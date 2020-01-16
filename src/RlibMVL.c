@@ -258,6 +258,14 @@ for(i=0;i<xlength(offsets);i++) {
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
 			break;
+		case LIBMVL_VECTOR_CSTRING:
+			v=PROTECT(allocVector(STRSXP, 1));
+			/* TODO: check that vector length is within R limits */
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
 			for(j=0;j<mvl_vector_length(vec);j++)
@@ -443,7 +451,7 @@ switch(type) {
 			}
 		for(i=0;i<xlength(data);i++) {
 			ch=CHAR(STRING_ELT(data, i));
-			strvec[i]=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, strlen(ch), ch, 0);
+			strvec[i]=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, strlen(ch), ch, 0);
 			}
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_OFFSET64, xlength(data), strvec, *moffset);
 		free(strvec);
@@ -454,7 +462,7 @@ switch(type) {
 			return(R_NilValue);
 			}
 		ch=CHAR(STRING_ELT(data, 0));
-		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, strlen(ch), ch, *moffset);
+		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, strlen(ch), ch, *moffset);
 		break;
 		
 	default:

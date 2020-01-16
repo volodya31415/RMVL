@@ -94,6 +94,7 @@ LIBMVL_OFFSET64 offset;
 memset(&(ctx->tmp_vh), 0, sizeof(ctx->tmp_vh));
 
 switch(type) {
+	case LIBMVL_VECTOR_CSTRING:
 	case LIBMVL_VECTOR_UINT8:
 		byte_length=length;
 		break;

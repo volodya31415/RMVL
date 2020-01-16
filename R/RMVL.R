@@ -2,6 +2,7 @@ mvl_open<-function(filename, append=FALSE, create=FALSE) {
 	cat("test\n")
 	MVLHANDLE<-list(handle=.Call("mmap_library", as.character(filename), as.integer(ifelse(append, 1, 0)+ifelse(create, 2, 0))))
 	class(MVLHANDLE)<-"MVL"
+	MVLHANDLE[["directory"]]<-mvl_get_directory(MVLHANDLE)
 	return(MVLHANDLE)
 	}
 	
@@ -81,22 +82,19 @@ mvl_write_object<-function(MVLHANDLE, x) {
 	stop("Could not write object")
 	}
 	
+flatten_string<-function(v) {
+	return(unlist(lapply(v, function(x){return(x[[1]])})))
+	}
 	
 mvl_read_object<-function(MVLHANDLE, offset) {
-	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
 	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")
 	if(offset==0)return(NULL)
 	metadata_offset<-.Call("read_metadata", MVLHANDLE[["handle"]], offset)
 	metadata<-mvl_read_object(MVLHANDLE, metadata_offset)
 	if(!is.null(metadata)) {
 		n<-metadata[1:(length(metadata)/2)]
-		for(i in 1:length(n)) {
-			n[[i]]<-rawToChar(metadata[[i]])
-			}
 		metadata<-metadata[(length(metadata)/2+1):length(metadata)]
-		for(i in 1:length(metadata)) {
-			if(class(metadata[[i]])=="raw")metadata[[i]]<-rawToChar(metadata[[i]])
-			}
 		names(metadata)<-unlist(n)
 		}
 	vec<-.Call("read_vectors", MVLHANDLE[["handle"]], offset)[[1]]
@@ -107,12 +105,12 @@ mvl_read_object<-function(MVLHANDLE, offset) {
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		cl<-metadata[["class"]]
 		if(cl=="factor" || cl=="character") {
-			vec<-unlist(lapply(vec, rawToChar))
+			vec<-flatten_string(vec)
 			if(cl=="factor")vec<-as.factor(vec)
 			} else 
 			class(vec)<-cl
-		if(!is.null(metadata[["names"]]))names(vec)<-unlist(lapply(metadata[["names"]], rawToChar))
-		if(!is.null(metadata[["rownames"]]))rownames(vec)<-unlist(lapply(metadata[["rownames"]], rawToChar))
+		if(!is.null(metadata[["names"]]))names(vec)<-flatten_string(metadata[["names"]])
+		if(!is.null(metadata[["rownames"]]))rownames(vec)<-flatten_string(metadata[["rownames"]])
 		if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 		}
 	return(vec)
@@ -134,6 +132,73 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 	z<-unclass(x)[[y]]
 	class(z)<-"MVL_OFFSET"
 	return(z)
+	}
+	
+`[.MVL`<-function(MVLHANDLE, y) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	
+	if(is.character(y)) {
+		offset<-MVLHANDLE[["directory"]][[y]]
+		if(is.null(offset))return(NULL)
+		
+		obj<-list(handle=MVLHANDLE[["handle"]], offset=offset)
+		obj[["metadata_offset"]]<-.Call("read_metadata", MVLHANDLE[["handle"]], offset)
+		metadata<-mvl_read_object(MVLHANDLE, obj[["metadata_offset"]])
+		if(!is.null(metadata)) {
+			n<-metadata[1:(length(metadata)/2)]
+			metadata<-metadata[(length(metadata)/2+1):length(metadata)]
+			names(metadata)<-unlist(n)
+			}
+		obj[["metadata"]]<-metadata
+		class(obj)<-"MVL_OBJECT"
+		return(obj)
+		}
+	stop("Cannot process ", y)
+	}
+	
+`[.MVL_OBJECT`<-function(obj, i, j, drop=NULL) {
+	if(missing(i) && missing(j)) {
+		return(mvl_read_object(obj, unclass(obj)[["offset"]]))
+		}
+	cat("obj class ", obj[["metadata"]][["class"]], "\n")
+	if(obj[["metadata"]][["class"]]=="data.frame") {
+		n<-obj[["metadata"]][["names"]]
+		if(missing(j)) {
+			j<-1:length(n)
+			} else {
+			if(is.logical(j)) {
+				j<-(1:length(n))[j]
+				} else
+			if(is.character(j) || is.factor(j)) {
+				if(is.factor(j))j<-as.character(j)
+				j0<-match(j, n)
+				if(any(is.na(j0)))
+					stop("Unknown columns ", j[is.na(j0)])
+				j<-j0
+				}
+			n<-n[j]
+			}
+		ofs<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][j]
+#		vec<-.Call("read_vectors", obj[["handle"]], ofs)
+		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x)[i])})
+		names(df)<-n
+		class(df)<-"data.frame"
+		rownames(df)<-obj[["metadata"]][["rownames"]][i]
+		return(df)
+		}
+	if(missing(j)) {
+		if(is.logical(i)) {
+			i<-(1:length(i))[i]
+			}
+		if(is.integer(i)) {
+			print(i)
+			print(L)
+			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][idx]
+			return(vec)
+			}
+		} else {
+		}
+	stop("Cannot process ", L)
 	}
 	
 .onUnload <- function (libpath) {
