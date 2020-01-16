@@ -319,6 +319,110 @@ UNPROTECT(1);
 return(ans);
 }
 
+SEXP read_vectors_idx(SEXP idx0, SEXP offsets, SEXP indicies)
+{
+int idx;
+SEXP ans, v, class;
+long i, j;
+double doffset;
+LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
+LIBMVL_OFFSET64 offset;
+double *doffset2=(double *)&offset;
+LIBMVL_VECTOR *vec;
+if(length(idx0)!=1) {
+	error("find_directory_entry first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+for(i=0;i<xlength(offsets);i++) {
+	doffset=REAL(offsets)[i];
+	offset=*offset0;
+	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+		SET_VECTOR_ELT(ans, i, R_NilValue);
+		continue;
+		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	switch(mvl_vector_type(vec)) {
+		case LIBMVL_VECTOR_UINT8:
+			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				RAW(v)[j]=mvl_vector_data(vec).b[INTEGER(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
+		case LIBMVL_VECTOR_CSTRING:
+			error("String subset not supported");
+			return(R_NilValue);
+			v=PROTECT(allocVector(STRSXP, 1));
+			/* TODO: check that vector length is within R limits */
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
+		case LIBMVL_VECTOR_INT32:
+			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				INTEGER(v)[j]=mvl_vector_data(vec).i[INTEGER(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_INT64:
+			warning("Converted 64-bit integers to doubles");
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				REAL(v)[j]=mvl_vector_data(vec).i64[INTEGER(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_FLOAT:
+			warning("Converted 32-bit floats to doubles");
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				REAL(v)[j]=mvl_vector_data(vec).f[INTEGER(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_DOUBLE:
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				REAL(v)[j]=mvl_vector_data(vec).d[INTEGER(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_OFFSET64:
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++) {
+				offset=mvl_vector_data(vec).offset[INTEGER(indicies)[j]];
+				REAL(v)[j]=*doffset2;
+				}
+			class=PROTECT(allocVector(STRSXP, 1));
+			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+			classgets(v, class);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(2);
+			break;
+		default:
+			warning("Unknown vector type");
+			SET_VECTOR_ELT(ans, i, R_NilValue);
+			break;
+		}
+	}
+
+UNPROTECT(1);
+return(ans);
+}
+
 SEXP read_metadata(SEXP idx0, SEXP offsets)
 {
 int idx;
@@ -486,6 +590,7 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "get_directory",  (DL_FUNC) &get_directory);
   R_RegisterCCallable("RMVL", "read_metadata",  (DL_FUNC) &read_metadata);
   R_RegisterCCallable("RMVL", "read_vectors",  (DL_FUNC) &read_vectors);
+  R_RegisterCCallable("RMVL", "read_vectors_idx",  (DL_FUNC) &read_vectors_idx);
   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
 }

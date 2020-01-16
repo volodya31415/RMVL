@@ -20,7 +20,7 @@
 #define LIBMVL_VECTOR_FLOAT	4
 #define LIBMVL_VECTOR_DOUBLE	5
 #define LIBMVL_VECTOR_OFFSET64	100
-#define LIBMVL_VECTOR_CSTRING	101
+#define LIBMVL_VECTOR_CSTRING	101     /* C string is just like UINT8, except that the data is considered valid up to length or first 0 byte */
 
 typedef unsigned long long LIBMVL_OFFSET64;
 

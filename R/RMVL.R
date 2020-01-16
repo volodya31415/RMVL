@@ -86,7 +86,7 @@ flatten_string<-function(v) {
 	return(unlist(lapply(v, function(x){return(x[[1]])})))
 	}
 	
-mvl_read_object<-function(MVLHANDLE, offset) {
+mvl_read_object<-function(MVLHANDLE, offset, idx=NULL) {
 	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
 	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")
 	if(offset==0)return(NULL)
@@ -97,7 +97,10 @@ mvl_read_object<-function(MVLHANDLE, offset) {
 		metadata<-metadata[(length(metadata)/2+1):length(metadata)]
 		names(metadata)<-unlist(n)
 		}
-	vec<-.Call("read_vectors", MVLHANDLE[["handle"]], offset)[[1]]
+	if(is.null(idx))
+		vec<-.Call("read_vectors", MVLHANDLE[["handle"]], offset)[[1]]
+		else 
+		vec<-.Call("read_vectors_idx", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 	if(inherits(vec, "MVL_OFFSET")) {
 		vec<-lapply(vec, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x))})
 		}
@@ -180,7 +183,7 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 			}
 		ofs<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][j]
 #		vec<-.Call("read_vectors", obj[["handle"]], ofs)
-		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x)[i])})
+		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(i)))})
 		names(df)<-n
 		class(df)<-"data.frame"
 		rownames(df)<-obj[["metadata"]][["rownames"]][i]
