@@ -1,0 +1,7 @@
+
+
+sql_scanner.c: sql.l sql_parser.c
+	flex -B --bison-bridge -o sql_scanner.c sql.l
+	
+sql_parser.c: sql.y
+	bison -o sql_parser.c -b sql_prefix sql.y

@@ -1,5 +1,4 @@
 mvl_open<-function(filename, append=FALSE, create=FALSE) {
-	cat("test\n")
 	MVLHANDLE<-list(handle=.Call("mmap_library", as.character(filename), as.integer(ifelse(append, 1, 0)+ifelse(create, 2, 0))))
 	class(MVLHANDLE)<-"MVL"
 	MVLHANDLE[["directory"]]<-mvl_get_directory(MVLHANDLE)
@@ -68,16 +67,20 @@ mvl_write_object_metadata<-function(MVLHANDLE, x) {
 	return(mvl_write_vector(MVLHANDLE, ofs))
 	}
 
-mvl_write_object<-function(MVLHANDLE, x) {
+mvl_write_object<-function(MVLHANDLE, x, name=NULL) {
 	cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x)
 	if(class(x) %in% c("numeric", "character", "integer", "factor")) {
-		return(mvl_write_vector(MVLHANDLE, x, metadata))
+		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
+		if(!is.null(name))mvl_add_directory_entries(X, name, offset)
+		return(offset)
 		}
 	if(class(x) %in% c("list", "data.frame")) {
 		v<-unlist(lapply(x, function(x){return(mvl_write_object(MVLHANDLE, x))}))
 		class(v)<-"MVL_OFFSET"
-		return(mvl_write_vector(MVLHANDLE, v, metadata))
+		offset<-mvl_write_vector(MVLHANDLE, v, metadata)
+		if(!is.null(name))mvl_add_directory_entries(X, name, offset)
+		return(offset)
 		}
 	stop("Could not write object")
 	}
@@ -137,26 +140,42 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 	return(z)
 	}
 	
-`[.MVL`<-function(MVLHANDLE, y) {
+`[.MVL`<-function(MVLHANDLE, y, sql=FALSE) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	
+	if(is.factor(y))y<-as.character(y)
+	
 	if(is.character(y)) {
-		offset<-MVLHANDLE[["directory"]][[y]]
-		if(is.null(offset))return(NULL)
-		
-		obj<-list(handle=MVLHANDLE[["handle"]], offset=offset)
-		obj[["metadata_offset"]]<-.Call("read_metadata", MVLHANDLE[["handle"]], offset)
-		metadata<-mvl_read_object(MVLHANDLE, obj[["metadata_offset"]])
-		if(!is.null(metadata)) {
-			n<-metadata[1:(length(metadata)/2)]
-			metadata<-metadata[(length(metadata)/2+1):length(metadata)]
-			names(metadata)<-unlist(n)
+		if(sql) {
+			cat("Running sql line \"", y, "\"\n", sep="")
+			.Call("execute_sql", MVLHANDLE[["handle"]], y)
+			} else {
+			offset<-MVLHANDLE[["directory"]][[y]]
+			if(is.null(offset))return(NULL)
+			
+			obj<-list(handle=MVLHANDLE[["handle"]], offset=offset)
+			obj[["metadata_offset"]]<-.Call("read_metadata", MVLHANDLE[["handle"]], offset)
+			metadata<-mvl_read_object(MVLHANDLE, obj[["metadata_offset"]])
+			if(!is.null(metadata)) {
+				n<-metadata[1:(length(metadata)/2)]
+				metadata<-metadata[(length(metadata)/2+1):length(metadata)]
+				names(metadata)<-unlist(n)
+				}
+			obj[["metadata"]]<-metadata
+			class(obj)<-"MVL_OBJECT"
+			return(obj)
 			}
-		obj[["metadata"]]<-metadata
-		class(obj)<-"MVL_OBJECT"
-		return(obj)
 		}
-	stop("Cannot process ", y)
+	if(class(y)=="formula") {
+		print(y)
+		print(terms(y, keep.order=TRUE, simplify=FALSE))
+		}
+	stop("Cannot process ", y, " class=", class(y))
+	}
+	
+names.MVL<-function(MVLHANDLE) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	return(names(MVLHANDLE[["directory"]]))
 	}
 	
 `[.MVL_OBJECT`<-function(obj, i, j, drop=NULL) {
@@ -205,5 +224,5 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 	}
 	
 .onUnload <- function (libpath) {
-  library.dynam.unload("RlibMVL", libpath)
+  library.dynam.unload("RMVL", libpath)
 }
