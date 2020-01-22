@@ -7,7 +7,7 @@
 
 #include "libMVL.h"
 
-void *do_malloc(long a, long b)
+static void *do_malloc(long a, long b)
 {
 void *r;
 int i=0;

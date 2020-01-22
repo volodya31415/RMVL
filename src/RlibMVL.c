@@ -4,6 +4,7 @@
 #include "libMVL.h"
 #include <R.h>
 #include <Rinternals.h>
+#include "sql_operations.h"
 //#include <Rext/Print.h>
 
 typedef struct {
@@ -591,6 +592,7 @@ error("sql parsing error: %s", message);
 SEXP execute_sql(SEXP idx0, SEXP sql_line)
 {
 int idx;
+OPERATION *sql_code;
 if(length(idx0)!=1) {
 	error("write_vector first argument must be a single integer");
 	return(R_NilValue);
@@ -605,8 +607,11 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 
-compile_sql(CHAR(asChar(sql_line)), -1);
-	
+sql_code=NULL;
+compile_sql(CHAR(asChar(sql_line)), -1, &sql_code);
+printf("Parsed 1\n");
+dump_operations(sql_code);
+
 return(R_NilValue);
 }
 
