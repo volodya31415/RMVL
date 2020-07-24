@@ -67,6 +67,8 @@ switch(t) {
 
 	case OPERATION_COLUMNS: return("COLUMNS");
 	case OPERATION_TABLES: return("TABLES");
+	case OPERATION_TABLES_JOIN_USING: return("TABLESJU");
+	case OPERATION_TABLES_JOIN_ON: return("TABLESJO");
 	case OPERATION_SELECT:	return("SELECT");
 	
 	default: return("UKNOWN");
@@ -106,6 +108,8 @@ switch(t) {
 
 	case OPERATION_COLUMNS:
 	case OPERATION_TABLES: 
+	case OPERATION_TABLES_JOIN_USING:
+	case OPERATION_TABLES_JOIN_ON:
 	case OPERATION_SELECT:	
 		return -t;
 	
@@ -159,6 +163,17 @@ if(a>0) {
 				} else {
 				printf("%s", op->name);
 				}
+			break;
+		case OPERATION_TABLES_JOIN_USING: 
+			dump_operations(op->op[0]);
+			printf(" JOIN %s USING (", op->name);
+			dump_operations(op->op[1]);
+			printf(")");
+			break;
+		case OPERATION_TABLES_JOIN_ON: 
+			dump_operations(op->op[0]);
+			printf(" JOIN %s ON ", op->name);
+			dump_operations(op->op[1]);
 			break;
 		case OPERATION_SELECT:	
 			dump_operations(op->op[0]);

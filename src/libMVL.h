@@ -20,7 +20,9 @@
 #define LIBMVL_VECTOR_FLOAT	4
 #define LIBMVL_VECTOR_DOUBLE	5
 #define LIBMVL_VECTOR_OFFSET64	100
-#define LIBMVL_VECTOR_CSTRING	101     /* C string is just like UINT8, except that the data is considered valid up to length or first 0 byte */
+#define LIBMVL_VECTOR_CSTRING	101     /* C string is just like UINT8, except that the data is considered valid up to length or
+first 0 byte */
+#define LIBMVL_VECTOR_POSTAMBLE 1000
 
 typedef unsigned long long LIBMVL_OFFSET64;
 
@@ -34,7 +36,8 @@ typedef struct {
 
 typedef struct {
 	LIBMVL_OFFSET64 directory;
-	int reserved[14];
+	int type;
+	int reserved[13];
 	} LIBMVL_POSTAMBLE;
 	
 typedef struct {
@@ -91,13 +94,18 @@ typedef struct {
 #define LIBMVL_ERR_EMPTY_DIRECTORY	-8
 #define LIBMVL_ERR_INVALID_DIRECTORY	-9
 #define LIBMVL_ERR_FTELL		-10
-
+#define LIBMVL_ERR_CORRUPT_POSTAMBLE	-11
+	
 LIBMVL_CONTEXT *mvl_create_context(void);
 void mvl_free_context(LIBMVL_CONTEXT *ctx);
 
 #define LIBMVL_NO_METADATA 	0
 
 LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, void *data, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata);
+/* Writes a single C string. In particular, this is handy for providing metadata tags */
+/* length can be specified as -1 to be computed automatically */
+LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, LIBMVL_OFFSET64 metadata);
 
 void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag);
 void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag, LIBMVL_OFFSET64 tag_size);

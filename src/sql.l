@@ -24,6 +24,10 @@
 
 [ \t\n][Aa][Ss][ \t\n]			{ return AS; }
 
+[ \t\n][Oo][Nn][ \t\n]			{ return ON; }
+
+[ \t\n][Uu][Ss][Ii][Nn][Gg][ \t\n]			{ return USING; }
+
 [-+*&|%=><.,()^]			{ yylval->ival=yytext[0]; return yytext[0]; }
 
 '[^`]*'					{ yylval->str=strndup(&(yytext[1]), yyleng-2); return NAME; }

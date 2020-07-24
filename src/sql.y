@@ -23,6 +23,8 @@
 %token <ival> FROM
 %token <ival> WHERE
 %token <ival> JOIN
+%token <ival> ON
+%token <ival> USING
 %token <ival> AS
 
 %token <ival> OP
@@ -75,6 +77,8 @@ columns:  expression {$$=new_op(); $$->type=OPERATION_COLUMNS; $$->name=strdup("
 	
 tables: NAME {$$=new_op(); $$->type=OPERATION_TABLES; $$->name=$1; $$->op[0]=NULL; }
 	| tables JOIN NAME {$$=new_op(); $$->type=OPERATION_TABLES; $$->name=$3; $$->op[0]=$1;};
+	| tables JOIN NAME USING '(' columns ')' {$$=new_op(); $$->type=OPERATION_TABLES_JOIN_USING; $$->name=$3; $$->op[0]=$1; $$->op[1]=$6;};
+	| tables JOIN NAME ON expression {$$=new_op(); $$->type=OPERATION_TABLES_JOIN_ON; $$->name=$3; $$->op[0]=$1; $$->op[1]=$5; };
 	
 expression: term		{$$=$1;}
 	| '-' term {$$=new_op(); $$->type=OPERATION_NEG; $$->op[0]=$2; }

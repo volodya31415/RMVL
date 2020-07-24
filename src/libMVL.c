@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "libMVL.h"
 
@@ -81,12 +82,13 @@ void mvl_write_postamble(LIBMVL_CONTEXT *ctx)
 int n;
 memset(&(ctx->tmp_postamble), 0, sizeof(ctx->tmp_postamble));
 ctx->tmp_postamble.directory=ctx->directory_offset;
+ctx->tmp_postamble.type=LIBMVL_VECTOR_POSTAMBLE;
 mvl_write(ctx, sizeof(ctx->tmp_postamble), &ctx->tmp_postamble);
 }
 
 LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, void *data, LIBMVL_OFFSET64 metadata)
 {
-long byte_length;
+LIBMVL_OFFSET64 byte_length;
 int padding;
 unsigned char *zeros;
 LIBMVL_OFFSET64 offset;
@@ -136,6 +138,74 @@ if(padding>0) {
 
 return(offset);
 }
+
+LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata)
+{
+LIBMVL_OFFSET64 byte_length, length;
+int padding, item_size;
+unsigned char *zeros;
+LIBMVL_OFFSET64 offset;
+int i;
+
+length=0;
+for(i=0;i<nvec;i++)length+=lengths[i];
+
+memset(&(ctx->tmp_vh), 0, sizeof(ctx->tmp_vh));
+
+switch(type) {
+	case LIBMVL_VECTOR_CSTRING:
+	case LIBMVL_VECTOR_UINT8:
+		item_size=1;
+		break;
+	case LIBMVL_VECTOR_INT32:
+	case LIBMVL_VECTOR_FLOAT:
+		item_size=4;
+		break;
+	case LIBMVL_VECTOR_INT64:
+	case LIBMVL_VECTOR_DOUBLE:
+	case LIBMVL_VECTOR_OFFSET64:
+		item_size=8;
+		break;
+	default:
+		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+		return;
+	}
+byte_length=length*item_size;
+padding=ctx->alignment-((byte_length+sizeof(ctx->tmp_vh)) & (ctx->alignment-1));
+padding=padding & (ctx->alignment-1);
+
+ctx->tmp_vh.length=length;
+ctx->tmp_vh.type=type;
+ctx->tmp_vh.metadata=metadata;
+
+offset=ftello(ctx->f);
+
+if((long long)offset<0) {
+	perror("mvl_write_vector");
+	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
+	}
+
+mvl_write(ctx, sizeof(ctx->tmp_vh), &ctx->tmp_vh);
+for(i=0;i<nvec;i++)
+	mvl_write(ctx, lengths[i]*item_size, data[i]);
+
+if(padding>0) {
+	zeros=alloca(padding);
+	memset(zeros, 0, padding);
+	mvl_write(ctx, padding, zeros);
+	}
+
+return(offset);
+}
+
+/* Writes a single C string. In particular, this is handy for providing metadata tags */
+/* length can be specified as -1 to be computed automatically */
+LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, LIBMVL_OFFSET64 metadata)
+{
+if(length<0)length=strlen(data);
+return(mvl_write_vector(ctx, LIBMVL_VECTOR_CSTRING, length, data, metadata));
+}
+
 
 void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag)
 {
@@ -266,8 +336,13 @@ if(pr->endianness!=LIBMVL_ENDIANNESS_FLAG) {
 	mvl_set_error(ctx, LIBMVL_ERR_WRONG_ENDIANNESS);
 	return;
 	}
+	
+if(pa->type!=LIBMVL_VECTOR_POSTAMBLE) {
+	mvl_set_error(ctx, LIBMVL_ERR_CORRUPT_POSTAMBLE);
+	return;
+	}
 
-fprintf(stderr, "Reading MVL directory at offset 0x%08lx\n", pa->directory);
+fprintf(stderr, "Reading MVL directory at offset 0x%08llx\n", pa->directory);
 dir=(LIBMVL_VECTOR *)&(((unsigned char *)data)[pa->directory]);
 
 for(i=0;i<ctx->dir_free;i++) {
