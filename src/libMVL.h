@@ -65,6 +65,21 @@ typedef struct {
 	} LIBMVL_DIRECTORY_ENTRY;
 	
 typedef struct {
+	long size;
+	long free;
+	LIBMVL_OFFSET64 *offset;
+	char **tag;
+	long *tag_length;
+	
+	/* Optional hash table */
+	
+	long *next_item;
+	long *first_item;
+	long hash_size;
+	long hash_mult;
+	} LIBMVL_NAMED_LIST;
+	
+typedef struct {
 	int alignment;
 	int error;
 
@@ -110,7 +125,19 @@ LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, L
 void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag);
 void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag, LIBMVL_OFFSET64 tag_size);
 LIBMVL_OFFSET64 mvl_write_directory(LIBMVL_CONTEXT *ctx);
-	
+
+LIBMVL_NAMED_LIST *mvl_create_named_list(int size);
+void mvl_free_named_list(LIBMVL_NAMED_LIST *L);
+long mvl_add_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag, LIBMVL_OFFSET64 offset);
+LIBMVL_OFFSET64 mvl_write_attributes_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
+
+/* Convenience function that create a named list populated with necessary entries
+ * It needs writable context to write attribute values */
+LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, char *R_class);
+
+/* This function writes contents of named list and creates R-compatible metadata with entry names */
+LIBMVL_OFFSET64 mvl_write_named_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
+
 void mvl_open(LIBMVL_CONTEXT *ctx, FILE *f);
 void mvl_close(LIBMVL_CONTEXT *ctx);
 void mvl_write_preamble(LIBMVL_CONTEXT *ctx);

@@ -273,6 +273,118 @@ ctx->directory_offset=offset;
 return(offset);
 }
 
+LIBMVL_NAMED_LIST *mvl_create_named_list(int size)
+{
+LIBMVL_NAMED_LIST *L;
+L=do_malloc(1, sizeof(*L));
+L->size=size;
+L->free=0;
+if(L->size<10)L->size=10;
+
+L->offset=do_malloc(L->size, sizeof(*L->offset));
+L->tag_length=do_malloc(L->size, sizeof(*L->tag_length));
+L->tag=do_malloc(L->size, sizeof(*L->tag));
+
+L->hash_size=0;
+L->next_item=NULL;
+L->first_item=NULL;
+L->hash_mult=217596121;
+}
+
+void mvl_free_named_list(LIBMVL_NAMED_LIST *L)
+{
+free(L->next_item);
+free(L->first_item);
+free(L->offset);
+free(L->tag);
+free(L->tag_length);
+free(L);
+}
+
+long mvl_add_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag, LIBMVL_OFFSET64 offset)
+{
+void *p;
+long k;
+if(L->free>=L->size) {
+	L->size=2*L->size+10;
+	
+	p=do_malloc(L->size, sizeof(*L->offset));
+	if(L->free>0)memcpy(p, L->offset, L->free*sizeof(*L->offset));
+	free(L->offset);
+	L->offset=p;
+	
+	p=do_malloc(L->size, sizeof(*L->tag_length));
+	if(L->free>0)memcpy(p, L->tag_length, L->free*sizeof(*L->tag_length));
+	free(L->tag_length);
+	L->tag_length=p;
+	
+	p=do_malloc(L->size, sizeof(*L->tag));
+	if(L->free>0)memcpy(p, L->tag, L->free*sizeof(*L->tag));
+	free(L->tag);
+	L->tag=p;
+	}
+k=L->free;
+L->free++;
+L->offset[k]=offset;
+if(tag_length<0)tag_length=strlen(tag);
+L->tag_length[k]=tag_length;
+L->tag[k]=strndup(tag, tag_length);
+
+if(L->hash_size>0) {
+	/* TODO: automatically add to hash table if present */
+	}
+return(k);
+}
+
+LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, char *R_class)
+{
+LIBMVL_NAMED_LIST *L;
+L=mvl_create_named_list(-1);
+mvl_add_list_entry(L, -1, "MVL_LAYOUT", mvl_write_string(ctx, -1, "R", LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "class", mvl_write_string(ctx, -1, R_class, LIBMVL_NO_METADATA));
+return(L);
+}
+
+LIBMVL_OFFSET64 mvl_write_attributes_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L)
+{
+LIBMVL_OFFSET64 *offsets, attr_offset;
+long i;
+offsets=do_malloc(2*L->free, sizeof(*offsets));
+
+for(i=0;i<L->free;i++) {
+	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
+	}
+memcpy(&(offsets[L->free]), L->offset, L->free*sizeof(*offsets));
+
+attr_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, 2*L->free, offsets, LIBMVL_NO_METADATA);
+
+free(offsets);
+
+return(attr_offset);
+}
+
+LIBMVL_OFFSET64 mvl_write_named_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L)
+{
+LIBMVL_OFFSET64 *offsets, list_offset;
+LIBMVL_NAMED_LIST *metadata;
+long i;
+offsets=do_malloc(L->free, sizeof(*offsets));
+
+for(i=0;i<L->free;i++) {
+	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
+	}
+	
+metadata=mvl_create_R_attributes_list(ctx, "list");
+mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+
+list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, metadata);
+
+mvl_free_named_list(metadata);
+free(offsets);
+
+return(list_offset);
+}
+
 void mvl_open(LIBMVL_CONTEXT *ctx, FILE *f)
 {
 ctx->f=f;
