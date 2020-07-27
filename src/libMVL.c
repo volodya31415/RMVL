@@ -289,6 +289,8 @@ L->hash_size=0;
 L->next_item=NULL;
 L->first_item=NULL;
 L->hash_mult=217596121;
+
+return(L);
 }
 
 void mvl_free_named_list(LIBMVL_NAMED_LIST *L)
