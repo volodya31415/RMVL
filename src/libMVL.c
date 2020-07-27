@@ -293,6 +293,8 @@ L->hash_mult=217596121;
 
 void mvl_free_named_list(LIBMVL_NAMED_LIST *L)
 {
+long i;
+for(i=0;i<L->free;i++)free(L->tag[i]);
 free(L->next_item);
 free(L->first_item);
 free(L->offset);
