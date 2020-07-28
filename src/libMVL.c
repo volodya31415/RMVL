@@ -381,7 +381,7 @@ for(i=0;i<L->free;i++) {
 metadata=mvl_create_R_attributes_list(ctx, "list");
 mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
 
-list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, metadata);
+list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, mvl_write_attributes_list(ctx, metadata));
 
 mvl_free_named_list(metadata);
 free(offsets);
