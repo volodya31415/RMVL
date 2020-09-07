@@ -539,6 +539,9 @@ if(length(metadata_offset)<1) {
 	dmoffset=REAL(metadata_offset)[0];
 	}
 switch(type) {
+	case LIBMVL_VECTOR_UINT8:
+		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), RAW(data), *moffset);
+		break;
 	case LIBMVL_VECTOR_INT32:
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT32, xlength(data), INTEGER(data), *moffset);
 		break;

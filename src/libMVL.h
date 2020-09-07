@@ -110,11 +110,15 @@ typedef struct {
 #define LIBMVL_ERR_INVALID_DIRECTORY	-9
 #define LIBMVL_ERR_FTELL		-10
 #define LIBMVL_ERR_CORRUPT_POSTAMBLE	-11
+#define LIBMVL_ERR_INVALID_ATTR_LIST	-12
+#define LIBMVL_ERR_INVALID_OFFSET	-13
+#define LIBMVL_ERR_INVALID_ATTR		-14
 	
 LIBMVL_CONTEXT *mvl_create_context(void);
 void mvl_free_context(LIBMVL_CONTEXT *ctx);
 
 #define LIBMVL_NO_METADATA 	0
+#define LIBMVL_NULL_OFFSET 	0
 
 LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, void *data, LIBMVL_OFFSET64 metadata);
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata);
@@ -129,7 +133,10 @@ LIBMVL_OFFSET64 mvl_write_directory(LIBMVL_CONTEXT *ctx);
 LIBMVL_NAMED_LIST *mvl_create_named_list(int size);
 void mvl_free_named_list(LIBMVL_NAMED_LIST *L);
 long mvl_add_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag, LIBMVL_OFFSET64 offset);
+LIBMVL_OFFSET64 mvl_find_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag);
 LIBMVL_OFFSET64 mvl_write_attributes_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
+/* This is meant to operate on memory mapped (or in-memory) files */
+LIBMVL_NAMED_LIST *mvl_read_attributes_list(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 metadata_offset);
 
 /* Convenience function that create a named list populated with necessary entries
  * It needs writable context to write attribute values */
@@ -137,6 +144,8 @@ LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, char *R_cla
 
 /* This function writes contents of named list and creates R-compatible metadata with entry names */
 LIBMVL_OFFSET64 mvl_write_named_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
+/* This is meant to operate on memory mapped (or in-memory) files */
+LIBMVL_NAMED_LIST *mvl_read_named_list(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 offset);
 
 void mvl_open(LIBMVL_CONTEXT *ctx, FILE *f);
 void mvl_close(LIBMVL_CONTEXT *ctx);
