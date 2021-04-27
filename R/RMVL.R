@@ -27,7 +27,7 @@ mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	if(!is.null(metadata.offset) && !inherits(metadata.offset, "MVL_OFFSET"))stop("not an MVL offset")
 	if(class(x)=="factor")x<-as.character(x)
-	type<-switch(class(x), numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
+	type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
 	if(type>0) {
 		return(.Call("write_vector", MVLHANDLE[["handle"]], as.integer(type), x, metadata.offset)) 
 		}
@@ -68,18 +68,18 @@ mvl_write_object_metadata<-function(MVLHANDLE, x) {
 	}
 
 mvl_write_object<-function(MVLHANDLE, x, name=NULL) {
-	cat("Writing", class(x), typeof(x), "\n")
+	#cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x)
-	if(class(x) %in% c("numeric", "character", "integer", "factor")) {
+	if(class(x) %in% c("numeric", "character", "integer", "factor", "raw")) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
-		if(!is.null(name))mvl_add_directory_entries(X, name, offset)
+		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(offset)
 		}
 	if(class(x) %in% c("list", "data.frame")) {
 		v<-unlist(lapply(x, function(x){return(mvl_write_object(MVLHANDLE, x))}))
 		class(v)<-"MVL_OFFSET"
 		offset<-mvl_write_vector(MVLHANDLE, v, metadata)
-		if(!is.null(name))mvl_add_directory_entries(X, name, offset)
+		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(offset)
 		}
 	stop("Could not write object")
@@ -110,14 +110,14 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL) {
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		cl<-metadata[["class"]]
+		if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 		if(cl=="factor" || cl=="character") {
 			vec<-flatten_string(vec)
 			if(cl=="factor")vec<-as.factor(vec)
-			} else 
+			}
 			class(vec)<-cl
 		if(!is.null(metadata[["names"]]))names(vec)<-flatten_string(metadata[["names"]])
 		if(!is.null(metadata[["rownames"]]))rownames(vec)<-flatten_string(metadata[["rownames"]])
-		if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 		}
 	return(vec)
 	}
@@ -148,7 +148,7 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 	if(is.character(y)) {
 		if(sql) {
 			cat("Running sql line \"", y, "\"\n", sep="")
-			.Call("execute_sql", MVLHANDLE[["handle"]], y)
+			return(.Call("execute_sql", MVLHANDLE[["handle"]], y))
 			} else {
 			offset<-MVLHANDLE[["directory"]][[y]]
 			if(is.null(offset))return(NULL)
@@ -182,7 +182,7 @@ names.MVL<-function(MVLHANDLE) {
 	if(missing(i) && missing(j)) {
 		return(mvl_read_object(obj, unclass(obj)[["offset"]]))
 		}
-	cat("obj class ", obj[["metadata"]][["class"]], "\n")
+	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	if(obj[["metadata"]][["class"]]=="data.frame") {
 		n<-obj[["metadata"]][["names"]]
 		if(missing(j)) {
@@ -212,15 +212,20 @@ names.MVL<-function(MVLHANDLE) {
 		if(is.logical(i)) {
 			i<-(1:length(i))[i]
 			}
+		if(is.factor(i))i<-as.character(i)
+		if(is.character(i)) {
+			if(is.null(obj$metadata$names))stop("Object has no names")
+			i<-which.max(obj$metadata$names==i)
+			}
 		if(is.integer(i)) {
-			print(i)
-			print(L)
-			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][idx]
+			#print(i)
+			#print(L)
+			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
 			return(vec)
 			}
 		} else {
 		}
-	stop("Cannot process ", L)
+	stop("Cannot process ", obj)
 	}
 	
 .onUnload <- function (libpath) {
