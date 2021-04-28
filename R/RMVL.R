@@ -121,12 +121,12 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=TRUE) {
 			vec[Fsmall]<-lapply(vec[Fsmall], function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x, recurse=FALSE))})
 			vec[!Fsmall]<-lapply(vec[!Fsmall], function(x) { 
 				class(x)<-"MVL_OFFSET"
-				L<-list(handle=MVLHANDLE[["handle"]], offset=x, length=.Call("read_lengths", MVLHANDLE[["handle"]], x), metadata_offset=.Call("read_metadata", MVLHANDLE[["handle"]], x))
+				L<-list(handle=MVLHANDLE[["handle"]], offset=x, length=.Call("read_lengths", MVLHANDLE[["handle"]], x), type=.Call("read_types", MVLHANDLE[["handle"]], x),metadata_offset=.Call("read_metadata", MVLHANDLE[["handle"]], x))
 				L[["metadata"]]<-mvl_read_metadata(MVLHANDLE, L[["metadata_offset"]])
 				class(L)<-"MVL_OBJECT"
 				return(L)} 
 				)
-		 }
+			}
 		}
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
@@ -174,16 +174,15 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 			offset<-MVLHANDLE[["directory"]][[y]]
 			if(is.null(offset))return(NULL)
 			
-			obj<-list(handle=MVLHANDLE[["handle"]], offset=offset)
-			obj[["metadata_offset"]]<-.Call("read_metadata", MVLHANDLE[["handle"]], offset)
-			metadata<-mvl_read_object(MVLHANDLE, obj[["metadata_offset"]])
-			if(!is.null(metadata)) {
-				n<-metadata[1:(length(metadata)/2)]
-				metadata<-metadata[(length(metadata)/2+1):length(metadata)]
-				names(metadata)<-unlist(n)
-				}
-			obj[["metadata"]]<-metadata
+			obj<-list(handle=MVLHANDLE[["handle"]], offset=offset, 
+				length=.Call("read_lengths", MVLHANDLE[["handle"]], offset), 
+				type=.Call("read_types", MVLHANDLE[["handle"]], offset),
+				metadata_offset=.Call("read_metadata", MVLHANDLE[["handle"]], offset))
+			obj[["metadata"]]<-mvl_read_metadata(MVLHANDLE, obj[["metadata_offset"]])
 			class(obj)<-"MVL_OBJECT"
+			
+			if(obj[["length"]]<MVL_SMALL_LENGTH)obj<-mvl_read_object(MVLHANDLE, obj[["offset"]], recurse=FALSE)
+			
 			return(obj)
 			}
 		}
@@ -199,17 +198,26 @@ names.MVL<-function(MVLHANDLE) {
 	return(names(MVLHANDLE[["directory"]]))
 	}
 	
+MVL_TYPE_NAME<-list("UINT8", "INT32", "INT64", "FLOAT", "DOUBLE")
+MVL_TYPE_NAME[[100]]<-"OFFSET64"
+MVL_TYPE_NAME[[101]]<-"CSTRING"
+	
+mvl_type_name<-function(x) {
+	y<-lapply(MVL_TYPE_NAME[x], function(xx){if(is.null(xx))return(NA); return(xx)})
+	return(unlist(y))
+	}
+	
 print.MVL_OBJECT<-function(obj) {
 	object_class<-obj[["metadata"]][["class"]]
 	if(is.null(object_class)) {
-		cat("MVL_OBJECT(length ", obj[["length"]], ")\n", sep="")
+		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " length ", obj[["length"]], ")\n", sep="")
 		} else
 	if(object_class %in% c("data.frame", "array")) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
-		cat("MVL_OBJECT(", object_class, " ", paste0(od, collapse="x"), ")\n", sep="")
+		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), ")\n", sep="")
 		} else {
-		cat("MVL_OBJECT(", object_class, ")\n", sep="")
+		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, ")\n", sep="")
 		}
 	invisible(obj)
 	}
