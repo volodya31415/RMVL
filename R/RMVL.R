@@ -89,7 +89,7 @@ flatten_string<-function(v) {
 	return(unlist(lapply(v, function(x){return(x[[1]])})))
 	}
 	
-mvl_read_object<-function(MVLHANDLE, offset, idx=NULL) {
+mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=TRUE) {
 	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
 	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")
 	if(offset==0)return(NULL)
@@ -105,7 +105,17 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL) {
 		else 
 		vec<-.Call("read_vectors_idx", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 	if(inherits(vec, "MVL_OFFSET")) {
-		vec<-lapply(vec, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x))})
+		if(recurse) {
+			vec<-lapply(vec, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x))})
+		 } else {
+			vec<-lapply(vec, function(x) { 
+				class(x)<-"MVL_OFFSET"
+				L<-list(handle=MVLHANDLE[["handle"]], offset=x, metadata_offset=.Call("read_metadata", MVLHANDLE[["handle"]], offset))
+				L[["metadata"]]<-mvl_read_object(MVLHANDLE, L[["metadata_offset"]])
+				class(L)<-"MVL_OBJECT"
+				return(L)} 
+				)
+		 }
 		}
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
@@ -183,7 +193,9 @@ names.MVL<-function(MVLHANDLE) {
 		return(mvl_read_object(obj, unclass(obj)[["offset"]]))
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
-	if(obj[["metadata"]][["class"]]=="data.frame") {
+	object_class<-obj[["metadata"]][["class"]]
+	if(is.null(object_class))object_class<-"NULL"
+	if(object_class=="data.frame") {
 		n<-obj[["metadata"]][["names"]]
 		if(missing(j)) {
 			j<-1:length(n)
@@ -217,15 +229,18 @@ names.MVL<-function(MVLHANDLE) {
 			if(is.null(obj$metadata$names))stop("Object has no names")
 			i<-which.max(obj$metadata$names==i)
 			}
-		if(is.integer(i)) {
+		if(is.numeric(i)) {
 			#print(i)
 			#print(L)
 			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
+			if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
+				vec<-mvl_read_object(obj, vec, recurse=FALSE)
+				}
 			return(vec)
 			}
 		} else {
 		}
-	stop("Cannot process ", obj)
+	stop("Cannot process ", obj, missing(i), missing(j))
 	}
 	
 .onUnload <- function (libpath) {
