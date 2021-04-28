@@ -218,6 +218,46 @@ UNPROTECT(3);
 return(ans);
 }
 
+SEXP read_lengths(SEXP idx0, SEXP offsets)
+{
+int idx;
+SEXP ans, v, class;
+long i, j;
+double doffset;
+LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
+LIBMVL_OFFSET64 offset;
+LIBMVL_VECTOR *vec;
+double *doffset2=(double *)&offset;
+if(length(idx0)!=1) {
+	error("find_directory_entry first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+ans=PROTECT(allocVector(REALSXP, xlength(offsets)));
+for(i=0;i<xlength(offsets);i++) {
+	doffset=REAL(offsets)[i];
+	offset=*offset0;
+	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+		REAL(ans)[i]=NA_REAL;
+		continue;
+		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	REAL(ans)[i]=mvl_vector_length(vec);
+	}
+
+UNPROTECT(1);
+return(ans);
+}
+
+
 SEXP read_vectors(SEXP idx0, SEXP offsets)
 {
 int idx;
@@ -624,6 +664,7 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "find_directory_entries",  (DL_FUNC) &find_directory_entries);
   R_RegisterCCallable("RMVL", "get_directory",  (DL_FUNC) &get_directory);
   R_RegisterCCallable("RMVL", "read_metadata",  (DL_FUNC) &read_metadata);
+  R_RegisterCCallable("RMVL", "read_lengths",  (DL_FUNC) &read_lengths);
   R_RegisterCCallable("RMVL", "read_vectors",  (DL_FUNC) &read_vectors);
   R_RegisterCCallable("RMVL", "read_vectors_idx",  (DL_FUNC) &read_vectors_idx);
   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
