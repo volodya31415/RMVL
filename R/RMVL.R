@@ -118,7 +118,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=TRUE) {
 			vec<-lapply(vec, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x))})
 		 } else {
 			Fsmall<-lengths<MVL_SMALL_LENGTH
-			vec[Fsmall]<-lapply(vec[Fsmall], function(x){class(x)<-"MVL_OFFSET" ; print(x); return(mvl_read_object(MVLHANDLE, x, recurse=FALSE))})
+			vec[Fsmall]<-lapply(vec[Fsmall], function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x, recurse=FALSE))})
 			vec[!Fsmall]<-lapply(vec[!Fsmall], function(x) { 
 				class(x)<-"MVL_OFFSET"
 				L<-list(handle=MVLHANDLE[["handle"]], offset=x, length=.Call("read_lengths", MVLHANDLE[["handle"]], x), metadata_offset=.Call("read_metadata", MVLHANDLE[["handle"]], x))
@@ -197,6 +197,21 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 names.MVL<-function(MVLHANDLE) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	return(names(MVLHANDLE[["directory"]]))
+	}
+	
+print.MVL_OBJECT<-function(obj) {
+	object_class<-obj[["metadata"]][["class"]]
+	if(is.null(object_class)) {
+		cat("MVL_OBJECT(length ", obj[["length"]], ")\n", sep="")
+		} else
+	if(object_class %in% c("data.frame", "array")) {
+		od<-obj[["metadata"]][["dim"]]
+		if(is.null(od))od<-obj[["length"]]
+		cat("MVL_OBJECT(", object_class, " ", paste0(od, collapse="x"), ")\n", sep="")
+		} else {
+		cat("MVL_OBJECT(", object_class, ")\n", sep="")
+		}
+	invisible(obj)
 	}
 	
 `[.MVL_OBJECT`<-function(obj, i, ..., drop=NULL) {
