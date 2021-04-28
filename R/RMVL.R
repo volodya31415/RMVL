@@ -114,7 +114,6 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=TRUE) {
 		vec<-.Call("read_vectors_idx", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 	if(inherits(vec, "MVL_OFFSET")) {
 		lengths<-.Call("read_lengths", MVLHANDLE[["handle"]], vec)
-		print(lengths)		
 		if(recurse) {
 			vec<-lapply(vec, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x))})
 		 } else {
@@ -200,18 +199,20 @@ names.MVL<-function(MVLHANDLE) {
 	return(names(MVLHANDLE[["directory"]]))
 	}
 	
-`[.MVL_OBJECT`<-function(obj, i, j, drop=NULL) {
-	if(missing(i) && missing(j)) {
+`[.MVL_OBJECT`<-function(obj, i, ..., drop=NULL) {
+	if(missing(i) && ...length()==0) {
 		return(mvl_read_object(obj, unclass(obj)[["offset"]]))
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
 	if(is.null(object_class))object_class<-"NULL"
 	if(object_class=="data.frame") {
+		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
-		if(missing(j)) {
+		if(...length()<1) {
 			j<-1:length(n)
 			} else {
+			j<-..1
 			if(is.logical(j)) {
 				j<-(1:length(n))[j]
 				} else
@@ -232,7 +233,45 @@ names.MVL<-function(MVLHANDLE) {
 		rownames(df)<-obj[["metadata"]][["rownames"]][i]
 		return(df)
 		}
-	if(missing(j)) {
+	if(object_class=="array") {
+		od<-obj[["metadata"]][["dim"]]
+		if(is.null(od))od<-obj[["length"]]
+		
+		if(missing(i)) {
+			d<-1
+			idx<-0:(od[1]-1)
+			} else {
+			d<-length(i)
+			idx<-i-1
+			}
+		mult<-1
+		
+		if(...length()+1!=length(od))stop("Array dimension is ", length(od), " but ", ...length()+1, " indices given")
+		
+		if(...length()>0) {
+			for(j in 1:...length()) {
+				ii<-NULL
+				try({ii<-...elt(j)}, silent=TRUE)
+				if(is.null(ii)) {
+					d<-c(d, od[j+1])
+					ii<-1:od[j+1]
+					} else {
+					d<-c(d, length(ii))
+					}
+				mult<-mult*od[j]
+				idx<-outer(idx, (ii-1)*mult, FUN="+")
+				}
+			}
+		vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(idx))[[1]]
+		
+		if(is.null(drop) || drop==TRUE) {
+			d<-d[d!=1]
+			if(length(d)>0)dim(vec)<-d
+			} else
+			dim(vec)<-d
+		return(vec)
+		}
+	if(...length()==0) {
 		if(is.logical(i)) {
 			i<-(1:length(i))[i]
 			}
@@ -251,9 +290,9 @@ names.MVL<-function(MVLHANDLE) {
 			if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
 				vec<-mvl_read_object(obj, vec, recurse=FALSE)
 				} else {
-				metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
-				metadata<-mvl_read_metadata(obj, metadata_offset)
-				print(metadata)
+				#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
+				#metadata<-mvl_read_metadata(obj, metadata_offset)
+				#print(metadata)
 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
 					cl<-metadata[["class"]]
 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
@@ -270,7 +309,7 @@ names.MVL<-function(MVLHANDLE) {
 			}
 		} else {
 		}
-	stop("Cannot process ", obj, missing(i), missing(j))
+	stop("Cannot process ", obj)
 	}
 	
 .onUnload <- function (libpath) {
