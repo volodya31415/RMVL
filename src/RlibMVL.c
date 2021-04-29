@@ -37,7 +37,7 @@ mode=INTEGER(mode0)[0];
 
 idx=-1;
 for(i=0;i<libraries_free;i++) {
-	if(libraries[i].f==NULL) {
+	if(libraries[i].ctx==NULL) {
 		idx=i;
 		break;
 		}
@@ -104,6 +104,12 @@ if(p->length>0) {
 		}
 	mvl_load_image(p->ctx, p->length, p->data);
 	fseek(p->f, 0, SEEK_END);
+	if(mode==0) {
+		/* Read-only mapping no need to use up a file descriptor */
+		fclose(p->f);
+		p->f=NULL;
+		p->ctx->f=NULL;
+		}
 	} else {
 	mvl_write_preamble(p->ctx);
 	p->modified=1;
@@ -129,7 +135,7 @@ if(idx>=libraries_free)return(R_NilValue);
 
 p=&(libraries[idx]);
 
-if(p->f==NULL)return(R_NilValue);
+if(p->ctx==NULL)return(R_NilValue);
 
 if(p->data!=NULL) {
 	munmap(p->data, p->length);
@@ -142,7 +148,7 @@ if(p->modified) {
 	
 mvl_free_context(p->ctx);
 p->ctx=NULL;
-fclose(p->f);
+if(p->f!=NULL)fclose(p->f);
 p->f=NULL;
 
 return(R_NilValue);
@@ -165,7 +171,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL){
+if(libraries[idx].ctx==NULL){
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -199,7 +205,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL){
+if(libraries[idx].ctx==NULL){
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -237,7 +243,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL) {
+if(libraries[idx].ctx==NULL) {
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -276,7 +282,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL) {
+if(libraries[idx].ctx==NULL) {
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -315,7 +321,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL) {
+if(libraries[idx].ctx==NULL) {
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -417,7 +423,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL) {
+if(libraries[idx].ctx==NULL) {
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -502,6 +508,112 @@ UNPROTECT(1);
 return(ans);
 }
 
+
+/* Same as function above, but the indices are assumed to be doubles - this is a workaround against R's lack for 64-bit integers */
+SEXP read_vectors_idx_real(SEXP idx0, SEXP offsets, SEXP indicies)
+{
+int idx;
+SEXP ans, v, class;
+long i, j;
+double doffset;
+LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
+LIBMVL_OFFSET64 offset;
+double *doffset2=(double *)&offset;
+LIBMVL_VECTOR *vec;
+if(length(idx0)!=1) {
+	error("find_directory_entry first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+for(i=0;i<xlength(offsets);i++) {
+	doffset=REAL(offsets)[i];
+	offset=*offset0;
+	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+		SET_VECTOR_ELT(ans, i, R_NilValue);
+		continue;
+		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	switch(mvl_vector_type(vec)) {
+		case LIBMVL_VECTOR_UINT8:
+			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				RAW(v)[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
+		case LIBMVL_VECTOR_CSTRING:
+			error("String subset not supported");
+			return(R_NilValue);
+			v=PROTECT(allocVector(STRSXP, 1));
+			/* TODO: check that vector length is within R limits */
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
+		case LIBMVL_VECTOR_INT32:
+			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				INTEGER(v)[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_INT64:
+			warning("Converted 64-bit integers to doubles");
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				REAL(v)[j]=mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_FLOAT:
+			warning("Converted 32-bit floats to doubles");
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				REAL(v)[j]=mvl_vector_data(vec).f[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_DOUBLE:
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++)
+				REAL(v)[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_OFFSET64:
+			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			for(j=0;j<xlength(indicies);j++) {
+				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				REAL(v)[j]=*doffset2;
+				}
+			class=PROTECT(allocVector(STRSXP, 1));
+			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+			classgets(v, class);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(2);
+			break;
+		default:
+			warning("Unknown vector type");
+			SET_VECTOR_ELT(ans, i, R_NilValue);
+			break;
+		}
+	}
+
+UNPROTECT(1);
+return(ans);
+}
+
 SEXP read_metadata(SEXP idx0, SEXP offsets)
 {
 int idx;
@@ -521,7 +633,7 @@ if(idx<0 || idx>=libraries_free) {
 	error("no such library");
 	return(R_NilValue);
 	}
-if(libraries[idx].f==NULL) {
+if(libraries[idx].ctx==NULL) {
 	error("no such library");
 	return(R_NilValue);
 	}
@@ -600,6 +712,10 @@ if(idx<0 || idx>=libraries_free) {
 	}
 if(libraries[idx].ctx==NULL) {
 	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("library not open for writing");
 	return(R_NilValue);
 	}
 
@@ -706,6 +822,7 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "read_types",  (DL_FUNC) &read_types);
   R_RegisterCCallable("RMVL", "read_vectors",  (DL_FUNC) &read_vectors);
   R_RegisterCCallable("RMVL", "read_vectors_idx",  (DL_FUNC) &read_vectors_idx);
+  R_RegisterCCallable("RMVL", "read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real);
   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
   R_RegisterCCallable("RMVL", "execute_sql",  (DL_FUNC) &execute_sql);

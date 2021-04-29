@@ -111,7 +111,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=TRUE) {
 	if(is.null(idx))
 		vec<-.Call("read_vectors", MVLHANDLE[["handle"]], offset)[[1]]
 		else 
-		vec<-.Call("read_vectors_idx", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+		vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 	if(inherits(vec, "MVL_OFFSET")) {
 		lengths<-.Call("read_lengths", MVLHANDLE[["handle"]], vec)
 		if(recurse) {
@@ -285,7 +285,7 @@ print.MVL_OBJECT<-function(obj) {
 				idx<-outer(idx, (ii-1)*mult, FUN="+")
 				}
 			}
-		vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(idx))[[1]]
+		vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		
 		if(is.null(drop) || drop==TRUE) {
 			d<-d[d!=1]
