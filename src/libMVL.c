@@ -1,10 +1,11 @@
 
-/* (c) Vladimir Dergachev 2019 */
+/* (c) Vladimir Dergachev 2019-2021 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "libMVL.h"
 
@@ -213,6 +214,70 @@ LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, L
 {
 if(length<0)length=strlen(data);
 return(mvl_write_vector(ctx, LIBMVL_VECTOR_CSTRING, length, data, metadata));
+}
+
+LIBMVL_OFFSET64 mvl_write_vector_inline(LIBMVL_CONTEXT *ctx, int type, int count, LIBMVL_OFFSET64 metadata, ...)
+{
+int i;
+va_list ap;
+
+va_start(ap, metadata);
+
+switch(type) {
+	case LIBMVL_VECTOR_CSTRING:
+	case LIBMVL_VECTOR_UINT8: {
+		char *data;
+		data=alloca(count);
+		for(i=0;i<count;i++)data[i]=va_arg(ap, int);
+		va_end(ap);
+		return(mvl_write_vector(ctx, type, count, data, metadata));
+		break;
+		}
+	case LIBMVL_VECTOR_INT32: {
+		int *data;
+		data=alloca(count*sizeof(*data));
+		for(i=0;i<count;i++)data[i]=va_arg(ap, int);
+		va_end(ap);
+		return(mvl_write_vector(ctx, type, count, data, metadata));
+		break;
+		}
+	case LIBMVL_VECTOR_FLOAT: {
+		float *data;
+		data=alloca(count*sizeof(*data));
+		for(i=0;i<count;i++)data[i]=va_arg(ap, double);
+		va_end(ap);
+		return(mvl_write_vector(ctx, type, count, data, metadata));
+		break;
+		}
+	case LIBMVL_VECTOR_INT64: {
+		long long *data;
+		data=alloca(count*sizeof(*data));
+		for(i=0;i<count;i++)data[i]=va_arg(ap, long long);
+		va_end(ap);
+		return(mvl_write_vector(ctx, type, count, data, metadata));
+		break;
+		}
+	case LIBMVL_VECTOR_DOUBLE: {
+		double *data;
+		data=alloca(count*sizeof(*data));
+		for(i=0;i<count;i++)data[i]=va_arg(ap, double);
+		va_end(ap);
+		return(mvl_write_vector(ctx, type, count, data, metadata));
+		break;
+		}
+	case LIBMVL_VECTOR_OFFSET64: {
+		LIBMVL_OFFSET64 *data;
+		data=alloca(count*sizeof(*data));
+		for(i=0;i<count;i++)data[i]=va_arg(ap, LIBMVL_OFFSET64);
+		va_end(ap);
+		return(mvl_write_vector(ctx, type, count, data, metadata));
+		break;
+		}
+	default:
+		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+		return(LIBMVL_NULL_OFFSET);
+	}
+	
 }
 
 

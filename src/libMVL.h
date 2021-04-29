@@ -7,7 +7,7 @@
 
 /* Mappable Vector Library - 
  * a structured file format which can be efficiently used 
- * after read-only memory mapping, can be appended while mapped, 
+ * after read-only memory mapping, and can be appended while mapped, 
  * with versionable edits
  */
 
@@ -125,6 +125,16 @@ LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nve
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */
 LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, LIBMVL_OFFSET64 metadata);
+
+/* This is convenient for writing several values of the same type as vector without allocating a temporary array.
+ * This function creates the array internally using alloca().
+ */
+LIBMVL_OFFSET64 mvl_write_vector_inline(LIBMVL_CONTEXT *ctx, int type, int count, LIBMVL_OFFSET64 metadata, ...);
+
+#define MVL_NUMARGS(...)  (sizeof((int[]){__VA_ARGS__})/sizeof(int))
+
+#define MVL_WVEC(ctx, type, ...) mvl_write_vector_inline(ctx, type, MVL_NUMARGS(__VA_ARGS__), 0, __VA_ARGS__)
+
 
 void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag);
 void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag, LIBMVL_OFFSET64 tag_size);
