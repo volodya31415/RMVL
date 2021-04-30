@@ -267,7 +267,7 @@ print.MVL_OBJECT<-function(obj) {
 		rownames(df)<-obj[["metadata"]][["rownames"]][i]
 		return(df)
 		}
-	if(object_class=="array") {
+	if(object_class %in% c("array", "matrix")) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		
