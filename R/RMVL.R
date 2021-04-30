@@ -31,10 +31,11 @@ mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(!is.null(metadata.offset) && !inherits(metadata.offset, "MVL_OFFSET"))stop("not an MVL offset")
 	if(class(x)=="factor")x<-as.character(x)
 	type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
+	if(type<0 && class(x) %in% c("array", "matrix"))type<-switch(typeof(x), double=5, integer=2, -1)
 	if(type>0) {
 		return(.Call("write_vector", MVLHANDLE[["handle"]], as.integer(type), x, metadata.offset)) 
 		}
-	stop("Could not write vector")
+	stop("Could not write vector with class ", class(x))
 	}
 
 mvl_write_string<-function(MVLHANDLE, x, metadata.offset=NULL) {
@@ -73,7 +74,7 @@ mvl_write_object_metadata<-function(MVLHANDLE, x) {
 mvl_write_object<-function(MVLHANDLE, x, name=NULL) {
 	#cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x)
-	if(class(x) %in% c("numeric", "character", "integer", "factor", "raw")) {
+	if(class(x) %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(offset)
@@ -85,7 +86,11 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL) {
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(offset)
 		}
-	stop("Could not write object")
+	if(class(x) == "MVL_OFFSET") {
+		# Already written
+		return(x)
+		}
+	stop("Could not write object with class ", class(x))
 	}
 	
 flatten_string<-function(v) {
@@ -198,6 +203,12 @@ names.MVL<-function(MVLHANDLE) {
 	return(names(MVLHANDLE[["directory"]]))
 	}
 	
+print.MVL<-function(MVLHANDLE) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	cat("MVL(handle ", MVLHANDLE[["handle"]], " directory with ", length(MVLHANDLE[["directory"]]), " entries)\n", sep="")
+	invisible(MVLHANDLE)
+	}
+	
 MVL_TYPE_NAME<-list("UINT8", "INT32", "INT64", "FLOAT", "DOUBLE")
 MVL_TYPE_NAME[[100]]<-"OFFSET64"
 MVL_TYPE_NAME[[101]]<-"CSTRING"
@@ -209,10 +220,10 @@ mvl_type_name<-function(x) {
 	
 print.MVL_OBJECT<-function(obj) {
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class)) {
+	if(is.null(object_class) || (object_class %in% c("numeric", "integer"))) {
 		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " length ", obj[["length"]], ")\n", sep="")
 		} else
-	if(object_class %in% c("data.frame", "array")) {
+	if(object_class %in% c("data.frame", "array", "matrix")) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), ")\n", sep="")
@@ -261,7 +272,7 @@ print.MVL_OBJECT<-function(obj) {
 		if(is.null(od))od<-obj[["length"]]
 		
 		if(missing(i)) {
-			d<-1
+			d<-od[1]
 			idx<-0:(od[1]-1)
 			} else {
 			d<-length(i)

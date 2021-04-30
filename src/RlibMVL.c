@@ -54,8 +54,10 @@ if(idx<0 && (libraries_free>=libraries_size)) {
 	free(libraries);
 	libraries=p;
 	}
-idx=libraries_free;
-libraries_free++;
+if(idx<0) {
+	idx=libraries_free;
+	libraries_free++;
+	}
 
 fn=CHAR(asChar(filename));
 
