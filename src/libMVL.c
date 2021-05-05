@@ -626,7 +626,7 @@ if(pa->type!=LIBMVL_VECTOR_POSTAMBLE) {
 	return;
 	}
 
-fprintf(stderr, "Reading MVL directory at offset 0x%08llx\n", pa->directory);
+//fprintf(stderr, "Reading MVL directory at offset 0x%08llx\n", pa->directory);
 dir=(LIBMVL_VECTOR *)&(((unsigned char *)data)[pa->directory]);
 
 for(i=0;i<ctx->dir_free;i++) {
@@ -636,7 +636,7 @@ for(i=0;i<ctx->dir_free;i++) {
 	}
 
 ctx->dir_free=dir->header.length>>1;
-fprintf(stderr, "Reading MVL with %ld directory entries\n", ctx->dir_free);
+//fprintf(stderr, "Reading MVL with %ld directory entries\n", ctx->dir_free);
 if(ctx->dir_free >= ctx->dir_size) {
 	ctx->dir_size=ctx->dir_free;
 	free(ctx->directory);

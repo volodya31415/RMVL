@@ -61,7 +61,7 @@ if(idx<0) {
 
 fn=CHAR(asChar(filename));
 
-Rprintf("Accessing MVL library from %s\n", fn);
+//Rprintf("Accessing MVL library from %s\n", fn);
 
 p=&libraries[idx];
 memset(p, 0, sizeof(*p));
@@ -752,10 +752,10 @@ SEXP read_vectors_idx(SEXP idx0, SEXP offsets, SEXP indicies)
 {
 int idx;
 SEXP ans, v, class;
-long i, j;
+long i, j, k;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
-LIBMVL_OFFSET64 offset;
+LIBMVL_OFFSET64 offset, m;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
 if(length(idx0)!=1) {
@@ -780,6 +780,17 @@ for(i=0;i<xlength(offsets);i++) {
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	
+	m=mvl_vector_length(vec);
+	for(j=0;j<xlength(indicies);j++) {
+		k=INTEGER(indicies)[j];
+		if((k<0) || (k>m)) {
+			UNPROTECT(1);
+			error("Index is out of range");
+			return(R_NilValue);
+			}
+		}	
+	
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
@@ -861,7 +872,7 @@ SEXP ans, v, class;
 long i, j;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
-LIBMVL_OFFSET64 offset;
+LIBMVL_OFFSET64 offset, k, m;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
 if(length(idx0)!=1) {
@@ -886,6 +897,17 @@ for(i=0;i<xlength(offsets);i++) {
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	
+	m=mvl_vector_length(vec);
+	for(j=0;j<xlength(indicies);j++) {
+		k=(LIBMVL_OFFSET64)REAL(indicies)[j];
+		if((k<0) || (k>m)) {
+			UNPROTECT(1);
+			error("Index is out of range");
+			return(R_NilValue);
+			}
+		}
+	
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
@@ -1087,6 +1109,7 @@ switch(type) {
 	case LIBMVL_VECTOR_INT64:
 		switch(TYPEOF(data)) {
 			case RAWSXP:
+//				Rprintf("Writing INT64 from RAW input length %lld output length %lld\n", xlength(data), xlength(data)/8);
 				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, xlength(data)/8, RAW(data), *moffset);
 				break;
 			case REALSXP:

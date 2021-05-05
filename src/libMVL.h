@@ -4,6 +4,7 @@
 #define __LIBMVL_H__
 
 #include <stdio.h>
+#include <math.h>
 
 /* Mappable Vector Library - 
  * a structured file format which can be efficiently used 
@@ -166,6 +167,91 @@ void mvl_write_postamble(LIBMVL_CONTEXT *ctx);
 #define mvl_vector_length(data)   (((LIBMVL_VECTOR_HEADER *)(data))->length)
 #define mvl_vector_data(data)   ((((LIBMVL_VECTOR *)(data))->u))
 #define mvl_vector_metadata_offset(data)   ((((LIBMVL_VECTOR_HEADER *)(data))->metadata))
+
+/* These two convenience functions are meant for retrieving a few values, such as stored configuration parameters.
+ * Only floating point and offset values are supported as output because they have intrinsic notion of invalid value.
+ */
+
+static inline double mvl_as_double(const LIBMVL_VECTOR *vec, long idx) 
+{
+if((idx<0) || (idx>=mvl_vector_length(vec)))return(NAN);
+
+switch(mvl_vector_type(vec)) {
+	case LIBMVL_VECTOR_DOUBLE:
+		return(mvl_vector_data(vec).d[idx]);
+	case LIBMVL_VECTOR_FLOAT:
+		return(mvl_vector_data(vec).f[idx]);
+	case LIBMVL_VECTOR_INT64:
+		return(mvl_vector_data(vec).i64[idx]);
+	case LIBMVL_VECTOR_INT32:
+		return(mvl_vector_data(vec).i[idx]);
+	default:
+		return(NAN);
+	}
+}
+
+static inline double mvl_as_double_default(const LIBMVL_VECTOR *vec, long idx, double def) 
+{
+if((idx<0) || (idx>=mvl_vector_length(vec)))return(def);
+
+switch(mvl_vector_type(vec)) {
+	case LIBMVL_VECTOR_DOUBLE:
+		return(mvl_vector_data(vec).d[idx]);
+	case LIBMVL_VECTOR_FLOAT:
+		return(mvl_vector_data(vec).f[idx]);
+	case LIBMVL_VECTOR_INT64:
+		return(mvl_vector_data(vec).i64[idx]);
+	case LIBMVL_VECTOR_INT32:
+		return(mvl_vector_data(vec).i[idx]);
+	default:
+		return(def);
+	}
+}
+
+static inline LIBMVL_OFFSET64 mvl_as_offset(const LIBMVL_VECTOR *vec, long idx) 
+{
+if((idx<0) || (idx>=mvl_vector_length(vec)))return(0);
+
+switch(mvl_vector_type(vec)) {
+	case LIBMVL_VECTOR_OFFSET64:
+		return(mvl_vector_data(vec).offset[idx]);
+	default:
+		return(0);
+	}
+}
+
+static inline double mvl_named_list_get_double(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, char *tag, long idx)
+{
+LIBMVL_VECTOR *vec;
+LIBMVL_OFFSET64 ofs;
+ofs=mvl_find_list_entry(L, tag_length, tag);
+if(ofs==0)return(NAN);
+
+vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
+return(mvl_as_double(vec, idx));
+}
+
+static inline double mvl_named_list_get_double_default(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, char *tag, long idx, double def)
+{
+LIBMVL_VECTOR *vec;
+LIBMVL_OFFSET64 ofs;
+ofs=mvl_find_list_entry(L, tag_length, tag);
+if(ofs==0)return(def);
+
+vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
+return(mvl_as_double_default(vec, idx, def));
+}
+
+static inline LIBMVL_OFFSET64 mvl_named_list_get_offset(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, char *tag, long idx)
+{
+LIBMVL_VECTOR *vec;
+LIBMVL_OFFSET64 ofs;
+ofs=mvl_find_list_entry(L, tag_length, tag);
+if(ofs==0)return(0);
+
+vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
+return(mvl_as_offset(vec, idx));
+}
 
 LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, char *tag);
 
