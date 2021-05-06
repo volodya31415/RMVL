@@ -113,6 +113,21 @@ mvl_read_metadata<-function(MVLHANDLE, metadata_offset) {
 	return(metadata)
 	}
 	
+mvl_object_stats<-function(MVLHANDLE, offset=NULL) {
+	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
+	if(is.null(offset) && inherits(MVLHANDLE, "MVL_OBJECT"))offset<-unclass(MVLHANDLE)[["offset"]]
+	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")
+	
+	L<-list(handle=MVLHANDLE[["handle"]], 
+		offset=offset, 
+		metadata_offset=.Call("read_metadata", MVLHANDLE[["handle"]], offset),
+		length=.Call("read_lengths", MVLHANDLE[["handle"]], offset), 
+		type=.Call("read_types", MVLHANDLE[["handle"]], offset), 
+		data_pointer=.Call("get_vector_data_ptr", MVLHANDLE[["handle"]], offset)
+		)
+	return(L)
+	}
+	
 mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=TRUE, raw=FALSE) {
 	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
 	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")

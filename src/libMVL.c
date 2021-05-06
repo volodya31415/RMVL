@@ -95,7 +95,7 @@ ctx->tmp_postamble.type=LIBMVL_VECTOR_POSTAMBLE;
 mvl_write(ctx, sizeof(ctx->tmp_postamble), &ctx->tmp_postamble);
 }
 
-LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, void *data, LIBMVL_OFFSET64 metadata)
+LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, const void *data, LIBMVL_OFFSET64 metadata)
 {
 LIBMVL_OFFSET64 byte_length;
 int padding;
@@ -210,7 +210,7 @@ return(offset);
 
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */
-LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, LIBMVL_OFFSET64 metadata)
+LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, const char *data, LIBMVL_OFFSET64 metadata)
 {
 if(length<0)length=strlen(data);
 return(mvl_write_vector(ctx, LIBMVL_VECTOR_CSTRING, length, data, metadata));
@@ -281,7 +281,7 @@ switch(type) {
 }
 
 
-void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag)
+void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag)
 {
 LIBMVL_DIRECTORY_ENTRY *p;
 if(ctx->dir_free>=ctx->dir_size) {
@@ -297,7 +297,7 @@ ctx->directory[ctx->dir_free].tag=strdup(tag);
 ctx->dir_free++;
 }
 
-void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag, LIBMVL_OFFSET64 tag_size)
+void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag, LIBMVL_OFFSET64 tag_size)
 {
 LIBMVL_DIRECTORY_ENTRY *p;
 if(ctx->dir_free>=ctx->dir_size) {
@@ -432,7 +432,7 @@ return(LIBMVL_NULL_OFFSET);
 }
 
 
-LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, char *R_class)
+LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, const char *R_class)
 {
 LIBMVL_NAMED_LIST *L;
 L=mvl_create_named_list(-1);
@@ -482,7 +482,7 @@ return(list_offset);
 }
 
 /* This is meant to operate on memory mapped files */
-LIBMVL_NAMED_LIST *mvl_read_attributes_list(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 metadata_offset)
+LIBMVL_NAMED_LIST *mvl_read_attributes_list(LIBMVL_CONTEXT *ctx, const void *data, LIBMVL_OFFSET64 metadata_offset)
 {
 LIBMVL_NAMED_LIST *L;
 long i, nattr;
@@ -519,7 +519,7 @@ return(L);
 }
 
 /* This is meant to operate on memory mapped files */
-LIBMVL_NAMED_LIST *mvl_read_named_list(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 offset)
+LIBMVL_NAMED_LIST *mvl_read_named_list(LIBMVL_CONTEXT *ctx, const void *data, LIBMVL_OFFSET64 offset)
 {
 LIBMVL_NAMED_LIST *L, *Lattr;
 char *p, *d;
@@ -571,7 +571,7 @@ fflush(ctx->f);
 ctx->f=NULL;
 }
 
-LIBMVL_OFFSET64 mvl_directory_length(void *data)
+LIBMVL_OFFSET64 mvl_directory_length(const void *data)
 {
 LIBMVL_VECTOR_HEADER *p=(LIBMVL_VECTOR_HEADER *)data;
 if(p->type!=LIBMVL_VECTOR_OFFSET64) {
@@ -583,7 +583,7 @@ if(p->length &1) {
 return(p->length>>1);
 }
 
-LIBMVL_OFFSET64 mvl_directory_tag(void *data, int i)
+LIBMVL_OFFSET64 mvl_directory_tag(const void *data, int i)
 {
 LIBMVL_VECTOR *p=(LIBMVL_VECTOR_HEADER *)data;
 return(p->u.offset[i]);
@@ -595,7 +595,7 @@ LIBMVL_VECTOR *p=(LIBMVL_VECTOR_HEADER *)data;
 return(p->u.offset[i+(p->header.length>>1)]);
 }
 
-LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, char *tag)
+LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, const char *tag)
 {
 int i;
 for(i=ctx->dir_free-1;i>=0;i--) {
@@ -604,7 +604,7 @@ for(i=ctx->dir_free-1;i>=0;i--) {
 return(0);
 }
 
-void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, void *data)
+void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *data)
 {
 LIBMVL_PREAMBLE *pr=(LIBMVL_PREAMBLE *)data;
 LIBMVL_POSTAMBLE *pa=(LIBMVL_POSTAMBLE *)&(((unsigned char *)data)[length-sizeof(LIBMVL_POSTAMBLE)]);

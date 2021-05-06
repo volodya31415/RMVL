@@ -121,11 +121,11 @@ void mvl_free_context(LIBMVL_CONTEXT *ctx);
 #define LIBMVL_NO_METADATA 	0
 #define LIBMVL_NULL_OFFSET 	0
 
-LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, void *data, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, const void *data, LIBMVL_OFFSET64 metadata);
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata);
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */
-LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, char *data, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, const char *data, LIBMVL_OFFSET64 metadata);
 
 /* This is convenient for writing several values of the same type as vector without allocating a temporary array.
  * This function creates the array internally using alloca().
@@ -137,8 +137,8 @@ LIBMVL_OFFSET64 mvl_write_vector_inline(LIBMVL_CONTEXT *ctx, int type, int count
 #define MVL_WVEC(ctx, type, ...) mvl_write_vector_inline(ctx, type, MVL_NUMARGS(__VA_ARGS__), 0, __VA_ARGS__)
 
 
-void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag);
-void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, char *tag, LIBMVL_OFFSET64 tag_size);
+void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag);
+void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag, LIBMVL_OFFSET64 tag_size);
 LIBMVL_OFFSET64 mvl_write_directory(LIBMVL_CONTEXT *ctx);
 
 LIBMVL_NAMED_LIST *mvl_create_named_list(int size);
@@ -147,16 +147,16 @@ long mvl_add_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag, 
 LIBMVL_OFFSET64 mvl_find_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag);
 LIBMVL_OFFSET64 mvl_write_attributes_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
 /* This is meant to operate on memory mapped (or in-memory) files */
-LIBMVL_NAMED_LIST *mvl_read_attributes_list(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 metadata_offset);
+LIBMVL_NAMED_LIST *mvl_read_attributes_list(LIBMVL_CONTEXT *ctx, const void *data, LIBMVL_OFFSET64 metadata_offset);
 
 /* Convenience function that create a named list populated with necessary entries
  * It needs writable context to write attribute values */
-LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, char *R_class);
+LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, const char *R_class);
 
 /* This function writes contents of named list and creates R-compatible metadata with entry names */
 LIBMVL_OFFSET64 mvl_write_named_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
 /* This is meant to operate on memory mapped (or in-memory) files */
-LIBMVL_NAMED_LIST *mvl_read_named_list(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 offset);
+LIBMVL_NAMED_LIST *mvl_read_named_list(LIBMVL_CONTEXT *ctx, const void *data, LIBMVL_OFFSET64 offset);
 
 void mvl_open(LIBMVL_CONTEXT *ctx, FILE *f);
 void mvl_close(LIBMVL_CONTEXT *ctx);
@@ -220,7 +220,7 @@ switch(mvl_vector_type(vec)) {
 	}
 }
 
-static inline double mvl_named_list_get_double(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, char *tag, long idx)
+static inline double mvl_named_list_get_double(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, const char *tag, long idx)
 {
 LIBMVL_VECTOR *vec;
 LIBMVL_OFFSET64 ofs;
@@ -231,7 +231,7 @@ vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
 return(mvl_as_double(vec, idx));
 }
 
-static inline double mvl_named_list_get_double_default(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, char *tag, long idx, double def)
+static inline double mvl_named_list_get_double_default(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, const char *tag, long idx, double def)
 {
 LIBMVL_VECTOR *vec;
 LIBMVL_OFFSET64 ofs;
@@ -242,7 +242,7 @@ vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
 return(mvl_as_double_default(vec, idx, def));
 }
 
-static inline LIBMVL_OFFSET64 mvl_named_list_get_offset(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, char *tag, long idx)
+static inline LIBMVL_OFFSET64 mvl_named_list_get_offset(LIBMVL_NAMED_LIST *L, const void *data, long tag_length, const char *tag, long idx)
 {
 LIBMVL_VECTOR *vec;
 LIBMVL_OFFSET64 ofs;
@@ -253,11 +253,11 @@ vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
 return(mvl_as_offset(vec, idx));
 }
 
-LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, char *tag);
+LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, const char *tag);
 
 /* This initializes context to use in-memory image of given length starting at data
  * the image could have been loaded via fread, or memory mapped
  */
-void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, void *data);
+void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *data);
 
 #endif
