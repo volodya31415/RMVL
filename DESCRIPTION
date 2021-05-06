@@ -11,3 +11,4 @@ Description: Mappable vector library allows to memory map large datasets on disk
 License: LGPL-2.1
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.1.1
