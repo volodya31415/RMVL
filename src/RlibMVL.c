@@ -1106,6 +1106,7 @@ double *doffset=(double *)&offset;
 const char *ch;
 LIBMVL_OFFSET64 *strvec;
 long long *idata;
+float *fdata;
 
 SEXP ans, class;
 
@@ -1181,6 +1182,17 @@ switch(type) {
 				error("can only write raw, double and integer to INT64");
 				return(R_NilValue);
 			}
+		break;
+	case LIBMVL_VECTOR_FLOAT:
+		fdata=calloc(xlength(data), sizeof(*fdata));
+		if(fdata==NULL) {
+			error("Out of memory");
+			return(R_NilValue);
+			}
+		for(i=0;i<xlength(data);i++)
+			fdata[i]=REAL(data)[i];
+		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_FLOAT, xlength(data), fdata, *moffset);
+		free(fdata);
 		break;
 	case LIBMVL_VECTOR_DOUBLE:
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_DOUBLE, xlength(data), REAL(data), *moffset);
