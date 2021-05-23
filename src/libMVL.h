@@ -114,6 +114,8 @@ typedef struct {
 #define LIBMVL_ERR_INVALID_ATTR_LIST	-12
 #define LIBMVL_ERR_INVALID_OFFSET	-13
 #define LIBMVL_ERR_INVALID_ATTR		-14
+#define LIBMVL_ERR_CANNOT_SEEK		-15
+#define LIBMVL_ERR_INVALID_PARAMETER	-16
 	
 LIBMVL_CONTEXT *mvl_create_context(void);
 void mvl_free_context(LIBMVL_CONTEXT *ctx);
@@ -122,6 +124,14 @@ void mvl_free_context(LIBMVL_CONTEXT *ctx);
 #define LIBMVL_NULL_OFFSET 	0
 
 LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, const void *data, LIBMVL_OFFSET64 metadata);
+
+/* This is identical to mvl_write_vector() except that it allows to reserve space for more data than is supplied. */
+LIBMVL_OFFSET64 mvl_start_write_vector(LIBMVL_CONTEXT *ctx, int type, long expected_length, long length, const void *data, LIBMVL_OFFSET64 metadata);
+/* Rewrite data in already written vector */
+/* In particular this allows vectors to be built up in pieces, by calling mvl_start_write_vector first */
+void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 offset, long length, const void *data);
+
+
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata);
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */

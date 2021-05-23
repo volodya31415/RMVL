@@ -71,11 +71,32 @@ if(ctx->abort_on_error) {
 	}
 }
 
-void mvl_write(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, void *data)
+void mvl_write(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *data)
 {
 LIBMVL_OFFSET64 n;
 n=fwrite(data, 1, length, ctx->f);
 if(n<length)mvl_set_error(ctx, LIBMVL_ERR_INCOMPLETE_WRITE);
+}
+
+void mvl_rewrite(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, LIBMVL_OFFSET64 length, const void *data)
+{
+LIBMVL_OFFSET64 n;
+off_t cur;
+cur=ftello(ctx->f);
+if(cur<0) {
+	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
+	return;
+	}
+if(fseeko(ctx->f, offset, SEEK_SET)<0) {
+	mvl_set_error(ctx, LIBMVL_ERR_CANNOT_SEEK);
+	return;
+	}
+n=fwrite(data, 1, length, ctx->f);
+if(n<length)mvl_set_error(ctx, LIBMVL_ERR_INCOMPLETE_WRITE);
+if(fseeko(ctx->f, cur, SEEK_SET)<0) {
+	mvl_set_error(ctx, LIBMVL_ERR_CANNOT_SEEK);
+	return;
+	}
 }
 
 void mvl_write_preamble(LIBMVL_CONTEXT *ctx)
@@ -147,6 +168,102 @@ if(padding>0) {
 	}
 
 return(offset);
+}
+
+LIBMVL_OFFSET64 mvl_start_write_vector(LIBMVL_CONTEXT *ctx, int type, long expected_length, long length, const void *data, LIBMVL_OFFSET64 metadata)
+{
+LIBMVL_OFFSET64 byte_length, total_byte_length;
+int padding;
+unsigned char *zeros;
+LIBMVL_OFFSET64 offset;
+
+if(length>expected_length) {
+	mvl_set_error(ctx, LIBMVL_ERR_INVALID_PARAMETER);
+	return(LIBMVL_NULL_OFFSET);
+	}
+
+
+memset(&(ctx->tmp_vh), 0, sizeof(ctx->tmp_vh));
+
+switch(type) {
+	case LIBMVL_VECTOR_CSTRING:
+	case LIBMVL_VECTOR_UINT8:
+		byte_length=length;
+		total_byte_length=expected_length;
+		break;
+	case LIBMVL_VECTOR_INT32:
+	case LIBMVL_VECTOR_FLOAT:
+		byte_length=length*4;
+		total_byte_length=expected_length*4;
+		break;
+	case LIBMVL_VECTOR_INT64:
+	case LIBMVL_VECTOR_DOUBLE:
+	case LIBMVL_VECTOR_OFFSET64:
+		byte_length=length*8;
+		total_byte_length=expected_length*8;
+		break;
+	default:
+		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+		return(LIBMVL_NULL_OFFSET);
+	}
+padding=ctx->alignment-((total_byte_length+sizeof(ctx->tmp_vh)) & (ctx->alignment-1));
+padding=padding & (ctx->alignment-1);
+
+ctx->tmp_vh.length=expected_length;
+ctx->tmp_vh.type=type;
+ctx->tmp_vh.metadata=metadata;
+
+offset=ftello(ctx->f);
+
+if((long long)offset<0) {
+	perror("mvl_write_vector");
+	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
+	return(LIBMVL_NULL_OFFSET);
+	}
+
+mvl_write(ctx, sizeof(ctx->tmp_vh), &ctx->tmp_vh);
+if(byte_length>0)mvl_write(ctx, byte_length, data);
+if(total_byte_length>byte_length) {
+	if(fseeko(ctx->f, total_byte_length-byte_length, SEEK_CUR)<0) {
+		mvl_set_error(ctx, LIBMVL_ERR_CANNOT_SEEK);
+		return(LIBMVL_NULL_OFFSET);
+		}
+	}
+
+if(padding>0) {
+	zeros=alloca(padding);
+	memset(zeros, 0, padding);
+	mvl_write(ctx, padding, zeros);
+	}
+
+return(offset);
+}
+
+void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 offset, long length, const void *data)
+{
+LIBMVL_OFFSET64 byte_length;
+off_t cur;
+
+switch(type) {
+	case LIBMVL_VECTOR_CSTRING:
+	case LIBMVL_VECTOR_UINT8:
+		byte_length=length;
+		break;
+	case LIBMVL_VECTOR_INT32:
+	case LIBMVL_VECTOR_FLOAT:
+		byte_length=length*4;
+		break;
+	case LIBMVL_VECTOR_INT64:
+	case LIBMVL_VECTOR_DOUBLE:
+	case LIBMVL_VECTOR_OFFSET64:
+		byte_length=length*8;
+		break;
+	default:
+		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+		return(LIBMVL_NULL_OFFSET);
+	}
+
+if(byte_length>0)mvl_rewrite(ctx, offset, byte_length, data);
 }
 
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata)
