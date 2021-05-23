@@ -242,7 +242,6 @@ return(offset);
 void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 offset, long length, const void *data)
 {
 LIBMVL_OFFSET64 byte_length;
-off_t cur;
 
 switch(type) {
 	case LIBMVL_VECTOR_CSTRING:
@@ -260,7 +259,7 @@ switch(type) {
 		break;
 	default:
 		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
-		return(LIBMVL_NULL_OFFSET);
+		return;
 	}
 
 if(byte_length>0)mvl_rewrite(ctx, offset, byte_length, data);
