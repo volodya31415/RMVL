@@ -1,13 +1,13 @@
 Package: RMVL
-Title: Mappable vector library for handling large datasets
+Title: Mappable Vector Library for Handling Large Datasets
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Vladimir",
            family = "Dergachev",
            role = c("aut", "cre"),
            email = "volodya@mindspring.com",
-           comment = structure("YOUR-ORCID-ID", .Names = "ORCID"))
-Description: Mappable vector library allows to memory map large datasets on disk. The data layout is optimized for memory efficiency and vector processing. Simple C API allows for interchange of datasets with outside programs.
+           comment = structure("https://orcid.org/0000-0003-4708-6625", .Names = "ORCID"))
+Description: Mappable vector library allows to memory map large datasets on disk. The data is accessed using usual R list and array subscription operators. The data layout is optimized for memory efficiency and vector processing. Simple C API allows for interchange of datasets with outside programs.
 License: LGPL-2.1
 Encoding: UTF-8
 LazyData: true

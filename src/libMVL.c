@@ -701,13 +701,13 @@ return(p->length>>1);
 
 LIBMVL_OFFSET64 mvl_directory_tag(const void *data, int i)
 {
-LIBMVL_VECTOR *p=(LIBMVL_VECTOR_HEADER *)data;
+LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
 return(p->u.offset[i]);
 }
 
 LIBMVL_OFFSET64 mvl_directory_entry(void *data, int i)
 {
-LIBMVL_VECTOR *p=(LIBMVL_VECTOR_HEADER *)data;
+LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
 return(p->u.offset[i+(p->header.length>>1)]);
 }
 
