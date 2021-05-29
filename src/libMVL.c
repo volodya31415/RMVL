@@ -7,6 +7,11 @@
 #include <unistd.h>
 #include <stdarg.h>
 
+#ifdef RMVL_PACKAGE
+#include <R.h>
+#include <Rinternals.h>
+#endif
+
 #include "libMVL.h"
 
 static void *do_malloc(long a, long b)
@@ -17,7 +22,11 @@ if(a<1)a=1;
 if(b<1)b=1;
 r=malloc(a*b);
 while(r==NULL){
+#ifdef USING_R
+	Rprintf("libMVL: Could not allocate %ld chunks of %ld bytes each (%ld bytes total)\n",a,b,a*b);
+#else
 	fprintf(stderr,"libMVL: Could not allocate %ld chunks of %ld bytes each (%ld bytes total)\n",a,b,a*b);
+#endif
 //	if(i>args_info.memory_allocation_retries_arg)exit(-1);
 	sleep(10);
 	r=malloc(a*b);
@@ -66,8 +75,12 @@ void mvl_set_error(LIBMVL_CONTEXT *ctx, int error)
 {
 ctx->error=error;
 if(ctx->abort_on_error) {
+#ifdef USING_R
+	Rprintf("*** ERROR: libMVL code %d\n", error);
+#else
 	fprintf(stderr, "*** ERROR: libMVL code %d\n", error);
 	exit(-1);
+#endif
 	}
 }
 

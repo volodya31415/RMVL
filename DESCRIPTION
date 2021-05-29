@@ -5,7 +5,7 @@ Authors@R:
     person(given = "Vladimir",
            family = "Dergachev",
            role = c("aut", "cre"),
-           email = "volodya@mindspring.com",
+           email = "support@altumrete.com",
            comment = structure("https://orcid.org/0000-0003-4708-6625", .Names = "ORCID"))
 Description: Mappable vector library allows to memory map large datasets on disk. The data is accessed using usual R list and array subscription operators. The data layout is optimized for memory efficiency and vector processing. Simple C API allows for interchange of datasets with outside programs.
 License: LGPL-2.1

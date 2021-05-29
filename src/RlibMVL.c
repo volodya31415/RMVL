@@ -4,7 +4,6 @@
 #include "libMVL.h"
 #include <R.h>
 #include <Rinternals.h>
-#include "sql_operations.h"
 //#include <Rext/Print.h>
 
 typedef struct {
@@ -1236,37 +1235,6 @@ UNPROTECT(2);
 return(ans);
 }
 
-void sql_yyerror(const char *message)
-{
-error("sql parsing error: %s", message);
-}
-
-SEXP execute_sql(SEXP idx0, SEXP sql_line)
-{
-int idx;
-OPERATION *sql_code;
-if(length(idx0)!=1) {
-	error("write_vector first argument must be a single integer");
-	return(R_NilValue);
-	}
-idx=INTEGER(idx0)[0];
-if(idx<0 || idx>=libraries_free) {
-	error("no such library");
-	return(R_NilValue);
-	}
-if(libraries[idx].ctx==NULL) {
-	error("no such library");
-	return(R_NilValue);
-	}
-
-sql_code=NULL;
-compile_sql(CHAR(asChar(sql_line)), -1, &sql_code);
-printf("Parsed 1\n");
-dump_operations(sql_code);
-
-return(R_NilValue);
-}
-
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
   R_RegisterCCallable("RMVL", "close_library",  (DL_FUNC) &close_library);
@@ -1284,5 +1252,4 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real);
   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
-  R_RegisterCCallable("RMVL", "execute_sql",  (DL_FUNC) &execute_sql);
 }
