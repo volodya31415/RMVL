@@ -63,6 +63,8 @@ ctx->dir_free=0;
 ctx->directory=do_malloc(ctx->dir_size, sizeof(*ctx->directory));
 ctx->directory_offset=-1;
 
+ctx->character_class_offset=0;
+
 return(ctx);
 }
 
@@ -138,23 +140,10 @@ LIBMVL_OFFSET64 offset;
 
 memset(&(ctx->tmp_vh), 0, sizeof(ctx->tmp_vh));
 
-switch(type) {
-	case LIBMVL_VECTOR_CSTRING:
-	case LIBMVL_VECTOR_UINT8:
-		byte_length=length;
-		break;
-	case LIBMVL_VECTOR_INT32:
-	case LIBMVL_VECTOR_FLOAT:
-		byte_length=length*4;
-		break;
-	case LIBMVL_VECTOR_INT64:
-	case LIBMVL_VECTOR_DOUBLE:
-	case LIBMVL_VECTOR_OFFSET64:
-		byte_length=length*8;
-		break;
-	default:
-		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
-		return(LIBMVL_NULL_OFFSET);
+byte_length=length*mvl_element_size(type);
+if(byte_length<=0) {
+	mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+	return(LIBMVL_NULL_OFFSET);
 	}
 padding=ctx->alignment-((byte_length+sizeof(ctx->tmp_vh)) & (ctx->alignment-1));
 padding=padding & (ctx->alignment-1);
@@ -256,24 +245,7 @@ void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 offset, l
 {
 LIBMVL_OFFSET64 byte_length;
 
-switch(type) {
-	case LIBMVL_VECTOR_CSTRING:
-	case LIBMVL_VECTOR_UINT8:
-		byte_length=length;
-		break;
-	case LIBMVL_VECTOR_INT32:
-	case LIBMVL_VECTOR_FLOAT:
-		byte_length=length*4;
-		break;
-	case LIBMVL_VECTOR_INT64:
-	case LIBMVL_VECTOR_DOUBLE:
-	case LIBMVL_VECTOR_OFFSET64:
-		byte_length=length*8;
-		break;
-	default:
-		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
-		return;
-	}
+byte_length=length*mvl_element_size(type);
 
 if(byte_length>0)mvl_rewrite(ctx, offset, byte_length, data);
 }
@@ -291,23 +263,10 @@ for(i=0;i<nvec;i++)length+=lengths[i];
 
 memset(&(ctx->tmp_vh), 0, sizeof(ctx->tmp_vh));
 
-switch(type) {
-	case LIBMVL_VECTOR_CSTRING:
-	case LIBMVL_VECTOR_UINT8:
-		item_size=1;
-		break;
-	case LIBMVL_VECTOR_INT32:
-	case LIBMVL_VECTOR_FLOAT:
-		item_size=4;
-		break;
-	case LIBMVL_VECTOR_INT64:
-	case LIBMVL_VECTOR_DOUBLE:
-	case LIBMVL_VECTOR_OFFSET64:
-		item_size=8;
-		break;
-	default:
-		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
-		return(LIBMVL_NULL_OFFSET);
+item_size=mvl_element_size(type);
+if(item_size<=0) {
+	mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+	return(LIBMVL_NULL_OFFSET);
 	}
 byte_length=length*item_size;
 padding=ctx->alignment-((byte_length+sizeof(ctx->tmp_vh)) & (ctx->alignment-1));
@@ -409,6 +368,16 @@ switch(type) {
 	
 }
 
+LIBMVL_OFFSET64 mvl_get_character_class_offset(LIBMVL_CONTEXT *ctx)
+{
+LIBMVL_NAMED_LIST *L;
+if(ctx->character_class_offset==0) {
+	L=mvl_create_R_attributes_list(ctx, "character");
+	ctx->character_class_offset=mvl_write_attributes_list(ctx, L);
+	mvl_free_named_list(L);
+	}
+return(ctx->character_class_offset);
+}
 
 void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag)
 {
@@ -601,6 +570,31 @@ for(i=0;i<L->free;i++) {
 	
 metadata=mvl_create_R_attributes_list(ctx, "list");
 mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+
+list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, mvl_write_attributes_list(ctx, metadata));
+
+mvl_free_named_list(metadata);
+free(offsets);
+
+return(list_offset);
+}
+
+LIBMVL_OFFSET64 mvl_write_named_list_as_data_frame(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L, int nrows, LIBMVL_OFFSET64 rownames)
+{
+LIBMVL_OFFSET64 *offsets, list_offset;
+LIBMVL_NAMED_LIST *metadata;
+long i;
+offsets=do_malloc(L->free, sizeof(*offsets));
+
+for(i=0;i<L->free;i++) {
+	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
+	}
+	
+metadata=mvl_create_R_attributes_list(ctx, "data.frame");
+mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+mvl_add_list_entry(metadata, -1, "dim", MVL_WVEC(ctx, LIBMVL_VECTOR_INT32, nrows, (int)L->free));
+if(rownames!=0)mvl_add_list_entry(metadata, -1, "rownames", rownames);
+
 
 list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, mvl_write_attributes_list(ctx, metadata));
 

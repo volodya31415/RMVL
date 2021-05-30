@@ -25,6 +25,25 @@
 first 0 byte */
 #define LIBMVL_VECTOR_POSTAMBLE 1000
 
+static inline int mvl_element_size(int type) 
+{
+switch(type) {
+	case LIBMVL_VECTOR_UINT8:
+	case LIBMVL_VECTOR_CSTRING:
+		return 1;
+	case LIBMVL_VECTOR_INT32:
+	case LIBMVL_VECTOR_FLOAT:
+		return 4;
+	case LIBMVL_VECTOR_INT64:
+	case LIBMVL_VECTOR_OFFSET64:
+	case LIBMVL_VECTOR_DOUBLE:
+		return 8;
+	default:
+		return(0);
+	}
+}
+
+
 typedef unsigned long long LIBMVL_OFFSET64;
 
 typedef struct {
@@ -88,6 +107,8 @@ typedef struct {
 	long dir_free;
 	LIBMVL_DIRECTORY_ENTRY *directory;	
 	LIBMVL_OFFSET64 directory_offset;
+
+	LIBMVL_OFFSET64 character_class_offset;
 	
 	FILE *f;
 	
@@ -163,8 +184,23 @@ LIBMVL_NAMED_LIST *mvl_read_attributes_list(LIBMVL_CONTEXT *ctx, const void *dat
  * It needs writable context to write attribute values */
 LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, const char *R_class);
 
+/* Convenience function that returns an offset to attributes describing R-style character vector
+ * The attributes are written out during the first call to this function
+ */
+LIBMVL_OFFSET64 mvl_get_character_class_offset(LIBMVL_CONTEXT *ctx);
+
+
 /* This function writes contents of named list and creates R-compatible metadata with entry names */
 LIBMVL_OFFSET64 mvl_write_named_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L);
+
+/* This convenience function writes named list of vectors as R-compatible data frame. 
+ * A well formatted data frame would have vectors of the same length specified as nrows
+ * Assuring validity is up to the caller
+ * 
+ * rownames specifies an offset of optional row names of the data frame. Set as 0 to omit.
+ */
+LIBMVL_OFFSET64 mvl_write_named_list_as_data_frame(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L, int nrows, LIBMVL_OFFSET64 rownames);
+
 /* This is meant to operate on memory mapped (or in-memory) files */
 LIBMVL_NAMED_LIST *mvl_read_named_list(LIBMVL_CONTEXT *ctx, const void *data, LIBMVL_OFFSET64 offset);
 
