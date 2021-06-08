@@ -31,9 +31,9 @@ MVL_SMALL_LENGTH<-1024
 #'
 #' M3<-mvl_open("test2.mvl", append=TRUE, create=TRUE)
 #' L<-list()
-#' L[["x"]]<-mvl_write_object(M3, data.frame(x=1:1e6, y=rnorm(1e6), s=rep(c("a", "b"), 5e5)))
+#' df<-data.frame(x=1:1e6, y=rnorm(1e6), s=rep(c("a", "b"), 5e5))
+#' L[["x"]]<-mvl_write_object(M3, df, drop.rownames=TRUE)
 #' L[["description"]]<-"Example of large data frame"
-#' L[["size"]]<-1e6
 #' mvl_write_object(M3, L, "test_object")
 #' mvl_close(M3)
 #'
@@ -109,7 +109,7 @@ mvl_write_string<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	return(.Call("write_vector", MVLHANDLE[["handle"]], as.integer(10001), x, metadata.offset)) 
 	}
 	
-mvl_write_object_metadata<-function(MVLHANDLE, x) {
+mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE) {
 	n<-mvl_write_string(MVLHANDLE, "MVL_LAYOUT")
 	o<-mvl_write_string(MVLHANDLE, "R")
 	if(!is.null(dim(x))) {
@@ -124,7 +124,7 @@ mvl_write_object_metadata<-function(MVLHANDLE, x) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "names"))
 		o<-c(o, mvl_write_vector(MVLHANDLE, names(x)))
 		}
-	if(!is.null(rownames(x))) {
+	if(!is.null(rownames(x)) && !drop.rownames) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "rownames"))
 		o<-c(o, mvl_write_vector(MVLHANDLE, rownames(x)))
 		}
@@ -139,13 +139,14 @@ mvl_write_object_metadata<-function(MVLHANDLE, x) {
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
 #' @param x a suitable R object (vector, array, list, data.frame)
 #' @param name if specified add a named entry to MVL file directory
+#' @param drop.rownames set to TRUE to prevent rownames from being written
 #' @return and object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #'  
 #' @export
 #'
-mvl_write_object<-function(MVLHANDLE, x, name=NULL) {
+mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	#cat("Writing", class(x), typeof(x), "\n")
-	metadata<-mvl_write_object_metadata(MVLHANDLE, x)
+	metadata<-mvl_write_object_metadata(MVLHANDLE, x, drop.rownames=drop.rownames)
 	if(class(x) %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
