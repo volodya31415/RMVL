@@ -1156,7 +1156,7 @@ LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
 
 LIBMVL_OFFSET64 offset;
 double *doffset=(double *)&offset;
-const char *ch;
+const char *ch, **strvec2;
 LIBMVL_OFFSET64 *strvec;
 long long *idata;
 float *fdata;
@@ -1253,6 +1253,7 @@ switch(type) {
 	case LIBMVL_VECTOR_OFFSET64:
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_OFFSET64, xlength(data), REAL(data), *moffset);
 		break;
+#if 0
 	case 10000:
 		strvec=calloc(xlength(data), sizeof(*strvec));
 		if(strvec==NULL) {
@@ -1266,6 +1267,20 @@ switch(type) {
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_OFFSET64, xlength(data), strvec, *moffset);
 		free(strvec);
 		break;
+#else
+	case 10000:
+		strvec2=calloc(xlength(data), sizeof(*strvec2));
+		if(strvec2==NULL) {
+			error("Out of memory");
+			return(R_NilValue);
+			}
+		for(i=0;i<xlength(data);i++) {
+			strvec2[i]=CHAR(STRING_ELT(data, i));
+			}
+		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), NULL, strvec2, *moffset);
+		free(strvec2);
+		break;
+#endif
 	case 10001:
 		if(length(data)!=1) {
 			error("data has to be length 1 string vector");
