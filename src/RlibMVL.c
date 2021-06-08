@@ -396,6 +396,15 @@ for(i=0;i<xlength(offsets);i++) {
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(2);
 			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, mvl_vector_length(vec)-1));
+			/* TODO: check that vector length is within R limits */
+			for(j=0;j<mvl_vector_length(vec)-1;j++) {
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+				}
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
 		default:
 			warning("Unknown vector type");
 			SET_VECTOR_ELT(ans, i, R_NilValue);
@@ -515,6 +524,15 @@ for(i=0;i<xlength(offsets);i++) {
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(2);
 			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
+			/* TODO: check that vector length is within R limits */
+			for(j=0;j<xlength(indicies);j++) {
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, INTEGER(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, INTEGER(indicies)[j])));
+				}
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
 		default:
 			warning("Unknown vector type");
 			SET_VECTOR_ELT(ans, i, R_NilValue);
@@ -633,6 +651,15 @@ for(i=0;i<xlength(offsets);i++) {
 			classgets(v, class);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(2);
+			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
+			/* TODO: check that vector length is within R limits */
+			for(j=0;j<xlength(indicies);j++) {
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)REAL(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)REAL(indicies)[j])));
+				}
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
 			break;
 		default:
 			warning("Unknown vector type");
@@ -777,6 +804,15 @@ for(i=0;i<xlength(offsets);i++) {
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(2);
 			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, mvl_vector_length(vec)-1));
+			/* TODO: check that vector length is within R limits */
+			for(j=0;j<mvl_vector_length(vec)-1;j++) {
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+				}
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
 		default:
 			warning("Unknown vector type");
 			SET_VECTOR_ELT(ans, i, R_NilValue);
@@ -891,6 +927,15 @@ for(i=0;i<xlength(offsets);i++) {
 			classgets(v, class);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(2);
+			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
+			/* TODO: check that vector length is within R limits */
+			for(j=0;j<xlength(indicies);j++) {
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, INTEGER(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, INTEGER(indicies)[j])));
+				}
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
 			break;
 		default:
 			warning("Unknown vector type");
@@ -1008,6 +1053,15 @@ for(i=0;i<xlength(offsets);i++) {
 			classgets(v, class);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(2);
+			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
+			/* TODO: check that vector length is within R limits */
+			for(j=0;j<xlength(indicies);j++) {
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)REAL(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)REAL(indicies)[j])));
+				}
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
 			break;
 		default:
 			warning("Unknown vector type");

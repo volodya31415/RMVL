@@ -65,11 +65,14 @@ ctx->directory_offset=-1;
 
 ctx->character_class_offset=0;
 
+ctx->cached_strings=mvl_create_named_list(32);
+
 return(ctx);
 }
 
 void mvl_free_context(LIBMVL_CONTEXT *ctx)
 {
+mvl_free_named_list(ctx->cached_strings);
 free(ctx);
 }
 
@@ -304,6 +307,18 @@ if(length<0)length=strlen(data);
 return(mvl_write_vector(ctx, LIBMVL_VECTOR_CSTRING, length, data, metadata));
 }
 
+LIBMVL_OFFSET64 mvl_write_cached_string(LIBMVL_CONTEXT *ctx, long length, const char *data)
+{
+LIBMVL_OFFSET64 ofs;
+if(length<0)length=strlen(data);
+ofs=mvl_find_list_entry(ctx->cached_strings, length, data);
+if(ofs!=LIBMVL_NULL_OFFSET)return(ofs);
+
+ofs=mvl_write_vector(ctx, LIBMVL_VECTOR_CSTRING, length, data, LIBMVL_NO_METADATA);
+mvl_add_list_entry(ctx->cached_strings, length, data, ofs);
+return(ofs);
+}
+
 LIBMVL_OFFSET64 mvl_write_vector_inline(LIBMVL_CONTEXT *ctx, int type, int count, LIBMVL_OFFSET64 metadata, ...)
 {
 int i;
@@ -366,6 +381,36 @@ switch(type) {
 		return(LIBMVL_NULL_OFFSET);
 	}
 	
+}
+
+LIBMVL_OFFSET64 mvl_write_packed_list(LIBMVL_CONTEXT *ctx, long count, long *str_size, const char **str, LIBMVL_OFFSET64 metadata)
+{
+LIBMVL_OFFSET64 *ofsv, ofs1, ofs2, len1;
+long *str_size2;
+long i;
+ofsv=do_malloc(count+1, sizeof(*ofsv));
+str_size2=do_malloc(count, sizeof(*str_size2));
+
+len1=0;
+for(i=0;i<count;i++) {
+	if((str_size==NULL) || (str_size[i]<0)) {
+		str_size2[i]=strlen(str[i]);
+		} else {
+		str_size2[i]=str_size[i];
+		}
+	len1+=str_size2[i];
+	}
+ofs1=mvl_write_concat_vectors(ctx, LIBMVL_VECTOR_UINT8, count, str_size2, str, LIBMVL_NO_METADATA);
+
+ofsv[0]=ofs1+sizeof(LIBMVL_VECTOR_HEADER);
+for(i=0;i<count;i++) {
+	ofsv[i+1]=ofsv[i]+str_size2[i];
+	}
+	
+ofs2=mvl_write_vector(ctx, LIBMVL_PACKED_LIST64, count+1, ofsv, metadata);
+free(ofsv);
+free(str_size2);
+return(ofs2);
 }
 
 LIBMVL_OFFSET64 mvl_get_character_class_offset(LIBMVL_CONTEXT *ctx)
@@ -534,8 +579,8 @@ LIBMVL_NAMED_LIST *mvl_create_R_attributes_list(LIBMVL_CONTEXT *ctx, const char 
 {
 LIBMVL_NAMED_LIST *L;
 L=mvl_create_named_list(-1);
-mvl_add_list_entry(L, -1, "MVL_LAYOUT", mvl_write_string(ctx, -1, "R", LIBMVL_NO_METADATA));
-mvl_add_list_entry(L, -1, "class", mvl_write_string(ctx, -1, R_class, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "MVL_LAYOUT", mvl_write_cached_string(ctx, -1, "R"));
+mvl_add_list_entry(L, -1, "class", mvl_write_cached_string(ctx, -1, R_class));
 return(L);
 }
 
@@ -546,7 +591,7 @@ long i;
 offsets=do_malloc(2*L->free, sizeof(*offsets));
 
 for(i=0;i<L->free;i++) {
-	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
+	offsets[i]=mvl_write_cached_string(ctx, L->tag_length[i], L->tag[i]);
 	}
 memcpy(&(offsets[L->free]), L->offset, L->free*sizeof(*offsets));
 
@@ -562,19 +607,20 @@ LIBMVL_OFFSET64 mvl_write_named_list(LIBMVL_CONTEXT *ctx, LIBMVL_NAMED_LIST *L)
 LIBMVL_OFFSET64 *offsets, list_offset;
 LIBMVL_NAMED_LIST *metadata;
 long i;
-offsets=do_malloc(L->free, sizeof(*offsets));
+// offsets=do_malloc(L->free, sizeof(*offsets));
 
-for(i=0;i<L->free;i++) {
-	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
-	}
+// for(i=0;i<L->free;i++) {
+// 	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
+// 	}
 	
 metadata=mvl_create_R_attributes_list(ctx, "list");
-mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+//mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+mvl_add_list_entry(metadata, -1, "names", mvl_write_packed_list(ctx, L->free, L->tag_length, L->tag, LIBMVL_NO_METADATA));
 
 list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, mvl_write_attributes_list(ctx, metadata));
 
 mvl_free_named_list(metadata);
-free(offsets);
+// free(offsets);
 
 return(list_offset);
 }
@@ -584,14 +630,15 @@ LIBMVL_OFFSET64 mvl_write_named_list_as_data_frame(LIBMVL_CONTEXT *ctx, LIBMVL_N
 LIBMVL_OFFSET64 *offsets, list_offset;
 LIBMVL_NAMED_LIST *metadata;
 long i;
-offsets=do_malloc(L->free, sizeof(*offsets));
-
-for(i=0;i<L->free;i++) {
-	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
-	}
+// offsets=do_malloc(L->free, sizeof(*offsets));
+// 
+// for(i=0;i<L->free;i++) {
+// 	offsets[i]=mvl_write_string(ctx, L->tag_length[i], L->tag[i], LIBMVL_NO_METADATA);
+// 	}
 	
 metadata=mvl_create_R_attributes_list(ctx, "data.frame");
-mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+// mvl_add_list_entry(metadata, -1, "names", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, offsets, LIBMVL_NO_METADATA));
+mvl_add_list_entry(metadata, -1, "names", mvl_write_packed_list(ctx, L->free, L->tag_length, L->tag, LIBMVL_NO_METADATA));
 mvl_add_list_entry(metadata, -1, "dim", MVL_WVEC(ctx, LIBMVL_VECTOR_INT32, nrows, (int)L->free));
 if(rownames!=0)mvl_add_list_entry(metadata, -1, "rownames", rownames);
 
@@ -599,7 +646,7 @@ if(rownames!=0)mvl_add_list_entry(metadata, -1, "rownames", rownames);
 list_offset=mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, L->free, L->offset, mvl_write_attributes_list(ctx, metadata));
 
 mvl_free_named_list(metadata);
-free(offsets);
+// free(offsets);
 
 return(list_offset);
 }
@@ -648,6 +695,7 @@ LIBMVL_NAMED_LIST *L, *Lattr;
 char *p, *d;
 LIBMVL_OFFSET64 names_ofs, tag_ofs;
 long i, nelem;
+int t;
 
 if(offset==LIBMVL_NULL_OFFSET)return(NULL);
 
@@ -663,17 +711,38 @@ if(Lattr==NULL)return(NULL);
 names_ofs=mvl_find_list_entry(Lattr, -1, "names");
 
 nelem=mvl_vector_length(&(d[offset]));
-if((mvl_vector_type(&(d[names_ofs]))!=LIBMVL_VECTOR_OFFSET64) || (nelem!=mvl_vector_length(&(d[names_ofs])))) {
-	mvl_free_named_list(Lattr);
-	mvl_set_error(ctx, LIBMVL_ERR_INVALID_ATTR);
-	return(NULL);
-	}
 
 L=mvl_create_named_list(nelem);
 
-for(i=0;i<nelem;i++) {
-	tag_ofs=mvl_vector_data(&(d[names_ofs])).offset[i];
-	mvl_add_list_entry(L, mvl_vector_length(&(d[tag_ofs])), mvl_vector_data(&(d[tag_ofs])).b, mvl_vector_data(&(d[offset])).offset[i]);
+switch(mvl_vector_type(&(d[names_ofs]))) {
+	case LIBMVL_VECTOR_OFFSET64:
+		if(nelem!=mvl_vector_length(&(d[names_ofs]))) {
+			mvl_free_named_list(L);
+			mvl_free_named_list(Lattr);
+			mvl_set_error(ctx, LIBMVL_ERR_INVALID_ATTR);
+			return(NULL);
+			}
+		for(i=0;i<nelem;i++) {
+			tag_ofs=mvl_vector_data(&(d[names_ofs])).offset[i];
+			mvl_add_list_entry(L, mvl_vector_length(&(d[tag_ofs])), mvl_vector_data(&(d[tag_ofs])).b, mvl_vector_data(&(d[offset])).offset[i]);
+			}
+		break;
+	case LIBMVL_PACKED_LIST64:
+		if(nelem+1!=mvl_vector_length(&(d[names_ofs]))) {
+			mvl_free_named_list(L);
+			mvl_free_named_list(Lattr);
+			mvl_set_error(ctx, LIBMVL_ERR_INVALID_ATTR);
+			return(NULL);
+			}
+		for(i=0;i<nelem;i++) {
+			mvl_add_list_entry(L, mvl_packed_list_get_entry_bytelength(&(d[names_ofs]), i), mvl_packed_list_get_entry(&(d[names_ofs]), d, i), mvl_vector_data(&(d[offset])).offset[i]);
+			}
+		break;
+	default:
+		mvl_free_named_list(L);
+		mvl_free_named_list(Lattr);
+		mvl_set_error(ctx, LIBMVL_ERR_INVALID_ATTR);
+		return(NULL);
 	}
 
 mvl_free_named_list(Lattr);

@@ -23,6 +23,19 @@
 #define LIBMVL_VECTOR_OFFSET64	100
 #define LIBMVL_VECTOR_CSTRING	101     /* C string is just like UINT8, except that the data is considered valid up to length or
 first 0 byte */
+
+/* The main purpose of this type is to provide efficient storage for vectors of short strings.
+ * This is stored as LIBMVL_VECTOR_OFFSET64 with offset[0] pointing to the start of basic vector and subsequent offsets pointing to the start of the next string.
+ * For convenience the last entry points to the end of the last string.
+ * 
+ * Thus the number of strings in PACKED_LIST64 is length-1.
+ * 
+ * The usuage of 64-bit offsets is allows for arbitrarily long strings in the list, while requiring only minimal overhead for each string.
+ * 
+ * The type is separate from LIBMVL_VECTOR_OFFSET64 to facilitate automated tree traversal.
+ */
+#define LIBMVL_PACKED_LIST64 	102     
+
 #define LIBMVL_VECTOR_POSTAMBLE 1000
 
 static inline int mvl_element_size(int type) 
@@ -37,6 +50,7 @@ switch(type) {
 	case LIBMVL_VECTOR_INT64:
 	case LIBMVL_VECTOR_OFFSET64:
 	case LIBMVL_VECTOR_DOUBLE:
+	case LIBMVL_PACKED_LIST64:
 		return 8;
 	default:
 		return(0);
@@ -108,6 +122,8 @@ typedef struct {
 	LIBMVL_DIRECTORY_ENTRY *directory;	
 	LIBMVL_OFFSET64 directory_offset;
 
+	LIBMVL_NAMED_LIST *cached_strings;
+	
 	LIBMVL_OFFSET64 character_class_offset;
 	
 	FILE *f;
@@ -157,6 +173,14 @@ LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nve
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */
 LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, const char *data, LIBMVL_OFFSET64 metadata);
+
+/* A cached version of the above that assures the string is only written once. No metadata because the strings are reused */
+LIBMVL_OFFSET64 mvl_write_cached_string(LIBMVL_CONTEXT *ctx, long length, const char *data);
+
+/* Create a packed list of strings 
+ * str_size can be either NULL or provide string length, some of which can be -1 
+ */
+LIBMVL_OFFSET64 mvl_write_packed_list(LIBMVL_CONTEXT *ctx, long count, long *str_size, const char **str, LIBMVL_OFFSET64 metadata);
 
 /* This is convenient for writing several values of the same type as vector without allocating a temporary array.
  * This function creates the array internally using alloca().
@@ -297,6 +321,28 @@ if(ofs==0)return(0);
 
 vec=(LIBMVL_VECTOR *)&(((char *)data)[ofs]);
 return(mvl_as_offset(vec, idx));
+}
+
+static inline LIBMVL_OFFSET64 mvl_packed_list_get_entry_bytelength(LIBMVL_VECTOR *vec, LIBMVL_OFFSET64 idx)
+{
+LIBMVL_OFFSET64 start, stop, len;
+if(mvl_vector_type(vec)!=LIBMVL_PACKED_LIST64)return -1;
+len=mvl_vector_length(vec);
+if((idx+1>=len) || (idx<0))return -1;
+start=mvl_vector_data(vec).offset[idx];
+stop=mvl_vector_data(vec).offset[idx+1];
+return(stop-start);
+}
+
+/* This returns char even though the underlying type can be different - we just want the pointer */
+static inline const char * mvl_packed_list_get_entry(LIBMVL_VECTOR *vec, const void *data, LIBMVL_OFFSET64 idx)
+{
+LIBMVL_OFFSET64 start, len;
+if(mvl_vector_type(vec)!=LIBMVL_PACKED_LIST64)return NULL;
+len=mvl_vector_length(vec);
+if((idx+1>=len) || (idx<0))return NULL;
+start=mvl_vector_data(vec).offset[idx];
+return(&(((const char *)(data))[start]));
 }
 
 LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, const char *tag);
