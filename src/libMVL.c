@@ -253,7 +253,7 @@ byte_length=length*mvl_element_size(type);
 if(byte_length>0)mvl_rewrite(ctx, offset, byte_length, data);
 }
 
-LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata)
+LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, const void **data, LIBMVL_OFFSET64 metadata)
 {
 LIBMVL_OFFSET64 byte_length, length;
 int padding, item_size;
