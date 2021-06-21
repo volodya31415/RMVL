@@ -116,7 +116,7 @@ if(p->length>0) {
 		p->ctx->f=NULL;
 		}
 #else
-	error("Windows not supported yet");
+	error("Memory map on windows not supported yet");
 #endif
 	} else {
 	mvl_write_preamble(p->ctx);
@@ -146,7 +146,11 @@ p=&(libraries[idx]);
 if(p->ctx==NULL)return(R_NilValue);
 
 if(p->data!=NULL) {
+#ifndef __WIN32__
 	munmap(p->data, p->length);
+#else
+	error("Memory map on Windows not supported yet");
+#endif
 	p->data=NULL;
 	}
 	

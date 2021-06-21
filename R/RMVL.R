@@ -20,6 +20,7 @@ MVL_SMALL_LENGTH<-1024
 #' @param create when TRUE create file if it did not exist
 #' @return handle to opened MVL file
 #' @examples
+#' \dontrun{
 #' M1<-mvl_open("test1.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(M1, data.frame(x=1:2, y=rnorm(2)), "test_frame")
 #' mvl_close(M1)
@@ -45,6 +46,7 @@ MVL_SMALL_LENGTH<-1024
 #' mvl_object_stats(L[["x"]])
 #' # If you need to get the whole x, one can use L[["x"]][]
 #' mvl_close(M4)
+#' }
 #' @export
 #'
 mvl_open<-function(filename, append=FALSE, create=FALSE) {
