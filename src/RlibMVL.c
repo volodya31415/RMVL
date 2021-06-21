@@ -1,5 +1,8 @@
 #include <stdio.h>
+#ifndef __WIN32__
 #include <sys/mman.h>
+#else
+#endif
 #include <errno.h>
 #include "libMVL.h"
 #include <R.h>
@@ -96,6 +99,7 @@ p->ctx=mvl_create_context();
 p->ctx->f=p->f;
 
 if(p->length>0) {
+#ifndef __WIN32__
 	p->data=mmap(NULL, libraries[idx].length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
 	if(p->data==NULL) {
 		error("Memory mapping MVL library: %s", strerror(errno));
@@ -111,6 +115,9 @@ if(p->length>0) {
 		p->f=NULL;
 		p->ctx->f=NULL;
 		}
+#else
+	error("Windows not supported yet");
+#endif
 	} else {
 	mvl_write_preamble(p->ctx);
 	p->modified=1;
@@ -1277,7 +1284,7 @@ switch(type) {
 		for(i=0;i<xlength(data);i++) {
 			strvec2[i]=CHAR(STRING_ELT(data, i));
 			}
-		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), NULL, strvec2, *moffset);
+		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), NULL, (char **)strvec2, *moffset);
 		free(strvec2);
 		break;
 #endif

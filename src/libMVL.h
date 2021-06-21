@@ -169,7 +169,7 @@ LIBMVL_OFFSET64 mvl_start_write_vector(LIBMVL_CONTEXT *ctx, int type, long expec
 void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 offset, long length, const void *data);
 
 
-LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, const void **data, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata);
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */
 LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, const char *data, LIBMVL_OFFSET64 metadata);
@@ -180,7 +180,7 @@ LIBMVL_OFFSET64 mvl_write_cached_string(LIBMVL_CONTEXT *ctx, long length, const 
 /* Create a packed list of strings 
  * str_size can be either NULL or provide string length, some of which can be -1 
  */
-LIBMVL_OFFSET64 mvl_write_packed_list(LIBMVL_CONTEXT *ctx, long count, long *str_size, const char **str, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_write_packed_list(LIBMVL_CONTEXT *ctx, long count, long *str_size, char **str, LIBMVL_OFFSET64 metadata);
 
 /* This is convenient for writing several values of the same type as vector without allocating a temporary array.
  * This function creates the array internally using alloca().

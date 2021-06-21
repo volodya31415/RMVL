@@ -253,7 +253,7 @@ byte_length=length*mvl_element_size(type);
 if(byte_length>0)mvl_rewrite(ctx, offset, byte_length, data);
 }
 
-LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, const void **data, LIBMVL_OFFSET64 metadata)
+LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata)
 {
 LIBMVL_OFFSET64 byte_length, length;
 int padding, item_size;
@@ -383,7 +383,7 @@ switch(type) {
 	
 }
 
-LIBMVL_OFFSET64 mvl_write_packed_list(LIBMVL_CONTEXT *ctx, long count, long *str_size, const char **str, LIBMVL_OFFSET64 metadata)
+LIBMVL_OFFSET64 mvl_write_packed_list(LIBMVL_CONTEXT *ctx, long count, long *str_size,  char **str, LIBMVL_OFFSET64 metadata)
 {
 LIBMVL_OFFSET64 *ofsv, ofs1, ofs2, len1;
 long *str_size2;
@@ -400,7 +400,7 @@ for(i=0;i<count;i++) {
 		}
 	len1+=str_size2[i];
 	}
-ofs1=mvl_write_concat_vectors(ctx, LIBMVL_VECTOR_UINT8, count, str_size2, str, LIBMVL_NO_METADATA);
+ofs1=mvl_write_concat_vectors(ctx, LIBMVL_VECTOR_UINT8, count, str_size2, (void **)str, LIBMVL_NO_METADATA);
 
 ofsv[0]=ofs1+sizeof(LIBMVL_VECTOR_HEADER);
 for(i=0;i<count;i++) {
@@ -735,7 +735,7 @@ switch(mvl_vector_type(&(d[names_ofs]))) {
 			return(NULL);
 			}
 		for(i=0;i<nelem;i++) {
-			mvl_add_list_entry(L, mvl_packed_list_get_entry_bytelength(&(d[names_ofs]), i), mvl_packed_list_get_entry(&(d[names_ofs]), d, i), mvl_vector_data(&(d[offset])).offset[i]);
+			mvl_add_list_entry(L, mvl_packed_list_get_entry_bytelength((LIBMVL_VECTOR *)&(d[names_ofs]), i), mvl_packed_list_get_entry((LIBMVL_VECTOR *)&(d[names_ofs]), d, i), mvl_vector_data(&(d[offset])).offset[i]);
 			}
 		break;
 	default:

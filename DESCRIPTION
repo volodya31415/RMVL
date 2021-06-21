@@ -1,6 +1,6 @@
 Package: RMVL
 Title: Mappable Vector Library for Handling Large Datasets
-Version: 0.0.0.9001
+Version: 0.0.1.0
 Authors@R: 
     person(given = "Vladimir",
            family = "Dergachev",
@@ -10,5 +10,4 @@ Authors@R:
 Description: Mappable vector library provides convenient way to access large datasets on solid state drives. This bypasses limitation of physical memory size as well as limited bandwidth of database interfaces. Access speed depends on storage medium, so solid state drive is recommended, preferably with PCI Express (or M.2 nvme) interface. The data is memory mapped into R and then accessed using usual R list and array subscription operators. The layout of underlying MVL files is optimized for large datasets. The vectors are stored to guarantee alignment for vector intrinsics after memory map. The package is built on top of libMVL, which can be used as standalone C library. libMVL has simple C API making it easy to interchange of datasets with outside programs. 
 License: LGPL-2.1
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.1.1
