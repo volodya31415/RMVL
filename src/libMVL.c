@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <alloca.h>
 
 #ifdef RMVL_PACKAGE
 #include <R.h>
