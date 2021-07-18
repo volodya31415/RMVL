@@ -20,6 +20,7 @@ MVL_SMALL_LENGTH<-1024
 #' @param create when TRUE create file if it did not exist
 #' @return handle to opened MVL file
 #' @examples
+#' \dontrun{
 #' M1<-mvl_open("test1.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(M1, data.frame(x=1:2, y=rnorm(2)), "test_frame")
 #' mvl_close(M1)
@@ -29,7 +30,6 @@ MVL_SMALL_LENGTH<-1024
 #' print(M2["test_frame"])
 #' mvl_close(M2)
 #'
-#' \dontrun{
 #' M3<-mvl_open("test2.mvl", append=TRUE, create=TRUE)
 #' L<-list()
 #' df<-data.frame(x=1:1e6, y=rnorm(1e6), s=rep(c("a", "b"), 5e5))
