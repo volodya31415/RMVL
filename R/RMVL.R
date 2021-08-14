@@ -103,6 +103,31 @@ mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	stop("Could not write vector with class ", class(x))
 	}
 
+mvl_fused_write_vector<-function(MVLHANDLE, L, metadata.offset=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	if(!is.null(metadata.offset) && !inherits(metadata.offset, "MVL_OFFSET"))stop("not an MVL offset")
+	
+	if(length(L)>0) {
+		for(i in 1:length(L)) {
+			if(class(L[[i]])=="factor")L[[i]]<-as.character(L[[i]])
+			}
+		type<-attr(L[[1]], "MVL_TYPE", exact=TRUE)
+		if(is.null(type) && class(L[[1]])=="MVL_OBJECT") {
+			type<-mvl_object_stats(L[[1]])[["type"]]
+			}
+		if(is.null(type)) {
+			type<-switch(class(L[[1]]), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
+			if(type<0 && class(L[[1]]) %in% c("array", "matrix"))type<-switch(typeof(x), double=5, integer=2, -1)
+			}
+		} else {
+		type<-5
+		}
+	if(type>0) {
+		return(.Call("fused_write_vector", MVLHANDLE[["handle"]], as.integer(type), L, metadata.offset)) 
+		}
+	stop("Could not write vector")
+	}
+	
 mvl_write_string<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	if(!is.null(metadata.offset) && !inherits(metadata.offset, "MVL_OFFSET"))stop("not an MVL offset")
@@ -111,12 +136,15 @@ mvl_write_string<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	return(.Call("write_vector", MVLHANDLE[["handle"]], as.integer(10001), x, metadata.offset)) 
 	}
 	
-mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE) {
+mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL) {
 	n<-mvl_write_string(MVLHANDLE, "MVL_LAYOUT")
 	o<-mvl_write_string(MVLHANDLE, "R")
-	if(!is.null(dim(x))) {
+	if(!is.null(dim(x)) || !is.null(dim.override)) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "dim"))
-		o<-c(o, mvl_write_vector(MVLHANDLE, dim(x)))
+		if(!is.null(dim.override))
+			o<-c(o, mvl_write_vector(MVLHANDLE, dim.override))
+			else
+			o<-c(o, mvl_write_vector(MVLHANDLE, dim(x)))
 		}
 	if(!is.null(class(x)) && !(class(x) %in% c("raw", "numeric", "integer"))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "class"))
@@ -136,7 +164,7 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE) {
 	return(mvl_write_vector(MVLHANDLE, ofs))
 	}
 
-#' Write R objects into MVL file
+#' Write R object into MVL file
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
 #' @param x a suitable R object (vector, array, list, data.frame)
@@ -155,6 +183,79 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 		return(invisible(offset))
 		}
 	if(class(x) %in% c("list", "data.frame")) {
+		v<-unlist(lapply(x, function(x){return(mvl_write_object(MVLHANDLE, x))}))
+		class(v)<-"MVL_OFFSET"
+		offset<-mvl_write_vector(MVLHANDLE, v, metadata)
+		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+		return(invisible(offset))
+		}
+	if(class(x) == "MVL_OFFSET") {
+		# Already written
+		return(invisible(x))
+		}
+	stop("Could not write object with class ", class(x))
+	}
+	
+#' Write concatenated R objects and write result into MVL file. 
+#'
+#' This is an equivalent of \code{rbind} for MVL files. This function can concatenate a mixture of R and MVL objects.
+#'
+#' Row names are always dropped.
+#'
+#' @param MVLHANDLE a handle to MVL file produced by \code{mvl_open()}
+#' @param L a list of suitable R objects (vector, array, data.frame) or equivalent MVL objects.
+#' @param name if specified add a named entry to MVL file directory
+#' @param drop.rownames set to TRUE to prevent rownames from being written
+#' @return and object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#'  
+#' @export
+#'
+mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
+	#cat("Writing", class(x), typeof(x), "\n")
+	if(length(L)<1)stop("No objects to concatenate")
+	if(!drop.rownames)stop("Cannot write out row names")
+	
+	cl<-class(L[[1]])
+	if(cl == "MVL_OBJECT") {
+		m<-L[[1]][["metadata"]]
+		if(is.null(m))stop("Malformed MVL object - no metadata")
+		cl<-m[["class"]]
+		if(is.null(cl)) {
+			st<-mvl_object_stats(L[[1]])
+			if(st[["type"]] %in% c(1,2))cl<-"integer"
+				else
+			if(st[["type"]] %in% c(3,4,5))cl<-"numeric"
+				else
+			if(st[["type"]] %in% c(102))cl<-"character"
+			}
+		if(is.null(cl))stop("Could not handle mvl object ", st)
+		}
+		
+	dims<-lapply(L, dim)
+	dimnull<-unlist(lapply(dims, is.null))
+	if(any(dimnull) && any(!dimnull))stop("Cannot concatenate: some objects have dimensions some not")
+	
+	lengths<-lapply(L, length)
+	if(is.null(dims[[1]]))dims<-lengths
+	
+	if(length(L)>1) {
+		kd<-length(dims[[1]])
+		if(length(dims[[1]])>1) {
+			for(i in 2:length(L)) {
+				if(any(dims[[i]][2:kd]!=dims[[1]][2:kd]))stop("Cannot concatenate: inconsistent dimensions for objects 1 and ", i, ": ", dims[[1]], " ", dims[[i]])
+				}
+			}
+		}
+	
+	
+	if(class(L[[1]]) %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
+		metadata<-mvl_write_object_metadata(MVLHANDLE, L[[1]], drop.rownames=drop.rownames)
+		offset<-mvl_fused_write_vector(MVLHANDLE, L, metadata)
+		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+		return(invisible(offset))
+		}
+	if(class(L[[1]]) %in% c("data.frame")) {
+		metadata<-mvl_write_object_metadata(MVLHANDLE, L[[1]], drop.rownames=drop.rownames)
 		v<-unlist(lapply(x, function(x){return(mvl_write_object(MVLHANDLE, x))}))
 		class(v)<-"MVL_OFFSET"
 		offset<-mvl_write_vector(MVLHANDLE, v, metadata)
@@ -189,8 +290,8 @@ mvl_read_metadata<-function(MVLHANDLE, metadata_offset) {
 #' This function is given either an MVL handle and an offset in MVL file to examine, or just a single parameter of class MVL_OBJECT that contains
 #'  both handle and offset
 #'
-#' The function returns list of object parameters including total number of element, element type (as used by libMVL) and a pointer to the underlying data
-#' The pointer is passed cast to double and can be used with custom C code, for example by using package inline.
+#' The function returns list of object parameters including total number of elements, element type (as used by libMVL) and a pointer to the underlying data
+#' The pointer is passed via a cast to double and can be used with custom C code, for example by using package inline.
 #'
 #' @param MVLHANDLE either a handle provided by mvl_open() or and MVL object such as produced by indexing operators
 #' @param offset offset to the object which properties are to be retrieved

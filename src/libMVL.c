@@ -209,6 +209,7 @@ switch(type) {
 	case LIBMVL_VECTOR_INT64:
 	case LIBMVL_VECTOR_DOUBLE:
 	case LIBMVL_VECTOR_OFFSET64:
+	case LIBMVL_PACKED_LIST64:
 		byte_length=length*8;
 		total_byte_length=expected_length*8;
 		break;
@@ -249,13 +250,14 @@ if(padding>0) {
 return(offset);
 }
 
-void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 offset, long length, const void *data)
+void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 base_offset, LIBMVL_OFFSET64 idx, long length, const void *data)
 {
-LIBMVL_OFFSET64 byte_length;
+LIBMVL_OFFSET64 byte_length, elt_size;
 
-byte_length=length*mvl_element_size(type);
+elt_size=mvl_element_size(type);
+byte_length=length*elt_size;
 
-if(byte_length>0)mvl_rewrite(ctx, offset, byte_length, data);
+if(byte_length>0)mvl_rewrite(ctx, base_offset+elt_size*idx+sizeof(ctx->tmp_vh), byte_length, data);
 }
 
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata)

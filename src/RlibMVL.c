@@ -217,6 +217,54 @@ p->f=NULL;
 return(R_NilValue);
 }
 
+
+SEXP VECTOR_ELT_STR(SEXP list, const char *s)
+{
+SEXP elt=R_NilValue;
+SEXP names=getAttrib(list, R_NamesSymbol);
+
+
+for (long i=0; i<xlength(list); i++)
+	if(!strcmp(CHAR(STRING_ELT(names, i)), s)) {
+		elt = VECTOR_ELT(list, i);
+		break;
+		}
+return elt;
+}
+
+
+void decode_mvl_object(SEXP obj, int *idx, LIBMVL_OFFSET64 *ofs)
+{
+int i;
+SEXP sidx, sofs;
+double doffset;
+LIBMVL_OFFSET64 *offset=(LIBMVL_OFFSET64 *)&doffset;
+
+sidx=VECTOR_ELT_STR(obj, "handle");
+sofs=VECTOR_ELT_STR(obj, "offset");
+
+*idx=-1;
+*ofs=0;
+
+if(sidx!=R_NilValue && length(sidx)==1)*idx=INTEGER(sidx)[0];
+
+if((*idx)>=0 && sofs!=R_NilValue && length(sofs)==1) {
+	doffset=REAL(sofs)[0];
+	*ofs=*offset;
+	}
+}
+
+LIBMVL_VECTOR * get_mvl_vector(int idx, LIBMVL_OFFSET64 offset)
+{
+if(idx<0 || idx>=libraries_free || offset==0)return(NULL);
+
+if(libraries[idx].ctx==NULL)return(NULL);
+
+if(libraries[idx].data==NULL)return(NULL);
+
+return((LIBMVL_VECTOR *)(&libraries[idx].data[offset]));
+}
+
 SEXP find_directory_entries(SEXP idx0, SEXP tag)
 {
 int idx;
@@ -1223,6 +1271,9 @@ LIBMVL_OFFSET64 *strvec;
 long long *idata;
 float *fdata;
 
+double *pd;
+int *pi;
+
 SEXP ans, class;
 
 if(length(idx0)!=1) {
@@ -1275,8 +1326,9 @@ switch(type) {
 					error("Out of memory");
 					return(R_NilValue);
 					}
+				pd=REAL(data);
 				for(i=0;i<xlength(data);i++)
-					idata[i]=REAL(data)[i];
+					idata[i]=pd[i];
 				
 				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, xlength(data), idata, *moffset);
 				free(idata);
@@ -1287,8 +1339,9 @@ switch(type) {
 					error("Out of memory");
 					return(R_NilValue);
 					}
+				pi=INTEGER(data);
 				for(i=0;i<xlength(data);i++)
-					idata[i]=REAL(data)[i];
+					idata[i]=pi[i];
 				
 				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, xlength(data), idata, *moffset);
 				free(idata);
@@ -1304,8 +1357,9 @@ switch(type) {
 			error("Out of memory");
 			return(R_NilValue);
 			}
+		pd=REAL(data);
 		for(i=0;i<xlength(data);i++)
-			fdata[i]=REAL(data)[i];
+			fdata[i]=pd[i];
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_FLOAT, xlength(data), fdata, *moffset);
 		free(fdata);
 		break;
@@ -1366,6 +1420,381 @@ UNPROTECT(2);
 return(ans);
 }
 
+
+// SEXP start_write_vector(SEXP idx0, SEXP type0, SEXP total_length, SEXP metadata_offset)
+// {
+// long i;
+// int idx, type;
+// double dmoffset;
+// LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
+// 
+// LIBMVL_OFFSET64 offset;
+// double *doffset=(double *)&offset;
+// const char *ch, **strvec2;
+// LIBMVL_OFFSET64 *strvec;
+// long long *idata;
+// float *fdata;
+// 
+// SEXP ans, class;
+// 
+// if(length(idx0)!=1) {
+// 	error("write_vector first argument must be a single integer");
+// 	return(R_NilValue);
+// 	}
+// idx=INTEGER(idx0)[0];
+// if(idx<0 || idx>=libraries_free) {
+// 	error("no such library");
+// 	return(R_NilValue);
+// 	}
+// if(libraries[idx].ctx==NULL) {
+// 	error("no such library");
+// 	return(R_NilValue);
+// 	}
+// if(libraries[idx].f==NULL) {
+// 	error("library not open for writing");
+// 	return(R_NilValue);
+// 	}
+// 
+// if(length(type0)!=1) {
+// 	error("start_write_vector second argument must be a single integer");
+// 	return(R_NilValue);
+// 	}
+// type=INTEGER(type0)[0];
+// 
+// if(length(total_length)!=1) {
+// 	error("start_write_vector third argument must be a single numeric");
+// 	return(R_NilValue);
+// 	}
+// 
+// libraries[idx].modified=1;
+// 
+// if(length(metadata_offset)<1) {
+// 	*moffset=0;
+// 	} else {
+// 	dmoffset=REAL(metadata_offset)[0];
+// 	}
+// 	
+// offset=mvl_start_write_vector(libraries[idx].ctx, type, REAL(total_length)[0], 0, NULL, *moffset);
+// 
+// ans=PROTECT(allocVector(REALSXP, 1));
+// REAL(ans)[0]=*doffset;
+// 
+// class=PROTECT(allocVector(STRSXP, 1));
+// SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+// classgets(ans, class);
+// UNPROTECT(2);
+// return(ans);
+// }
+
+
+SEXP fused_write_vector(SEXP idx0, SEXP type0, SEXP data_list, SEXP metadata_offset)
+{
+long i, j, k, m;
+int idx, data_idx, type;
+double dmoffset;
+LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
+
+LIBMVL_OFFSET64 offset, char_offset, data_offset, vec_idx, char_idx;
+double *doffset=(double *)&offset;
+const char *ch, **strvec2;
+LIBMVL_OFFSET64 *strvec;
+long long *idata;
+float *fdata;
+SEXP data;
+
+double *pd;
+int *pi;
+unsigned char *pc;
+long total_length, char_total_length;
+
+LIBMVL_VECTOR *vec, *char_vec;
+
+SEXP ans, class;
+
+if(length(idx0)!=1) {
+	error("fused_write_vector first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("library not open for writing");
+	return(R_NilValue);
+	}
+	
+if(TYPEOF(data_list)!=VECSXP) {
+	error("fused_write_vector third argument must be a list of data to write out");
+	return(R_NilValue);
+	}
+
+if(length(type0)!=1) {
+	error("fused_write_vector second argument must be a single integer");
+	return(R_NilValue);
+	}
+type=INTEGER(type0)[0];
+
+libraries[idx].modified=1;
+
+if(length(metadata_offset)<1) {
+	*moffset=0;
+	} else {
+	dmoffset=REAL(metadata_offset)[0];
+	}
+
+total_length=0;
+char_total_length=0;
+for(k=0;k<xlength(data_list);k++) {
+	data=VECTOR_ELT(data_list, k);
+	
+	if(TYPEOF(data)==STRSXP) {
+		total_length+=xlength(data);
+		for(i=0;i<xlength(data);i++) {
+			char_total_length+=strlen(CHAR(STRING_ELT(data, i)));
+			}
+		continue;
+		}
+	
+	if(TYPEOF(data)!=VECSXP) {
+		total_length+=xlength(data);
+		continue;
+		}
+	decode_mvl_object(data, &data_idx, &data_offset);
+	vec=get_mvl_vector(data_idx, data_offset);
+	
+	if(vec==NULL) {
+		error("Invalid MVL object in data list");
+		return(R_NilValue);
+		}
+	if(mvl_vector_type(vec)!=type) {
+		switch(type) {
+			case 10000:
+				if(mvl_vector_type(vec)!=LIBMVL_PACKED_LIST64) {
+					error("Cannot convert MVL object to character");
+					return(R_NilValue);
+					}
+				if(mvl_vector_length(vec)<1) {
+					error("Invalid MVL packed list");
+					return(R_NilValue);
+					}
+				total_length+=mvl_vector_length(vec)-1;
+				char_total_length+=mvl_vector_data(vec).offset[mvl_vector_length(vec)]-mvl_vector_data(vec).offset[0];
+				break;
+			default:
+				error("Internal conversion between types of MVL objects not supported yet");
+				return(R_NilValue);
+			}
+		} else {
+		total_length+=mvl_vector_length(vec);
+		}
+	}
+
+if(char_total_length>0) {
+	char_offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_total_length, 0, NULL, LIBMVL_NO_METADATA);
+	char_offset+=sizeof(LIBMVL_VECTOR_HEADER);
+	total_length++;
+	offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, total_length, 1, &char_offset, *moffset);
+//	Rprintf("packed_list: %ld %ld %ld %ld\n", total_length, char_total_length, offset, char_offset);
+	vec_idx=1;
+	char_idx=0;
+	} else {
+	offset=mvl_start_write_vector(libraries[idx].ctx, type, total_length, 0, NULL, *moffset);
+	vec_idx=0;
+	char_idx=0;
+	}
+
+for(k=0;k<xlength(data_list);k++) {
+	data=VECTOR_ELT(data_list, k);
+
+	if(TYPEOF(data)==VECSXP) {
+		decode_mvl_object(data, &data_idx, &data_offset);
+		vec=get_mvl_vector(data_idx, data_offset);
+		
+		if(mvl_vector_type(vec)==type) {
+			mvl_rewrite_vector(libraries[idx].ctx, type, offset, vec_idx, mvl_vector_length(vec), &(mvl_vector_data(vec)));
+			vec_idx+=mvl_vector_length(vec);
+			continue;
+			}
+
+		switch(type) {
+			case LIBMVL_VECTOR_INT32:
+				break;
+			case LIBMVL_VECTOR_INT64:
+				break;
+			case LIBMVL_VECTOR_FLOAT:
+				break;
+			case LIBMVL_VECTOR_DOUBLE:
+				break;
+			case 10000:
+				pc=(unsigned char *)get_mvl_vector(data_idx, mvl_vector_data(vec).offset[0]);
+				if(pc==NULL) {
+					error("Invalid packed list");
+					return(R_NilValue);
+					}
+				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, mvl_vector_data(vec).offset[mvl_vector_length(vec)]-mvl_vector_data(vec).offset[0], pc);
+
+				#define REWRITE_BUF_SIZE (1024*1024)
+				
+				strvec=calloc(REWRITE_BUF_SIZE, sizeof(*strvec));
+				if(strvec==NULL) {
+					error("Out of memory");
+					return(R_NilValue);
+					}
+				
+				for(j=1;j<mvl_vector_length(vec);j+=REWRITE_BUF_SIZE) {
+					for(i=0;i+j<mvl_vector_length(vec) && i<REWRITE_BUF_SIZE;i++)
+						strvec[i]=char_offset+(mvl_vector_data(vec).offset[j+i]-mvl_vector_data(vec).offset[0]);
+					i=j+REWRITE_BUF_SIZE>=mvl_vector_length(vec) ? mvl_vector_length(vec)-j : REWRITE_BUF_SIZE;
+					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, offset, vec_idx, i, strvec);
+					vec_idx+=i;
+					}
+					
+				
+				/* TODO: all offsets need to shift by char_idx-mvl_vector_data(vec).offset[0] */
+				
+				char_idx+=mvl_vector_data(vec).offset[mvl_vector_length(vec)]-mvl_vector_data(vec).offset[0];
+				
+				free(strvec);
+				#undef REWRITE_BUF_SIZE
+				break;
+			default:
+				break;
+			}
+		/* TODO */
+		continue;
+		}
+	
+	switch(type) {
+		case LIBMVL_VECTOR_UINT8:
+			mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, offset, vec_idx, xlength(data), RAW(data));
+			vec_idx+=xlength(data);
+			break;
+		case LIBMVL_VECTOR_INT32:
+			mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT32, offset, vec_idx, xlength(data), INTEGER(data));
+			vec_idx+=xlength(data);
+			break;
+		case LIBMVL_VECTOR_INT64:
+			switch(TYPEOF(data)) {
+				case RAWSXP:
+	//				Rprintf("Writing INT64 from RAW input length %lld output length %lld\n", xlength(data), xlength(data)/8);
+					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, offset, vec_idx, xlength(data)/8, RAW(data));
+					vec_idx+=xlength(data)/8;
+					break;
+				case REALSXP:
+					idata=calloc(xlength(data), sizeof(*idata));
+					if(idata==NULL) {
+						error("Out of memory");
+						return(R_NilValue);
+						}
+					pd=REAL(data);
+					for(i=0;i<xlength(data);i++)
+						idata[i]=pd[i];
+					
+					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, offset, vec_idx, xlength(data), idata);
+					vec_idx+=xlength(data);
+					free(idata);
+					break;
+				case INTSXP:
+					idata=calloc(xlength(data), sizeof(*idata));
+					if(idata==NULL) {
+						error("Out of memory");
+						return(R_NilValue);
+						}
+					pi=INTEGER(data);
+					for(i=0;i<xlength(data);i++)
+						idata[i]=pi[i];
+					
+					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, offset, vec_idx, xlength(data), idata);
+					vec_idx+=xlength(data);
+					free(idata);
+					break;
+				default:
+					error("can only write raw, double and integer to INT64");
+					return(R_NilValue);
+				}
+			break;
+		case LIBMVL_VECTOR_FLOAT:
+			fdata=calloc(xlength(data), sizeof(*fdata));
+			if(fdata==NULL) {
+				error("Out of memory");
+				return(R_NilValue);
+				}
+			pd=REAL(data);
+			for(i=0;i<xlength(data);i++)
+				fdata[i]=pd[i];
+			mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_FLOAT, offset, vec_idx, xlength(data), fdata);
+			vec_idx+=xlength(data);
+			free(fdata);
+			break;
+		case LIBMVL_VECTOR_DOUBLE:
+			mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_DOUBLE, offset, vec_idx, xlength(data), REAL(data));
+			vec_idx+=xlength(data);
+			break;
+		case LIBMVL_VECTOR_OFFSET64:
+			mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_OFFSET64, offset, vec_idx, xlength(data), REAL(data));
+			vec_idx+=xlength(data);
+			break;
+		case 10000:
+			#define REWRITE_BUF_SIZE (1024*1024)
+			
+			strvec=calloc(REWRITE_BUF_SIZE, sizeof(*strvec));
+			if(strvec==NULL) {
+				error("Out of memory");
+				return(R_NilValue);
+				}
+			
+			/* TODO: it would be nice to bounce strings against internal buffer to reduce frequency of rewrite() calls */
+			for(j=0;j<xlength(data);j+=REWRITE_BUF_SIZE) {
+				for(i=0;i+j<xlength(data) && i<REWRITE_BUF_SIZE;i++) {
+					ch=CHAR(STRING_ELT(data, i+j));
+					m=strlen(ch);
+					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, m, ch);
+//					Rprintf("str %s %d %ld\n", ch, m, char_idx);
+					strvec[i]=char_offset+char_idx+m;
+					char_idx+=m;
+					}
+				i=j+REWRITE_BUF_SIZE>=xlength(data) ? xlength(data)-j : REWRITE_BUF_SIZE;
+				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, offset, vec_idx, i, strvec);
+				vec_idx+=i;
+				}
+			#undef REWRITE_BUF_SIZE
+			free(strvec);				
+			break;
+// 		case 10001:
+// 			if(length(data)!=1) {
+// 				error("data has to be length 1 string vector");
+// 				return(R_NilValue);
+// 				}
+// 			ch=CHAR(STRING_ELT(data, 0));
+// 			offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, strlen(ch), ch, *moffset);
+// 			break;
+			
+		default:
+			error("write_vector: unknown type %d", type);
+			return(R_NilValue);
+		}
+	}
+	
+if(char_idx>char_total_length) {
+	error("Internal error: char_idx>char_total_length");
+	}
+	
+ans=PROTECT(allocVector(REALSXP, 1));
+REAL(ans)[0]=*doffset;
+
+class=PROTECT(allocVector(STRSXP, 1));
+SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+classgets(ans, class);
+UNPROTECT(2);
+return(ans);
+}
+
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
   R_RegisterCCallable("RMVL", "close_library",  (DL_FUNC) &close_library);
@@ -1383,4 +1812,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real);
   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
+  R_RegisterCCallable("RMVL", "fused_write_vector",  (DL_FUNC) &fused_write_vector);
 }
