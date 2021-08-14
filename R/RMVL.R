@@ -147,9 +147,9 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 			else
 			o<-c(o, mvl_write_vector(MVLHANDLE, dim(x)))
 		}
-	if(!is.null(class(x)) && !(class(x) %in% c("raw", "numeric", "integer"))) {
+	if(!is.null(class(x)) && !(mvl_object_class(x) %in% c("raw", "numeric", "integer"))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "class"))
-		o<-c(o, mvl_write_string(MVLHANDLE, class(x)))
+		o<-c(o, mvl_write_string(MVLHANDLE, mvl_object_class(x)))
 		}
 	if(!is.null(names(x))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "names"))
@@ -163,6 +163,21 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 	ofs<-c(n, o)
 	class(ofs)<-"MVL_OFFSET"
 	return(mvl_write_vector(MVLHANDLE, ofs))
+	}
+	
+mvl_object_class<-function(x) {
+	if(class(x)!="MVL_OBJECT")return(class(x))
+	if(is.null(x[["metadata"]]))stop("Malformed MVL_OBJECT")
+	if(is.null(x[["metadata"]][["class"]])) {
+		st<-mvl_object_stats(x)
+		if(st[["type"]] %in% c(1,2))return("integer")
+			else
+		if(st[["type"]] %in% c(3,4,5))return("numeric")
+			else
+		if(st[["type"]] %in% c(102))return("character")
+		return("MVL_OBJECT")
+		}
+	return(x[["metadata"]][["class"]])
 	}
 
 #' Write R object into MVL file
@@ -215,21 +230,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	if(length(L)<1)stop("No objects to concatenate")
 	if(!drop.rownames)stop("Cannot write out row names")
 	
-	cl<-class(L[[1]])
-	if(cl == "MVL_OBJECT") {
-		m<-L[[1]][["metadata"]]
-		if(is.null(m))stop("Malformed MVL object - no metadata")
-		cl<-m[["class"]]
-		if(is.null(cl)) {
-			st<-mvl_object_stats(L[[1]])
-			if(st[["type"]] %in% c(1,2))cl<-"integer"
-				else
-			if(st[["type"]] %in% c(3,4,5))cl<-"numeric"
-				else
-			if(st[["type"]] %in% c(102))cl<-"character"
-			}
-		if(is.null(cl))stop("Could not handle mvl object ", st)
-		}
+	cl<-mvl_object_class(L[[1]])
 		
 	dims<-lapply(L, dim)
 	dimnull<-unlist(lapply(dims, is.null))
@@ -241,7 +242,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	if(length(L)>1) {
 		kd<-length(dims[[1]])
 		if(kd>1) {
-			if(class(L[[1]]) %in% c("data.frame")) idx<-2:kd
+			if(mvl_object_class(L[[1]]) %in% c("data.frame")) idx<-2:kd
 				else idx<-1:(kd-1)
 			for(i in 2:length(L)) {
 				if(any(dims[[i]][idx]!=dims[[1]][idx]))stop("Cannot concatenate: inconsistent dimensions for objects 1 and ", i, ": ", paste(dims[[1]], collapse=","), " ", paste(dims[[i]], collapse=","))
@@ -250,7 +251,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		}
 	
 	
-	if(class(L[[1]]) %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
+	if(cl %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
 		dims_new<-dim(L[[1]])
 		if(!is.null(dims_new)) {
 			if(length(dims_new)>1) {
@@ -264,7 +265,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
 		}
-	if(class(L[[1]]) %in% c("data.frame")) {
+	if(cl %in% c("data.frame")) {
 		dims_new<-dim(L[[1]])
 		if(!is.null(dims_new)) {
 			if(length(dims_new)>1) {
@@ -579,6 +580,19 @@ length.MVL_OBJECT<-function(x) {
 	return(x[["length"]])
 	}
 	
+	
+#' Retrieve MVL object names
+#' 
+#' @param x MVL_OBJECT as retrieved by subscription operators
+#' @return character vector of names
+#'
+#' @export
+names.MVL_OBJECT<-function(x) {
+	m<-unclass(x)[["metadata"]]
+	if(is.null(m))stop("Malformed MVL_OBJECT")
+	return(m[["names"]])
+	}
+	
 # We are exporting plain function as well, so one can list its source code from command line
 #' MVL object subscription operator
 #'
@@ -632,7 +646,7 @@ length.MVL_OBJECT<-function(x) {
 				L[["metadata"]]<-metadata
 				class(L)<-"MVL_OBJECT"
 				
-				if(!ref && length(L)<MVL_SMALL_LENGTH)L<-mvl_read_object(L, unclass(L)[["offset"]], recurse=recurse, ref=ref, raw=raw)
+				if(!ref && (length(L)<MVL_SMALL_LENGTH || recurse) )L<-mvl_read_object(L, unclass(L)[["offset"]], recurse=recurse, ref=ref, raw=raw)
 				
 				return(L)
 				}
