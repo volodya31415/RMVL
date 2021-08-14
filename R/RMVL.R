@@ -313,7 +313,7 @@ mvl_object_stats<-function(MVLHANDLE, offset=NULL) {
 	return(L)
 	}
 	
-mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE) {
+mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE, ref=FALSE) {
 	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
 	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")
 	if(is.na(offset))return(NA)
@@ -345,7 +345,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE)
 		if(recurse) {
 			vec<-lapply(vec, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x, recurse=TRUE, raw=raw))})
 		 } else {
-			Fsmall<-lengths<MVL_SMALL_LENGTH
+			Fsmall<-lengths<MVL_SMALL_LENGTH & !ref
 			vec[Fsmall]<-lapply(vec[Fsmall], function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x, recurse=FALSE, raw=raw))})
 			vec[!Fsmall]<-lapply(vec[!Fsmall], function(x) {
 				class(x)<-"MVL_OFFSET"
@@ -422,7 +422,7 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 #' @return Stored object
 #' @export [.MVL
 #' @export
-`[.MVL`<-function(MVLHANDLE, y, raw=FALSE) {
+`[.MVL`<-function(MVLHANDLE, y, raw=FALSE, ref=FALSE) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	
 	if(is.factor(y))y<-as.character(y)
@@ -438,7 +438,7 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 		obj[["metadata"]]<-mvl_read_metadata(MVLHANDLE, obj[["metadata_offset"]])
 		class(obj)<-"MVL_OBJECT"
 		
-		if(obj[["length"]]<MVL_SMALL_LENGTH)obj<-mvl_read_object(MVLHANDLE, obj[["offset"]], recurse=FALSE, raw=raw)
+		if(!ref && obj[["length"]]<MVL_SMALL_LENGTH)obj<-mvl_read_object(MVLHANDLE, obj[["offset"]], recurse=FALSE, raw=raw)
 		
 		return(obj)
 		}
@@ -488,6 +488,7 @@ print.MVL<-function(x, ...) {
 MVL_TYPE_NAME<-list("UINT8", "INT32", "INT64", "FLOAT", "DOUBLE")
 MVL_TYPE_NAME[[100]]<-"OFFSET64"
 MVL_TYPE_NAME[[101]]<-"CSTRING"
+MVL_TYPE_NAME[[102]]<-"STRVEC"
 	
 mvl_type_name<-function(x) {
 	y<-lapply(MVL_TYPE_NAME[x], function(xx){if(is.null(xx))return(NA); return(xx)})
@@ -507,7 +508,7 @@ mvl_type_name<-function(x) {
 print.MVL_OBJECT<-function(x, ..., small_length=10) {
 	obj<-x
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class) || (object_class %in% c("numeric", "integer"))) {
+	if(is.null(object_class) || (object_class %in% c("numeric", "integer", "character"))) {
 		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " length ", obj[["length"]], ")\n", sep="")
 		} else
 	if(object_class %in% c("data.frame", "array", "matrix")) {
@@ -565,9 +566,9 @@ length.MVL_OBJECT<-function(x) {
 #' @return Stored object
 #' @export [.MVL_OBJECT
 #' @export
-`[.MVL_OBJECT`<-function(obj, i, ..., drop=NULL, raw=FALSE, recurse=FALSE) {
+`[.MVL_OBJECT`<-function(obj, i, ..., drop=NULL, raw=FALSE, recurse=FALSE, ref=FALSE) {
 	if(missing(i) && ...length()==0) {
-		return(mvl_read_object(obj, unclass(obj)[["offset"]], recurse=recurse, raw=raw))
+		return(mvl_read_object(obj, unclass(obj)[["offset"]], recurse=recurse, raw=raw, ref=ref))
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
