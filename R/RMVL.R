@@ -199,9 +199,8 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	
 #' Write concatenated R objects and write result into MVL file. 
 #'
-#' This is an equivalent of \code{rbind} for MVL files. This function can concatenate a mixture of R and MVL objects.
-#'
-#' Row names are always dropped.
+#' This function can concatenate a mixture of R and MVL objects. For vectors it is the equivalent of \code{c()}. For array and matrices it works as \code{cbind()}
+#' For data frames it works as \code{rbind}, but row names are always dropped.
 #'
 #' @param MVLHANDLE a handle to MVL file produced by \code{mvl_open()}
 #' @param L a list of suitable R objects (vector, array, data.frame) or equivalent MVL objects.
