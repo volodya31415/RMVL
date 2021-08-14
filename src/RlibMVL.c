@@ -1583,8 +1583,9 @@ for(k=0;k<xlength(data_list);k++) {
 					error("Invalid MVL packed list");
 					return(R_NilValue);
 					}
+				//Rprintf("STRVEC length %ld\n", mvl_vector_length(vec));
 				total_length+=mvl_vector_length(vec)-1;
-				char_total_length+=mvl_vector_data(vec).offset[mvl_vector_length(vec)]-mvl_vector_data(vec).offset[0];
+				char_total_length+=mvl_vector_data(vec).offset[mvl_vector_length(vec)-1]-mvl_vector_data(vec).offset[0];
 				break;
 			default:
 				error("Internal conversion between types of MVL objects not supported yet");
@@ -1600,7 +1601,7 @@ if(char_total_length>0) {
 	char_offset+=sizeof(LIBMVL_VECTOR_HEADER);
 	total_length++;
 	offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, total_length, 1, &char_offset, *moffset);
-//	Rprintf("packed_list: %ld %ld %ld %ld\n", total_length, char_total_length, offset, char_offset);
+	//Rprintf("packed_list: %ld %ld %ld %ld\n", total_length, char_total_length, offset, char_offset);
 	vec_idx=1;
 	char_idx=0;
 	} else {
@@ -1637,7 +1638,8 @@ for(k=0;k<xlength(data_list);k++) {
 					error("Invalid packed list");
 					return(R_NilValue);
 					}
-				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, mvl_vector_data(vec).offset[mvl_vector_length(vec)]-mvl_vector_data(vec).offset[0], pc);
+				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, mvl_vector_data(vec).offset[mvl_vector_length(vec)-1]-mvl_vector_data(vec).offset[0], pc);
+				//Rprintf("s# %ld %ld\n", vec_idx, char_idx);
 
 				#define REWRITE_BUF_SIZE (1024*1024)
 				
@@ -1649,7 +1651,7 @@ for(k=0;k<xlength(data_list);k++) {
 				
 				for(j=1;j<mvl_vector_length(vec);j+=REWRITE_BUF_SIZE) {
 					for(i=0;i+j<mvl_vector_length(vec) && i<REWRITE_BUF_SIZE;i++)
-						strvec[i]=char_offset+(mvl_vector_data(vec).offset[j+i]-mvl_vector_data(vec).offset[0]);
+						strvec[i]=char_offset+char_idx+(mvl_vector_data(vec).offset[j+i]-mvl_vector_data(vec).offset[0]);
 					i=j+REWRITE_BUF_SIZE>=mvl_vector_length(vec) ? mvl_vector_length(vec)-j : REWRITE_BUF_SIZE;
 					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, offset, vec_idx, i, strvec);
 					vec_idx+=i;
@@ -1658,7 +1660,8 @@ for(k=0;k<xlength(data_list);k++) {
 				
 				/* TODO: all offsets need to shift by char_idx-mvl_vector_data(vec).offset[0] */
 				
-				char_idx+=mvl_vector_data(vec).offset[mvl_vector_length(vec)]-mvl_vector_data(vec).offset[0];
+				char_idx+=mvl_vector_data(vec).offset[mvl_vector_length(vec)-1]-mvl_vector_data(vec).offset[0];
+				//Rprintf("s#2 %ld %ld\n", vec_idx, char_idx);
 				
 				free(strvec);
 				#undef REWRITE_BUF_SIZE
@@ -1755,7 +1758,7 @@ for(k=0;k<xlength(data_list);k++) {
 					ch=CHAR(STRING_ELT(data, i+j));
 					m=strlen(ch);
 					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, m, ch);
-//					Rprintf("str %s %d %ld\n", ch, m, char_idx);
+					//Rprintf("str %s %d %ld\n", ch, m, char_idx);
 					strvec[i]=char_offset+char_idx+m;
 					char_idx+=m;
 					}

@@ -114,6 +114,7 @@ mvl_fused_write_vector<-function(MVLHANDLE, L, metadata.offset=NULL) {
 		type<-attr(L[[1]], "MVL_TYPE", exact=TRUE)
 		if(is.null(type) && class(L[[1]])=="MVL_OBJECT") {
 			type<-mvl_object_stats(L[[1]])[["type"]]
+			if(type==102)type<-10000
 			}
 		if(is.null(type)) {
 			type<-switch(class(L[[1]]), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
@@ -509,7 +510,10 @@ print.MVL_OBJECT<-function(x, ..., small_length=10) {
 	obj<-x
 	object_class<-obj[["metadata"]][["class"]]
 	if(is.null(object_class) || (object_class %in% c("numeric", "integer", "character"))) {
-		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " length ", obj[["length"]], ")\n", sep="")
+		tname<-mvl_type_name(obj[["type"]])
+		len<-obj[["length"]]
+		if(tname=="STRVEC")len<-len-1
+		cat("MVL_OBJECT(", tname, " length ", len, ")\n", sep="")
 		} else
 	if(object_class %in% c("data.frame", "array", "matrix")) {
 		od<-obj[["metadata"]][["dim"]]
