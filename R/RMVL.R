@@ -242,17 +242,25 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	if(length(L)>1) {
 		kd<-length(dims[[1]])
 		if(kd>1) {
+			if(class(L[[1]]) %in% c("data.frame")) idx<-2:kd
+				else idx<-1:(kd-1)
 			for(i in 2:length(L)) {
-				print(dims[[i]][2:kd])
-				print(dims[[1]][2:kd])
-				if(any(dims[[i]][2:kd]!=dims[[1]][2:kd]))stop("Cannot concatenate: inconsistent dimensions for objects 1 and ", i, ": ", paste(dims[[1]], collapse=","), " ", paste(dims[[i]], collapse=","))
+				if(any(dims[[i]][idx]!=dims[[1]][idx]))stop("Cannot concatenate: inconsistent dimensions for objects 1 and ", i, ": ", paste(dims[[1]], collapse=","), " ", paste(dims[[i]], collapse=","))
 				}
 			}
 		}
 	
 	
-	if(class(L[[1]]) %in% c("numeric", "character", "integer", "factor", "raw")) {
-		metadata<-mvl_write_object_metadata(MVLHANDLE, L[[1]], drop.rownames=drop.rownames, dim.override=NULL)
+	if(class(L[[1]]) %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
+		dims_new<-dim(L[[1]])
+		if(!is.null(dims_new)) {
+			if(length(dims_new)>1) {
+				dims_new<-c(dims_new[1:(length(dims_new)-1)], sum(unlist(lapply(dims, function(x){return(x[[length(dims_new)]])}))))
+				} else {
+				dims_new<-sum(unlist(dims))
+				}
+			}
+		metadata<-mvl_write_object_metadata(MVLHANDLE, L[[1]], drop.rownames=drop.rownames, dim.override=dims_new)
 		offset<-mvl_fused_write_vector(MVLHANDLE, L, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
