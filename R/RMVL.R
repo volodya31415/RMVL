@@ -276,7 +276,13 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		metadata<-mvl_write_object_metadata(MVLHANDLE, L[[1]], drop.rownames=drop.rownames, dim.override=dims_new)
 		v<-list()
 		for(i in 1:length(L[[1]])) {
-			Lcol<-lapply(L, function(x){return(x[[i]])})
+			Lcol<-lapply(L, function(x){
+				if(class(x)!="MVL_OBJECT") {
+					if(class(x[[i]])=="factor")return(as.character(x[[i]]))
+					return(x[[i]])
+					}
+				return(x[,i,ref=TRUE]) 
+				})
 			v[[i]]<-mvl_fused_write_objects(MVLHANDLE, Lcol)
 			}
 		v<-unlist(v)
@@ -590,7 +596,7 @@ length.MVL_OBJECT<-function(x) {
 #' @return Stored object
 #' @export [.MVL_OBJECT
 #' @export
-`[.MVL_OBJECT`<-function(obj, i, ..., drop=NULL, raw=FALSE, recurse=FALSE, ref=FALSE) {
+`[.MVL_OBJECT`<-function(obj, i, ..., drop=TRUE, raw=FALSE, recurse=FALSE, ref=FALSE) {
 	if(missing(i) && ...length()==0) {
 		return(mvl_read_object(obj, unclass(obj)[["offset"]], recurse=recurse, raw=raw, ref=ref))
 		}
@@ -600,12 +606,6 @@ length.MVL_OBJECT<-function(x) {
 	if(object_class=="data.frame") {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
-		if(missing(i)) {
-			i<-1:(obj[["metadata"]][["dim"]][1])
-			}
-		if(is.logical(i)) {
-			i<-which(i)
-			}
 		if(...length()<1 || missing(..1)) {
 			j<-1:length(n)
 			} else {
@@ -621,6 +621,25 @@ length.MVL_OBJECT<-function(x) {
 				j<-j0
 				}
 			n<-n[j]
+			}
+		if(missing(i)) {
+			if(length(j)==1 && drop) {
+				ofs<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
+				metadata_offset<-.Call("read_metadata", obj[["handle"]], ofs)
+				metadata<-mvl_read_metadata(obj, metadata_offset)
+
+				L<-list(handle=obj[["handle"]], offset=ofs, length=.Call("read_lengths", obj[["handle"]], ofs), type=.Call("read_types", obj[["handle"]], ofs),metadata_offset=metadata_offset)
+				L[["metadata"]]<-metadata
+				class(L)<-"MVL_OBJECT"
+				
+				if(!ref && length(L)<MVL_SMALL_LENGTH)L<-mvl_read_object(L, unclass(L)[["offset"]], recurse=recurse, ref=ref, raw=raw)
+				
+				return(L)
+				}
+			i<-1:(obj[["metadata"]][["dim"]][1])
+			}
+		if(is.logical(i)) {
+			i<-which(i)
 			}
 		if(raw)
 			ofs<-.Call("read_vectors_idx_raw_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
