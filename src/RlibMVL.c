@@ -307,6 +307,9 @@ SEXP ans, class, names;
 long i;
 LIBMVL_OFFSET64 offset;
 double *doffset=(double *)&offset;
+
+double *dp;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -322,10 +325,11 @@ if(libraries[idx].ctx==NULL){
 	}
 ans=PROTECT(allocVector(REALSXP, libraries[idx].ctx->dir_free));
 names=PROTECT(allocVector(STRSXP, libraries[idx].ctx->dir_free));
+dp=REAL(ans);
 for(i=0;i<libraries[idx].ctx->dir_free;i++) {
 	SET_STRING_ELT(names, i, mkChar(libraries[idx].ctx->directory[i].tag));
 	offset=libraries[idx].ctx->directory[i].offset;
-	REAL(ans)[i]=*doffset;
+	dp[i]=*doffset;
 	}
 setAttrib(ans, R_NamesSymbol, names);
 class=PROTECT(allocVector(STRSXP, 1));
@@ -345,6 +349,8 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 LIBMVL_VECTOR *vec;
 double *doffset2=(double *)&offset;
+double *d_ans, *d_offsets;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -359,15 +365,17 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(offsets)));
+d_ans=REAL(ans);
+d_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
-	doffset=REAL(offsets)[i];
+	doffset=d_offsets[i];
 	offset=*offset0;
 	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
 		REAL(ans)[i]=NA_REAL;
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
-	REAL(ans)[i]=mvl_vector_length(vec);
+	d_ans[i]=mvl_vector_length(vec);
 	}
 
 UNPROTECT(1);
@@ -384,6 +392,10 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 LIBMVL_VECTOR *vec;
 double *doffset2=(double *)&offset;
+
+int *p_ans;
+double *p_offsets;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -398,15 +410,17 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(INTSXP, xlength(offsets)));
+p_ans=INTEGER(ans);
+p_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
-	doffset=REAL(offsets)[i];
+	doffset=p_offsets[i];
 	offset=*offset0;
 	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
 		INTEGER(ans)[i]=NA_INTEGER;
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
-	INTEGER(ans)[i]=mvl_vector_type(vec);
+	p_ans[i]=mvl_vector_type(vec);
 	}
 
 UNPROTECT(1);
@@ -425,6 +439,11 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *pd;
+int *pi;
+char *pc;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -467,8 +486,9 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_INT64:
 		case LIBMVL_VECTOR_FLOAT:
 			v=PROTECT(allocVector(RAWSXP, mvl_vector_length(vec)*field_size));
+			pc=RAW(v);
 			for(j=0;j<mvl_vector_length(vec)*field_size;j++)
-				RAW(v)[j]=mvl_vector_data(vec).b[j];
+				pc[j]=mvl_vector_data(vec).b[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -482,23 +502,26 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
+			pi=INTEGER(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				INTEGER(v)[j]=mvl_vector_data(vec).i[j];
+				pi[j]=mvl_vector_data(vec).i[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
+			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				REAL(v)[j]=mvl_vector_data(vec).d[j];
+				pd[j]=mvl_vector_data(vec).d[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
+			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++) {
 				offset=mvl_vector_data(vec).offset[j];
-				REAL(v)[j]=*doffset2;
+				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -538,6 +561,11 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *pd;
+int *pi, *pidx;
+char *pc;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -552,6 +580,7 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+pidx=INTEGER(indicies);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
@@ -578,8 +607,9 @@ for(i=0;i<xlength(offsets);i++) {
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				RAW(v)[j]=mvl_vector_data(vec).b[INTEGER(indicies)[j]];
+				pc[j]=mvl_vector_data(vec).b[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
@@ -596,37 +626,41 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
+			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				INTEGER(v)[j]=mvl_vector_data(vec).i[INTEGER(indicies)[j]];
+				pi[j]=mvl_vector_data(vec).i[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_INT64:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(RAW(v)[j]), &(mvl_vector_data(vec).i64[INTEGER(indicies)[j]]), field_size);
+				memcpy(&(RAW(v)[j]), &(mvl_vector_data(vec).i64[pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(RAW(v)[j]), &(mvl_vector_data(vec).i64[INTEGER(indicies)[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data(vec).i64[pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).d[INTEGER(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).d[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[INTEGER(indicies)[j]];
-				REAL(v)[j]=*doffset2;
+				offset=mvl_vector_data(vec).offset[pidx[j]];
+				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -638,7 +672,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, INTEGER(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, INTEGER(indicies)[j])));
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -666,6 +700,11 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *pd, *pidx;
+int *pi;
+char *pc;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -680,6 +719,7 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+pidx=REAL(indicies);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
@@ -706,8 +746,9 @@ for(i=0;i<xlength(offsets);i++) {
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				RAW(v)[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pc[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
@@ -724,37 +765,42 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
+			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				INTEGER(v)[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pi[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_INT64:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(RAW(v)[j]), &(mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)REAL(indicies)[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(RAW(v)[j]), &(mvl_vector_data(vec).f[(LIBMVL_OFFSET64)REAL(indicies)[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data(vec).f[(LIBMVL_OFFSET64)pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)REAL(indicies)[j]];
-				REAL(v)[j]=*doffset2;
+				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)pidx[j]];
+				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -766,7 +812,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)REAL(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)REAL(indicies)[j])));
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -793,6 +839,9 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *p_offsets, *p_ans;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -807,17 +856,19 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(offsets)));
+p_ans=REAL(ans);
+p_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
-	doffset=REAL(offsets)[i];
+	doffset=p_offsets[i];
 	offset=*offset0;
 	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
-		REAL(ans)[i]=0;
+		p_ans[i]=0;
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
 	
 	offset=(LIBMVL_OFFSET64)&(mvl_vector_data(vec));
-	REAL(ans)[i]=*doffset2;	
+	p_ans[i]=*doffset2;	
 	}
 UNPROTECT(1);
 return(ans);
@@ -833,6 +884,11 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *pd;
+int *pi;
+char *pc;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -858,8 +914,9 @@ for(i=0;i<xlength(offsets);i++) {
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, mvl_vector_length(vec)));
+			pc=RAW(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				RAW(v)[j]=mvl_vector_data(vec).b[j];
+				pc[j]=mvl_vector_data(vec).b[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
@@ -874,39 +931,44 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
+			pi=INTEGER(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				INTEGER(v)[j]=mvl_vector_data(vec).i[j];
+				pi[j]=mvl_vector_data(vec).i[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_INT64:
 			warning("Converted 64-bit integers to doubles");
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
+			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				REAL(v)[j]=mvl_vector_data(vec).i64[j];
+				pd[j]=mvl_vector_data(vec).i64[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
+			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				REAL(v)[j]=mvl_vector_data(vec).f[j];
+				pd[j]=mvl_vector_data(vec).f[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
+			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				REAL(v)[j]=mvl_vector_data(vec).d[j];
+				pd[j]=mvl_vector_data(vec).d[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
+			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++) {
 				offset=mvl_vector_data(vec).offset[j];
-				REAL(v)[j]=*doffset2;
+				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -944,6 +1006,11 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset, m;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *pd;
+int *pi, *pidx;
+char *pc;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -958,6 +1025,7 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+pidx=INTEGER(indicies);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
@@ -980,8 +1048,9 @@ for(i=0;i<xlength(offsets);i++) {
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				RAW(v)[j]=mvl_vector_data(vec).b[INTEGER(indicies)[j]];
+				pc[j]=mvl_vector_data(vec).b[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
@@ -998,39 +1067,44 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
+			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				INTEGER(v)[j]=mvl_vector_data(vec).i[INTEGER(indicies)[j]];
+				pi[j]=mvl_vector_data(vec).i[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_INT64:
 			warning("Converted 64-bit integers to doubles");
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).i64[INTEGER(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).i64[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).f[INTEGER(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).f[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).d[INTEGER(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).d[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[INTEGER(indicies)[j]];
-				REAL(v)[j]=*doffset2;
+				offset=mvl_vector_data(vec).offset[pidx[j]];
+				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -1042,7 +1116,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, INTEGER(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, INTEGER(indicies)[j])));
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1070,6 +1144,11 @@ LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset, k, m;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
+
+double *pd, *pidx;
+int *pi;
+char *pc;
+
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
 	return(R_NilValue);
@@ -1084,6 +1163,7 @@ if(libraries[idx].ctx==NULL) {
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+pidx=REAL(indicies);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
@@ -1106,8 +1186,9 @@ for(i=0;i<xlength(offsets);i++) {
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
+			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				RAW(v)[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pc[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
@@ -1124,39 +1205,44 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
+			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				INTEGER(v)[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pi[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_INT64:
 			warning("Converted 64-bit integers to doubles");
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).f[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).f[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				REAL(v)[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)REAL(indicies)[j]];
+				pd[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
+			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)REAL(indicies)[j]];
-				REAL(v)[j]=*doffset2;
+				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)pidx[j]];
+				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -1168,7 +1254,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)REAL(indicies)[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)REAL(indicies)[j])));
+				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1419,73 +1505,6 @@ classgets(ans, class);
 UNPROTECT(2);
 return(ans);
 }
-
-
-// SEXP start_write_vector(SEXP idx0, SEXP type0, SEXP total_length, SEXP metadata_offset)
-// {
-// long i;
-// int idx, type;
-// double dmoffset;
-// LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
-// 
-// LIBMVL_OFFSET64 offset;
-// double *doffset=(double *)&offset;
-// const char *ch, **strvec2;
-// LIBMVL_OFFSET64 *strvec;
-// long long *idata;
-// float *fdata;
-// 
-// SEXP ans, class;
-// 
-// if(length(idx0)!=1) {
-// 	error("write_vector first argument must be a single integer");
-// 	return(R_NilValue);
-// 	}
-// idx=INTEGER(idx0)[0];
-// if(idx<0 || idx>=libraries_free) {
-// 	error("no such library");
-// 	return(R_NilValue);
-// 	}
-// if(libraries[idx].ctx==NULL) {
-// 	error("no such library");
-// 	return(R_NilValue);
-// 	}
-// if(libraries[idx].f==NULL) {
-// 	error("library not open for writing");
-// 	return(R_NilValue);
-// 	}
-// 
-// if(length(type0)!=1) {
-// 	error("start_write_vector second argument must be a single integer");
-// 	return(R_NilValue);
-// 	}
-// type=INTEGER(type0)[0];
-// 
-// if(length(total_length)!=1) {
-// 	error("start_write_vector third argument must be a single numeric");
-// 	return(R_NilValue);
-// 	}
-// 
-// libraries[idx].modified=1;
-// 
-// if(length(metadata_offset)<1) {
-// 	*moffset=0;
-// 	} else {
-// 	dmoffset=REAL(metadata_offset)[0];
-// 	}
-// 	
-// offset=mvl_start_write_vector(libraries[idx].ctx, type, REAL(total_length)[0], 0, NULL, *moffset);
-// 
-// ans=PROTECT(allocVector(REALSXP, 1));
-// REAL(ans)[0]=*doffset;
-// 
-// class=PROTECT(allocVector(STRSXP, 1));
-// SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
-// classgets(ans, class);
-// UNPROTECT(2);
-// return(ans);
-// }
-
 
 SEXP fused_write_vector(SEXP idx0, SEXP type0, SEXP data_list, SEXP metadata_offset)
 {
