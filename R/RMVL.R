@@ -91,7 +91,7 @@ mvl_get_vectors<-function(MVLHANDLE, offsets, raw=FALSE) {
 mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	if(!is.null(metadata.offset) && !inherits(metadata.offset, "MVL_OFFSET"))stop("not an MVL offset")
-	if(class(x)=="factor")x<-as.character(x)
+	if(inherits(x, "factor"))x<-as.character(x)
 	type<-attr(x, "MVL_TYPE", exact=TRUE)
 	if(is.null(type)) {
 		type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
@@ -109,16 +109,17 @@ mvl_fused_write_vector<-function(MVLHANDLE, L, metadata.offset=NULL) {
 	
 	if(length(L)>0) {
 		for(i in 1:length(L)) {
-			if(class(L[[i]])=="factor")L[[i]]<-as.character(L[[i]])
+			if(inherits(L[[i]], "factor"))L[[i]]<-as.character(L[[i]])
 			}
 		type<-attr(L[[1]], "MVL_TYPE", exact=TRUE)
-		if(is.null(type) && class(L[[1]])=="MVL_OBJECT") {
+		if(is.null(type) && inherits(L[[1]], "MVL_OBJECT")) {
 			type<-mvl_object_stats(L[[1]])[["type"]]
 			if(type==102)type<-10000
 			}
 		if(is.null(type)) {
-			type<-switch(class(L[[1]]), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
-			if(type<0 && class(L[[1]]) %in% c("array", "matrix"))type<-switch(typeof(L[[1]]), double=5, integer=2, -1)
+			# TODO: for now this is meant to work with primitive vectors
+			type<-switch(class(L[[1]])[[1]], raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
+			if(type<0 && inherits(L[[1]], c("array", "matrix")))type<-switch(typeof(L[[1]]), double=5, integer=2, -1)
 			}
 		} else {
 		type<-5
@@ -147,9 +148,9 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 			else
 			o<-c(o, mvl_write_vector(MVLHANDLE, dim(x)))
 		}
-	if(!is.null(class(x)) && !(mvl_class(x) %in% c("raw", "numeric", "integer"))) {
+	if(!is.null(class(x)) && !(mvl_inherits(x,  c("raw", "numeric", "integer")))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "class"))
-		o<-c(o, mvl_write_string(MVLHANDLE, mvl_class(x)))
+		o<-c(o, mvl_write_vector(MVLHANDLE, mvl_class(x)))
 		}
 	if(!is.null(names(x))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "names"))
@@ -176,7 +177,7 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 #' @export
 #'
 mvl_class<-function(x) {
-	if(class(x)!="MVL_OBJECT")return(class(x))
+	if(!inherits(x, "MVL_OBJECT"))return(class(x))
 	m<-x[["metadata"]]
 	if(is.null(m) || is.null(m[["class"]])) {
 		st<-mvl_object_stats(x)
@@ -190,6 +191,25 @@ mvl_class<-function(x) {
 	return(m[["class"]])
 	}
 
+#' Check inheritance of R or MVL objects
+#'
+#' This functions works just like the usual R \code{inherit()}, except that it takes MVL_OBJECT class into account.
+#' For non-MVL objects the function simply calls the usual R \code{inherit()}, so it can be used instead of \code{inherit()} for code that operates on both usual R objects and MVL objects.
+#'
+#' @param x  any object
+#' @param chstr
+#' @return character string giving object class
+#'  
+#' @export
+#'
+mvl_inherits<-function(x, clstr, which=FALSE) {
+	if(!inherits(x, "MVL_OBJECT"))return(inherits(x, clstr, which=which))
+	cl<-mvl_class(x)
+	inh<-inherits(x, clstr, which=TRUE) | (cl %in% clstr)
+	if(which)return(inh)
+		else return(any(inh))
+	}
+	
 #' Write R object into MVL file
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
@@ -203,19 +223,19 @@ mvl_class<-function(x) {
 mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	#cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x, drop.rownames=drop.rownames)
-	if(class(x) %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
+	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix"))) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
 		}
-	if(class(x) %in% c("list", "data.frame")) {
+	if(inherits(x, c("list", "data.frame"))) {
 		v<-unlist(lapply(x, function(x){return(mvl_write_object(MVLHANDLE, x))}))
 		class(v)<-"MVL_OFFSET"
 		offset<-mvl_write_vector(MVLHANDLE, v, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
 		}
-	if(class(x) == "MVL_OFFSET") {
+	if(inherits(x, "MVL_OFFSET")) {
 		# Already written
 		return(invisible(x))
 		}
@@ -252,7 +272,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	if(length(L)>1) {
 		kd<-length(dims[[1]])
 		if(kd>1) {
-			if(mvl_class(L[[1]]) %in% c("data.frame")) idx<-2:kd
+			if(any(cl %in% c("data.frame"))) idx<-2:kd
 				else idx<-1:(kd-1)
 			for(i in 2:length(L)) {
 				if(any(dims[[i]][idx]!=dims[[1]][idx]))stop("Cannot concatenate: inconsistent dimensions for objects 1 and ", i, ": ", paste(dims[[1]], collapse=","), " ", paste(dims[[i]], collapse=","))
@@ -261,7 +281,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		}
 	
 	
-	if(cl %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix")) {
+	if(any(cl %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix"))) {
 		dims_new<-dim(L[[1]])
 		if(!is.null(dims_new)) {
 			if(length(dims_new)>1) {
@@ -275,7 +295,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
 		}
-	if(cl %in% c("data.frame")) {
+	if(any(cl %in% c("data.frame"))) {
 		dims_new<-dim(L[[1]])
 		if(!is.null(dims_new)) {
 			if(length(dims_new)>1) {
@@ -288,8 +308,8 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		v<-list()
 		for(i in 1:length(L[[1]])) {
 			Lcol<-lapply(L, function(x){
-				if(class(x)!="MVL_OBJECT") {
-					if(class(x[[i]])=="factor")return(as.character(x[[i]]))
+				if(!inherits(x, "MVL_OBJECT")) {
+					if(inherits(x[[i]], "factor"))return(as.character(x[[i]]))
 					return(x[[i]])
 					}
 				return(x[,i,ref=TRUE]) 
@@ -358,7 +378,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 	metadata<-mvl_read_metadata(MVLHANDLE, metadata_offset)
 	cl<-metadata[["class"]]
 	
-	if(any(metadata[["MVL_LAYOUT"]]=="R") && !recurse && !is.null(cl) && (cl=="data.frame")) {
+	if(any(metadata[["MVL_LAYOUT"]]=="R") && !recurse && !is.null(cl) && any(cl=="data.frame")) {
 		L<-list(handle=MVLHANDLE[["handle"]], offset=offset, length=.Call("read_lengths", MVLHANDLE[["handle"]], offset), type=.Call("read_types", MVLHANDLE[["handle"]], offset),metadata_offset=metadata_offset)
 		L[["metadata"]]<-metadata
 		class(L)<-"MVL_OBJECT"
@@ -395,8 +415,8 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		if(!is.null(cl)) {
-			if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
-			if(cl=="factor" || cl=="character") {
+			if(!any(cl=="data.frame") && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
+			if(any(cl=="factor") || any(cl=="character")) {
 				vec<-mvl_flatten_string(vec)
 				if(cl=="factor")vec<-as.factor(vec)
 				}
@@ -407,7 +427,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 		rn<-metadata[["rownames"]]
 		if(!is.null(rn) && class(rn)!="MVL_OBJECT")rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
 			else
-		if(!is.null(cl) && cl=="data.frame")rownames(vec)<-1:(metadata[["dim"]][1])
+		if(!is.null(cl) && any(cl=="data.frame"))rownames(vec)<-1:(metadata[["dim"]][1])
 		}
 	return(vec)
 	}
@@ -676,7 +696,7 @@ names.MVL_OBJECT<-function(x) {
 		
 		if(length(i)>0) {
 			rn<-obj[["metadata"]][["rownames"]]
-			if(class(rn)=="MVL_OBJECT") {
+			if(inherits(rn, "MVL_OBJECT")) {
 				rn<-mvl_flatten_string(rn[i, recurse=TRUE])
 				rownames(df)<-rn
 				} else {

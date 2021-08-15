@@ -11,7 +11,7 @@ mvl_fused_write_objects(M1, L2, "L2")
 L3<-list(paste("test", 1:10, sep=""), as.character(12:41))
 mvl_fused_write_objects(M1, L3, "L3")
 
-L4<-list(matrix(1:6, 2, 3), matrix(1:12, 2, 4))
+L4<-list(matrix(1:6, 2, 3), matrix(5:12, 2, 4))
 mvl_fused_write_objects(M1, L4, "L4")
 
 L5<-list(data.frame(x=1:10, b=paste("test", 10:1)), data.frame(x=5:2, b=paste("test", 2:5)))
@@ -32,8 +32,8 @@ M1<-mvl_open("test1b.mvl", append=TRUE, create=TRUE)
 
 flatten<-function(L) {
 	return(lapply(L, function(x) { 
-		if(class(x)!="MVL_OBJECT")return(x)
-		if(!is.null(unclass(x)$metadata) && !is.null(unclass(x)$metadata$class) && (unclass(x)$metadata$class=="data.frame"))return(x[,])
+		if(any(class(x)!="MVL_OBJECT"))return(x)
+		if(!is.null(unclass(x)$metadata) && !is.null(unclass(x)$metadata$class) && any(unclass(x)$metadata$class=="data.frame"))return(x[,])
 		return(x[]) 
 		}))
 	}
@@ -47,7 +47,7 @@ mvl_fused_write_objects(M1, L2, "L2")
 L3<-list(paste("test", 10:5, sep=""), M2["L3", ref=TRUE], as.character(7:3))
 mvl_fused_write_objects(M1, L3, "L3")
 
-L4<-list(matrix(2:7, 2, 3), M2["L4", ref=TRUE], matrix(5:16, 2, 4))
+L4<-list(matrix(2:7, 2, 3), M2["L4", ref=TRUE], matrix(9:16, 2, 4))
 mvl_fused_write_objects(M1, L4, "L4")
 
 L5<-list(data.frame(x=1:9, b=paste("test", 9:1)), M2["L5", ref=TRUE], data.frame(x=4:2, b=paste("test", 2:4)))
