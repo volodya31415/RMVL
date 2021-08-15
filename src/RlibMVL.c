@@ -347,7 +347,6 @@ double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 LIBMVL_VECTOR *vec;
-double *doffset2=(double *)&offset;
 double *d_ans, *d_offsets;
 
 if(length(idx0)!=1) {
@@ -390,7 +389,6 @@ double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
 LIBMVL_VECTOR *vec;
-double *doffset2=(double *)&offset;
 
 int *p_ans;
 double *p_offsets;
