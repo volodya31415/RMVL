@@ -147,9 +147,9 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 			else
 			o<-c(o, mvl_write_vector(MVLHANDLE, dim(x)))
 		}
-	if(!is.null(class(x)) && !(mvl_object_class(x) %in% c("raw", "numeric", "integer"))) {
+	if(!is.null(class(x)) && !(mvl_class(x) %in% c("raw", "numeric", "integer"))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "class"))
-		o<-c(o, mvl_write_string(MVLHANDLE, mvl_object_class(x)))
+		o<-c(o, mvl_write_string(MVLHANDLE, mvl_class(x)))
 		}
 	if(!is.null(names(x))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "names"))
@@ -165,10 +165,20 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 	return(mvl_write_vector(MVLHANDLE, ofs))
 	}
 	
-mvl_object_class<-function(x) {
+#' Return underlying R class of object
+#'
+#' This function returns the equivalent R class of underlying MVL object, i.e. the class it would have if converted into a regular R object.
+#' For non-MVL objects the function simply calls the usual R class(), so it can be used instead of class() for code that operates on both usual R objects and MVL objects.
+#'
+#' @param x  any object
+#' @return character string giving object class
+#'  
+#' @export
+#'
+mvl_class<-function(x) {
 	if(class(x)!="MVL_OBJECT")return(class(x))
-	if(is.null(x[["metadata"]]))stop("Malformed MVL_OBJECT")
-	if(is.null(x[["metadata"]][["class"]])) {
+	m<-x[["metadata"]]
+	if(is.null(m) || is.null(m[["class"]])) {
 		st<-mvl_object_stats(x)
 		if(st[["type"]] %in% c(1,2))return("integer")
 			else
@@ -177,7 +187,7 @@ mvl_object_class<-function(x) {
 		if(st[["type"]] %in% c(102))return("character")
 		return("MVL_OBJECT")
 		}
-	return(x[["metadata"]][["class"]])
+	return(m[["class"]])
 	}
 
 #' Write R object into MVL file
@@ -186,7 +196,7 @@ mvl_object_class<-function(x) {
 #' @param x a suitable R object (vector, array, list, data.frame)
 #' @param name if specified add a named entry to MVL file directory
 #' @param drop.rownames set to TRUE to prevent rownames from being written
-#' @return and object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #'  
 #' @export
 #'
@@ -230,7 +240,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	if(length(L)<1)stop("No objects to concatenate")
 	if(!drop.rownames)stop("Cannot write out row names")
 	
-	cl<-mvl_object_class(L[[1]])
+	cl<-mvl_class(L[[1]])
 		
 	dims<-lapply(L, dim)
 	dimnull<-unlist(lapply(dims, is.null))
@@ -242,7 +252,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	if(length(L)>1) {
 		kd<-length(dims[[1]])
 		if(kd>1) {
-			if(mvl_object_class(L[[1]]) %in% c("data.frame")) idx<-2:kd
+			if(mvl_class(L[[1]]) %in% c("data.frame")) idx<-2:kd
 				else idx<-1:(kd-1)
 			for(i in 2:length(L)) {
 				if(any(dims[[i]][idx]!=dims[[1]][idx]))stop("Cannot concatenate: inconsistent dimensions for objects 1 and ", i, ": ", paste(dims[[1]], collapse=","), " ", paste(dims[[i]], collapse=","))
