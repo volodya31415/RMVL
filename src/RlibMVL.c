@@ -235,7 +235,6 @@ return elt;
 
 void decode_mvl_object(SEXP obj, int *idx, LIBMVL_OFFSET64 *ofs)
 {
-int i;
 SEXP sidx, sofs;
 double doffset;
 LIBMVL_OFFSET64 *offset=(LIBMVL_OFFSET64 *)&doffset;
@@ -342,8 +341,8 @@ return(ans);
 SEXP read_lengths(SEXP idx0, SEXP offsets)
 {
 int idx;
-SEXP ans, v, class;
-long i, j;
+SEXP ans;
+long i;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
@@ -385,8 +384,8 @@ return(ans);
 SEXP read_types(SEXP idx0, SEXP offsets)
 {
 int idx;
-SEXP ans, v, class;
-long i, j;
+SEXP ans;
+long i;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
@@ -442,7 +441,7 @@ LIBMVL_VECTOR *vec;
 
 double *pd;
 int *pi;
-char *pc;
+unsigned char *pc;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -480,6 +479,8 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_OFFSET64:
 				field_size=8;
 				break;
+		default:
+			field_size=1;
 		}
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
@@ -564,7 +565,7 @@ LIBMVL_VECTOR *vec;
 
 double *pd;
 int *pi, *pidx;
-char *pc;
+unsigned char *pc;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -588,6 +589,7 @@ for(i=0;i<xlength(offsets);i++) {
 		SET_VECTOR_ELT(ans, i, R_NilValue);
 		continue;
 		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 		case LIBMVL_VECTOR_CSTRING:
@@ -602,8 +604,9 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_OFFSET64:
 				field_size=8;
 				break;
+		default:
+			field_size=1;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
@@ -703,7 +706,7 @@ LIBMVL_VECTOR *vec;
 
 double *pd, *pidx;
 int *pi;
-char *pc;
+unsigned char *pc;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -727,6 +730,7 @@ for(i=0;i<xlength(offsets);i++) {
 		SET_VECTOR_ELT(ans, i, R_NilValue);
 		continue;
 		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 		case LIBMVL_VECTOR_CSTRING:
@@ -741,8 +745,9 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_OFFSET64:
 				field_size=8;
 				break;
+		default:
+			field_size=1;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
@@ -887,7 +892,7 @@ LIBMVL_VECTOR *vec;
 
 double *pd;
 int *pi;
-char *pc;
+unsigned char *pc;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -1009,7 +1014,7 @@ LIBMVL_VECTOR *vec;
 
 double *pd;
 int *pi, *pidx;
-char *pc;
+unsigned char *pc;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -1147,7 +1152,7 @@ LIBMVL_VECTOR *vec;
 
 double *pd, *pidx;
 int *pi;
-char *pc;
+unsigned char *pc;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -1273,8 +1278,8 @@ return(ans);
 SEXP read_metadata(SEXP idx0, SEXP offsets)
 {
 int idx;
-SEXP ans, v, class;
-long i, j;
+SEXP ans, class;
+long i;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
@@ -1515,7 +1520,7 @@ LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
 
 LIBMVL_OFFSET64 offset, char_offset, data_offset, vec_idx, char_idx;
 double *doffset=(double *)&offset;
-const char *ch, **strvec2;
+const char *ch;
 LIBMVL_OFFSET64 *strvec;
 long long *idata;
 float *fdata;
@@ -1526,7 +1531,7 @@ int *pi;
 unsigned char *pc;
 long total_length, char_total_length;
 
-LIBMVL_VECTOR *vec, *char_vec;
+LIBMVL_VECTOR *vec;
 
 SEXP ans, class;
 
