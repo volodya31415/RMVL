@@ -231,7 +231,7 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 #' @param L a list of suitable R objects (vector, array, data.frame) or equivalent MVL objects.
 #' @param name if specified add a named entry to MVL file directory
 #' @param drop.rownames set to TRUE to prevent rownames from being written
-#' @return and object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @return any object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #'  
 #' @export
 #'
