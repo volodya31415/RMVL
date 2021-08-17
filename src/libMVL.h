@@ -352,7 +352,8 @@ LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, const char *tag);
  */
 void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *data);
 
-#define LIBMVL_SORT_LEXICOGRAPHIC	1
+#define LIBMVL_SORT_LEXICOGRAPHIC	1		/* Ascending */
+#define LIBMVL_SORT_LEXICOGRAPHIC_DESC	2		/* Descending */
 
 /*
  * This function sorts indices into a list of vectors so that the resulting permutation is ordered.

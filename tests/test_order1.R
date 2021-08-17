@@ -39,6 +39,15 @@ idx1a<-order(df[, "s"], df[, "y"])
 idx1b<-mvl_order_vectors(list(M3$test_object$x[,"s"], M3$test_object$x[,"y"]))
 if(!all.equal(idx1a, idx1b))cat("test6 failed\n")
 
+idx1a<-order(df[, "s"], df[, "y"], decreasing=TRUE)
+idx1b<-mvl_order_vectors(list(M3$test_object$x[,"s"], M3$test_object$x[,"y"]), decreasing=TRUE)
+if(!all.equal(idx1a, idx1b))cat("test7 failed\n")
+
+idx1a<-idx0[order(df[idx0, "s"], df[idx0, "y"], decreasing=TRUE)]
+idx1b<-mvl_order_vectors(list(M3$test_object$x[,"s"], M3$test_object$x[,"y"]), idx0, decreasing=TRUE)
+if(!all.equal(idx1a, idx1b))cat("test8 failed\n")
+
+
 mvl_close(M3)
 
 unlink("test2.mvl")

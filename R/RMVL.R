@@ -145,12 +145,13 @@ mvl_write_string<-function(MVLHANDLE, x, metadata.offset=NULL) {
 #'
 #' @param L  list of vector like MVL_OBJECTs 
 #' @param indices  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to length of the object.
+#' @param decreasing whether to sort in ascending or decreasing order. This parameter is provided for compatibility with \code{order()} function
 #' @param sort_function specifies desired sort order
 #' @return sorted indices
 #'  
 #' @export
 #'
-mvl_order_vectors<-function(L, indices=NULL, sort_function=1) {
+mvl_order_vectors<-function(L, indices=NULL, decreasing=FALSE, sort_function=ifelse(decreasing, 2, 1)) {
 	return(.Call("order_vectors", L, indices, as.integer(sort_function))) 
 	}
 

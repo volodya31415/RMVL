@@ -932,7 +932,95 @@ if(ai<bi)return -1;
 if(ai>bi)return 1;
 return 0;
 }
-	
+
+int mvl_lexicographic_desc_cmp(MVL_SORT_UNIT *a, MVL_SORT_UNIT *b)
+{
+LIBMVL_OFFSET64 i, ai, bi;
+LIBMVL_OFFSET64 N=a->info->nvec;
+LIBMVL_VECTOR *vec;
+ai=a->index;
+bi=b->index;
+for(i=0;i<N;i++) {
+	vec=a->info->vec[i];
+		
+	switch(mvl_vector_type(vec)) {
+		case LIBMVL_VECTOR_CSTRING:
+		case LIBMVL_VECTOR_UINT8: {
+			unsigned char ad, bd;
+			ad=mvl_vector_data(vec).b[ai];
+			bd=mvl_vector_data(vec).b[bi];
+			if(ad<bd)return 1;
+			if(ad>bd)return -1;
+			break;
+			}
+		case LIBMVL_VECTOR_INT32: {
+			int ad, bd;
+			ad=mvl_vector_data(vec).i[ai];
+			bd=mvl_vector_data(vec).i[bi];
+			if(ad<bd)return 1;
+			if(ad>bd)return -1;
+			break;
+			}
+		case LIBMVL_VECTOR_FLOAT: {
+			float ad, bd;
+			ad=mvl_vector_data(vec).f[ai];
+			bd=mvl_vector_data(vec).f[bi];
+			if(ad<bd)return 1;
+			if(ad>bd)return -1;
+			break;
+			}
+		case LIBMVL_VECTOR_INT64: {
+			long long ad, bd;
+			ad=mvl_vector_data(vec).i64[ai];
+			bd=mvl_vector_data(vec).i64[bi];
+			if(ad<bd)return 1;
+			if(ad>bd)return -1;
+			break;
+			}
+		case LIBMVL_VECTOR_DOUBLE: {
+			double ad, bd;
+			ad=mvl_vector_data(vec).d[ai];
+			bd=mvl_vector_data(vec).d[bi];
+			if(ad<bd)return 1;
+			if(ad>bd)return -1;
+			break;
+			}
+		case LIBMVL_VECTOR_OFFSET64: {
+			LIBMVL_OFFSET64 ad, bd;
+			ad=mvl_vector_data(vec).offset[ai];
+			bd=mvl_vector_data(vec).offset[bi];
+			if(ad<bd)return 1;
+			if(ad>bd)return -1;
+			break;
+			}
+		case LIBMVL_PACKED_LIST64: {
+			LIBMVL_OFFSET64 al, bl, nn;
+			unsigned char *ad, *bd;
+			al=mvl_packed_list_get_entry_bytelength(vec, ai);
+			bl=mvl_packed_list_get_entry_bytelength(vec, bi);
+			ad=mvl_packed_list_get_entry(vec, a->info->data[i], ai);
+			bd=mvl_packed_list_get_entry(vec, a->info->data[i], bi);
+			nn=al;
+			if(bl<nn)nn=bl;
+			for(LIBMVL_OFFSET64 j=0;j<nn;j++) {
+				if(ad[j]<bd[j])return 1;
+				if(ad[j]>bd[j])return -1;
+				}
+			if(al<bl)return 1;
+			if(al>bl)return -1;
+			break;
+			}
+		default:
+			if(ai<bi)return 1;
+			if(ai>bi)return -1;
+			return(0);
+		}
+	}
+if(ai<bi)return 1;
+if(ai>bi)return -1;
+return 0;
+}
+
 /*
  * This function sorts indices into a list of vectors so that the resulting permutation is ordered.
  * The vector should all be the same length N, except LIBMVL_PACKED_LIST64 which should N+1 - this provides the same number of elements.
@@ -979,6 +1067,9 @@ for(i=0;i<indices_count;i++) {
 switch(sort_function) {
 	case LIBMVL_SORT_LEXICOGRAPHIC:
 		qsort(units, indices_count, sizeof(*units), mvl_lexicographic_cmp);
+		break;
+	case LIBMVL_SORT_LEXICOGRAPHIC_DESC:
+		qsort(units, indices_count, sizeof(*units), mvl_lexicographic_desc_cmp);
 		break;
 	default:
 		break;
