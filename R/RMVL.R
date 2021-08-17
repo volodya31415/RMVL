@@ -425,7 +425,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 			}
 		if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
 		rn<-metadata[["rownames"]]
-		if(!is.null(rn) && class(rn)!="MVL_OBJECT")rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
+		if(!is.null(rn) && !inherits(rn, "MVL_OBJECT"))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
 			else
 		if(!is.null(cl) && any(cl=="data.frame"))rownames(vec)<-1:(metadata[["dim"]][1])
 		}
