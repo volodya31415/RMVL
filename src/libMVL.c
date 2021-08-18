@@ -907,7 +907,7 @@ for(i=0;i<N;i++) {
 			}
 		case LIBMVL_PACKED_LIST64: {
 			LIBMVL_OFFSET64 al, bl, nn;
-			unsigned char *ad, *bd;
+			const unsigned char *ad, *bd;
 			al=mvl_packed_list_get_entry_bytelength(vec, ai);
 			bl=mvl_packed_list_get_entry_bytelength(vec, bi);
 			ad=mvl_packed_list_get_entry(vec, a->info->data[i], ai);
@@ -995,7 +995,7 @@ for(i=0;i<N;i++) {
 			}
 		case LIBMVL_PACKED_LIST64: {
 			LIBMVL_OFFSET64 al, bl, nn;
-			unsigned char *ad, *bd;
+			const unsigned char *ad, *bd;
 			al=mvl_packed_list_get_entry_bytelength(vec, ai);
 			bl=mvl_packed_list_get_entry_bytelength(vec, bi);
 			ad=mvl_packed_list_get_entry(vec, a->info->data[i], ai);

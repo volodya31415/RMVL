@@ -94,8 +94,18 @@ mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(inherits(x, "factor"))x<-as.character(x)
 	type<-attr(x, "MVL_TYPE", exact=TRUE)
 	if(is.null(type)) {
-		type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
-		if(type<0 && class(x) %in% c("array", "matrix"))type<-switch(typeof(x), double=5, integer=2, -1)
+		if(inherits(x, "MVL_OBJECT")) {
+			type<-unclass(x)[["type"]]
+			if(type==100)stop("Only vector like MVL_OBJECTs are supported")
+			if(type==102)type<-10000
+			if(type>0)
+				return(.Call("fused_write_vector", MVLHANDLE[["handle"]], as.integer(type), list(x), metadata.offset)) 
+				else 
+				stop("Malformed MVL_OBJECT")
+			} else {
+			type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
+			if(type<0 && inherits(x, c("array", "matrix")))type<-switch(typeof(x), double=5, integer=2, -1)
+			}
 		}
 	if(type>0) {
 		return(.Call("write_vector", MVLHANDLE[["handle"]], as.integer(type), x, metadata.offset)) 
@@ -232,7 +242,7 @@ mvl_inherits<-function(x, clstr, which=FALSE) {
 #' Write R object into MVL file
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
-#' @param x a suitable R object (vector, array, list, data.frame)
+#' @param x a suitable R object (vector, array, list, data.frame) or a vector-like MVL_OBJECT
 #' @param name if specified add a named entry to MVL file directory
 #' @param drop.rownames set to TRUE to prevent rownames from being written
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
@@ -242,7 +252,8 @@ mvl_inherits<-function(x, clstr, which=FALSE) {
 mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	#cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x, drop.rownames=drop.rownames)
-	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix"))) {
+	# For now we only support vector-like MVL_OBJECTs.
+	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix", "MVL_OBJECT"))) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
