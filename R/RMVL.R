@@ -216,6 +216,7 @@ mvl_class<-function(x) {
 #'
 #' @param x  any object
 #' @param clstr classes to match against
+#' @param which when TRUE return a boolean array indicating of which classes named in \code{clstr} are inherited by x. When FALSE return a single boolean indicating inheritance of any class named in \code{clstr}.
 #' @return character string giving object class
 #'  
 #' @export
@@ -223,7 +224,7 @@ mvl_class<-function(x) {
 mvl_inherits<-function(x, clstr, which=FALSE) {
 	if(!inherits(x, "MVL_OBJECT"))return(inherits(x, clstr, which=which))
 	cl<-mvl_class(x)
-	inh<-inherits(x, clstr, which=TRUE) | (cl %in% clstr)
+	inh<-inherits(x, clstr, which=TRUE) | ( clstr %in% cl)
 	if(which)return(inh)
 		else return(any(inh))
 	}

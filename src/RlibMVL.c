@@ -1823,23 +1823,20 @@ return(ans);
 
 SEXP order_vectors(SEXP data_list, SEXP indices, SEXP s_sort_function)
 {
-int idx, data_idx, sort_function;
+int data_idx, sort_function;
 
-LIBMVL_OFFSET64 offset, char_offset, data_offset, vec_idx, char_idx;
-double *doffset=(double *)&offset;
-LIBMVL_OFFSET64 *strvec;
+LIBMVL_OFFSET64 offset, char_offset, data_offset;
 SEXP data;
 
 double *pd;
 int *pi;
-unsigned char *pc;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors, *vec;
 LIBMVL_OFFSET64 *v_idx;
 LIBMVL_OFFSET64 N;
 
-SEXP ans, class;
+SEXP ans;
 	
 if(TYPEOF(data_list)!=VECSXP) {
 	error("order_vectors first argument must be a list of data to sort");
@@ -1973,7 +1970,6 @@ switch(TYPEOF(indices)) {
 	}
 	
 if(mvl_sort_indices(N, v_idx, xlength(data_list), vectors, vec_data, sort_function)) {
-	fprintf(stderr, "N=%d vec_count=%d\n", N, xlength(data_list));
 	free(vec_data);
 	free(vectors);
 	free(v_idx);

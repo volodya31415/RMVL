@@ -1066,10 +1066,10 @@ for(i=0;i<indices_count;i++) {
 
 switch(sort_function) {
 	case LIBMVL_SORT_LEXICOGRAPHIC:
-		qsort(units, indices_count, sizeof(*units), mvl_lexicographic_cmp);
+		qsort(units, indices_count, sizeof(*units), (int (*)(const void *, const void *))mvl_lexicographic_cmp);
 		break;
 	case LIBMVL_SORT_LEXICOGRAPHIC_DESC:
-		qsort(units, indices_count, sizeof(*units), mvl_lexicographic_desc_cmp);
+		qsort(units, indices_count, sizeof(*units), (int (*)(const void *, const void *))mvl_lexicographic_desc_cmp);
 		break;
 	default:
 		break;
