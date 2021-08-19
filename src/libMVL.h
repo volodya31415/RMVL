@@ -368,4 +368,77 @@ void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *dat
  */
 int mvl_sort_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, int sort_function);
 
+
+/* Hash function */
+
+/* This randomizes bits of 64-bit numbers. */
+static inline LIBMVL_OFFSET64 mvl_randomize_bits64(LIBMVL_OFFSET64 x)
+{
+	x^=x>>31;
+x*=18397683724573214587LLU;
+	x^=x>>32;
+x*=13397683724573242421LLU;
+	x^=x>>33;
+	return(x);
+}
+
+#define MVL_SEED_HASH_VALUE	0xabcdef
+
+/* This allows to accumulate hash value from several sources. 
+ * Initial x value can be anything except 0 
+ */
+static inline LIBMVL_OFFSET64 mvl_accumulate_hash64(LIBMVL_OFFSET64 x, const unsigned char *data, LIBMVL_OFFSET64 count)
+{
+LIBMVL_OFFSET64 i;
+for(i=0;i<count;i++) {
+	x=(x+data[i]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
+	}
+return(x);
+}
+
+/* This allows to accumulate hash value from several sources. 
+ * Initial x values can be anything except 0.
+ * The accumulation is done in place and in parallel for 8 streams, count bytes for each stream.
+ */
+static inline void mvl_accumulate_hash64x8(LIBMVL_OFFSET64 *x, const unsigned char *data0, const unsigned char *data1, const unsigned char *data2, const unsigned char *data3, const unsigned char *data4, const unsigned char *data5, const unsigned char *data6, const unsigned char *data7, LIBMVL_OFFSET64 count)
+{
+LIBMVL_OFFSET64 i, x0, x1, x2, x3, x4, x5, x6, x7;
+
+x0=x[0];
+x1=x[1];
+x2=x[2];
+x3=x[3];
+x4=x[4];
+x5=x[5];
+x6=x[6];
+x7=x[7];
+
+for(i=0;i<count;i++) {
+	#define STEP(k)  {\
+		x ## k=( (x ## k) +(data ## k)[i]); \
+		(x ## k)*=13397683724573242421LLU; \
+		(x ## k) ^= (x ## k)>>33; \
+		}
+	STEP(0)
+	STEP(1)
+	STEP(2)
+	STEP(3)
+	STEP(4)
+	STEP(5)
+	STEP(6)
+	STEP(7)
+	}
+
+x[0]=x0;
+x[1]=x1;
+x[2]=x2;
+x[3]=x3;
+x[4]=x4;
+x[5]=x5;
+x[6]=x6;
+x[7]=x7;
+}
+
 #endif
