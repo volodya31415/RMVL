@@ -1980,6 +1980,9 @@ ans=PROTECT(allocVector(REALSXP, N));
 pd=REAL(ans);
 for(LIBMVL_OFFSET64 m=0;m<N;m++)pd[m]=v_idx[m]+1;
 UNPROTECT(1);
+free(vec_data);
+free(vectors);
+free(v_idx);
 return(ans);	
 }
 
