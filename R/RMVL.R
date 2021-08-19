@@ -166,9 +166,19 @@ mvl_order_vectors<-function(L, indices=NULL, decreasing=FALSE, sort_function=ife
 	}
 
 	
-mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL) {
+mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL, class.override=NULL, names.override=NULL, rownames.override=NULL) {
 	n<-mvl_write_string(MVLHANDLE, "MVL_LAYOUT")
 	o<-mvl_write_string(MVLHANDLE, "R")
+	
+	metadata_overrides<-attr(x, "MVL_METADATA")
+	
+	if(!is.null(metadata_overrides)) {
+		if(is.null(dim.override))dim.override<-metadata_overrides[["dim"]]
+		if(is.null(class.override))class.override<-metadata_overrides[["class"]]
+		if(is.null(names.override))names.override<-metadata_overrides[["names"]]
+		if(is.null(rownames.override))rownames.override<-metadata_overrides[["rownames"]]
+		}
+	
 	if(!is.null(dim(x)) || !is.null(dim.override)) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "dim"))
 		if(!is.null(dim.override))
@@ -176,17 +186,26 @@ mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.overr
 			else
 			o<-c(o, mvl_write_vector(MVLHANDLE, dim(x)))
 		}
-	if(!is.null(class(x)) && !(mvl_inherits(x,  c("raw", "numeric", "integer")))) {
+	if(!is.null(class.override) || ( !is.null(class(x)) && !(mvl_inherits(x,  c("raw", "numeric", "integer"))))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "class"))
-		o<-c(o, mvl_write_vector(MVLHANDLE, mvl_class(x)))
+		if(!is.null(class.override))
+			o<-c(o, mvl_write_vector(MVLHANDLE, as.character(class.override)))
+			else
+			o<-c(o, mvl_write_vector(MVLHANDLE, mvl_class(x)))
 		}
-	if(!is.null(names(x))) {
+	if(!is.null(names(x)) || !is.null(names.override)) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "names"))
-		o<-c(o, mvl_write_vector(MVLHANDLE, names(x)))
+		if(!is.null(names.override))
+			o<-c(o, mvl_write_vector(MVLHANDLE, names.override))
+			else
+			o<-c(o, mvl_write_vector(MVLHANDLE, names(x)))
 		}
-	if(!is.null(rownames(x)) && !drop.rownames) {
+	if(!drop.rownames && (!is.null(rownames(x)) || !is.null(rownames.override))) {
 		n<-c(n, mvl_write_string(MVLHANDLE, "rownames"))
-		o<-c(o, mvl_write_vector(MVLHANDLE, rownames(x)))
+		if(!is.null(rownames.override))
+			o<-c(o, mvl_write_vector(MVLHANDLE, rownames.override))
+			else
+			o<-c(o, mvl_write_vector(MVLHANDLE, rownames(x)))
 		}
 	if(is.null(n))return(NULL)
 	ofs<-c(n, o)
