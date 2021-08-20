@@ -1054,6 +1054,7 @@ for(i=1;i<vec_count;i++) {
 		if(mvl_vector_length(vec[i])!=N+1)return -1;
 		if(vec_data==NULL)return -1;
 		if(vec_data[i]==NULL)return -1;
+		continue;
 		}
 	if(mvl_vector_length(vec[i])!=N)return -1;
 	}
@@ -1101,14 +1102,15 @@ if(mvl_vector_type(vec[0])==LIBMVL_PACKED_LIST64)N--;
 for(i=1;i<vec_count;i++) {
 	if(mvl_vector_type(vec[i])==LIBMVL_PACKED_LIST64) {
 		if(mvl_vector_length(vec[i])!=N+1)return -1;
-		if(vec_data==NULL)return -1;
-		if(vec_data[i]==NULL)return -1;
+		if(vec_data==NULL)return -2;
+		if(vec_data[i]==NULL)return -3;
+		continue;
 		}
-	if(mvl_vector_length(vec[i])!=N)return -1;
+	if(mvl_vector_length(vec[i])!=N)return -4;
 	}
 	
 for(i=0;i<indices_count;i++) {
-	if(indices[i]>=N)return -2;
+	if(indices[i]>=N)return -5;
 	}
 
 for(j=0;j<vec_count;j++) {
@@ -1133,8 +1135,8 @@ for(j=0;j<vec_count;j++) {
 				}
 			break;
 		case LIBMVL_PACKED_LIST64: {
-			if(vec_data==NULL)return -1;
-			if(vec_data[j]==NULL)return -1;
+			if(vec_data==NULL)return -6;
+			if(vec_data[j]==NULL)return -7;
 			for(i=0;i<indices_count;i++) {
 				hash[i]=mvl_accumulate_hash64(hash[i], mvl_packed_list_get_entry(vec[j], vec_data[j], indices[i]), mvl_packed_list_get_entry_bytelength(vec[j], indices[i]));
 				}
@@ -1152,4 +1154,5 @@ return 0;
  */
 int mvl_group_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *first, LIBMVL_OFFSET64 *next, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
 {
+return 0;
 }

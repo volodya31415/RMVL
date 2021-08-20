@@ -1829,7 +1829,7 @@ LIBMVL_OFFSET64 offset, char_offset, data_offset;
 SEXP data;
 
 double *pd;
-int *pi;
+int *pi, err;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors, *vec;
@@ -1969,11 +1969,11 @@ switch(TYPEOF(indices)) {
 		return(R_NilValue);		
 	}
 	
-if(mvl_sort_indices(N, v_idx, xlength(data_list), vectors, vec_data, sort_function)) {
+if((err=mvl_sort_indices(N, v_idx, xlength(data_list), vectors, vec_data, sort_function))!=0) {
 	free(vec_data);
 	free(vectors);
 	free(v_idx);
-	error("Error sorting indices");
+	error("Error sorting indices, error code %d", err);
 	return(R_NilValue);		
 	}
 ans=PROTECT(allocVector(REALSXP, N));
@@ -1995,7 +1995,7 @@ SEXP data;
 
 double *pd;
 LIBMVL_OFFSET64 *po;
-int *pi;
+int *pi, err;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors, *vec;
@@ -2130,11 +2130,11 @@ switch(TYPEOF(indices)) {
 	
 ans=PROTECT(allocVector(REALSXP, N));
 pd=REAL(ans);
-if(mvl_hash_indices(N, v_idx, (LIBMVL_OFFSET64 *)pd, xlength(data_list), vectors, vec_data)) {
+if((err=mvl_hash_indices(N, v_idx, (LIBMVL_OFFSET64 *)pd, xlength(data_list), vectors, vec_data))!=0) {
 	free(vec_data);
 	free(vectors);
 	free(v_idx);
-	error("Error hashing indices");
+	error("Error hashing indices, code %d", err);
 	UNPROTECT(1);
 	return(R_NilValue);		
 	}
