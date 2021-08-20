@@ -1030,7 +1030,7 @@ return 0;
  * You can set vec_data to NULL if LIBMVL_PACKED_LIST64 vectors are not present. Also entries vec_data[i] can be NULL if the corresponding vector is not of type
  * LIBMVL_PACKED_LIST64
  * 
- * This function return 0 on successful sort. If no vectors are supplies (vec_count==0) the indices are unchanged the sort is considered successful
+ * This function return 0 on successful sort. If no vectors are supplies (vec_count==0) the indices are unchanged and the sort is considered successful.
  */
 int mvl_sort_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, int sort_function)
 {
@@ -1077,5 +1077,79 @@ switch(sort_function) {
 for(i=0;i<indices_count;i++) {
 	indices[i]=units[i].index;
 	}
+	
+free(units);
 return 0;
+}
+
+/* This function is used to compute 64 bit hash of vector values
+ * "hash" is passed in and contains the result of the computations
+ */
+int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
+{
+LIBMVL_OFFSET64 i, j, N;
+
+for(i=0;i<indices_count;i++) {
+	hash[i]=MVL_SEED_HASH_VALUE;
+	}
+
+if(vec_count<1)return 0;
+
+N=mvl_vector_length(vec[0]);
+//fprintf(stderr, "vec_count=%d N=%d\n", vec_count, N);
+if(mvl_vector_type(vec[0])==LIBMVL_PACKED_LIST64)N--;
+for(i=1;i<vec_count;i++) {
+	if(mvl_vector_type(vec[i])==LIBMVL_PACKED_LIST64) {
+		if(mvl_vector_length(vec[i])!=N+1)return -1;
+		if(vec_data==NULL)return -1;
+		if(vec_data[i]==NULL)return -1;
+		}
+	if(mvl_vector_length(vec[i])!=N)return -1;
+	}
+	
+for(i=0;i<indices_count;i++) {
+	if(indices[i]>=N)return -2;
+	}
+
+for(j=0;j<vec_count;j++) {
+	switch(mvl_vector_type(vec[j])) {
+		case LIBMVL_VECTOR_CSTRING:
+		case LIBMVL_VECTOR_UINT8: 
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i[indices[i]]), 1);
+				}
+			break;
+		case LIBMVL_VECTOR_FLOAT:
+		case LIBMVL_VECTOR_INT32:
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i[indices[i]]), 4);
+				}
+			break;
+		case LIBMVL_VECTOR_OFFSET64: /* TODO: we might want to do something more clever here */
+		case LIBMVL_VECTOR_DOUBLE:
+		case LIBMVL_VECTOR_INT64: 
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i64[indices[i]]), 8);
+				}
+			break;
+		case LIBMVL_PACKED_LIST64: {
+			if(vec_data==NULL)return -1;
+			if(vec_data[j]==NULL)return -1;
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_hash64(hash[i], mvl_packed_list_get_entry(vec[j], vec_data[j], indices[i]), mvl_packed_list_get_entry_bytelength(vec[j], indices[i]));
+				}
+			break;
+			}
+		default:
+			return(-1);
+		}
+	}
+return 0;
+}
+
+/* This function is used to compute groups of indices which have the same value for all the supplied MVL vectors
+ * first and next contain the result of the computation
+ */
+int mvl_group_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *first, LIBMVL_OFFSET64 *next, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
+{
 }

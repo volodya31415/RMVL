@@ -441,4 +441,6 @@ x[6]=x6;
 x[7]=x7;
 }
 
+int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data);
+
 #endif

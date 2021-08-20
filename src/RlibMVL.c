@@ -1986,6 +1986,167 @@ free(v_idx);
 return(ans);	
 }
 
+SEXP hash_vectors(SEXP data_list, SEXP indices)
+{
+int data_idx, sort_function;
+
+LIBMVL_OFFSET64 offset, char_offset, data_offset;
+SEXP data;
+
+double *pd;
+LIBMVL_OFFSET64 *po;
+int *pi;
+
+void **vec_data;
+LIBMVL_VECTOR **vectors, *vec;
+LIBMVL_OFFSET64 *v_idx;
+LIBMVL_OFFSET64 N;
+
+SEXP ans;
+	
+if(TYPEOF(data_list)!=VECSXP) {
+	error("order_vectors first argument must be a list of data to sort");
+	return(R_NilValue);
+	}
+
+if(xlength(data_list)<1) {
+	return(indices);
+	}
+	
+if(TYPEOF(indices)!=NILSXP && xlength(indices)<1) {
+	return(indices);
+	}
+	
+vec_data=calloc(xlength(data_list), sizeof(*vec_data));
+vectors=calloc(xlength(data_list), sizeof(*vectors));
+if(vec_data==NULL || vectors==NULL) {
+	error("Not enough memory");
+	free(vec_data);
+	free(vectors);
+	return(R_NilValue);
+	}
+
+for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
+	data=VECTOR_ELT(data_list, k);
+	decode_mvl_object(data, &data_idx, &data_offset);
+	vectors[k]=get_mvl_vector(data_idx, data_offset);
+	
+	if(vectors[k]==NULL) {
+		error("Invalid MVL object in data list");
+		free(vec_data);
+		free(vectors);
+		return(R_NilValue);
+		}
+	vec_data[k]=libraries[data_idx].data;
+	}
+	
+switch(TYPEOF(indices)) {
+	case VECSXP:
+		decode_mvl_object(indices, &data_idx, &data_offset);
+		vec=get_mvl_vector(data_idx, data_offset);
+		
+		if(vec==NULL) {
+			error("Invalid MVL object or R vector passed as indices");
+			free(vec_data);
+			free(vectors);
+			return(R_NilValue);
+			}
+		N=mvl_vector_length(vec);
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			free(vec_data);
+			free(vectors);
+			return(R_NilValue);
+			}
+		
+		switch(mvl_vector_type(vec)) {
+			case LIBMVL_VECTOR_OFFSET64:
+				memcpy(v_idx, mvl_vector_data(vec).offset, N*sizeof(*v_idx));
+				break;
+			case LIBMVL_VECTOR_INT32:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i[m];
+				break;
+			case LIBMVL_VECTOR_INT64:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i64[m];
+				break;
+			case LIBMVL_VECTOR_DOUBLE:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).d[m];
+				break;
+			case LIBMVL_VECTOR_FLOAT:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).f[m];
+				break;
+			default:
+				error("Cannot interpret MVL object as indices");
+				free(vec_data);
+				free(vectors);
+				free(v_idx);
+				return(R_NilValue);
+				break;
+			}
+		break;
+	case REALSXP:
+		N=xlength(indices);
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			free(vec_data);
+			free(vectors);
+			return(R_NilValue);
+			}
+		pd=REAL(indices);
+		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=pd[m]-1;
+		break;
+	case INTSXP:
+		N=xlength(indices);
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			free(vec_data);
+			free(vectors);
+			return(R_NilValue);
+			}
+		pi=INTEGER(indices);
+		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=pi[m]-1;
+		break;
+	case NILSXP:
+		N=mvl_vector_length(vectors[0]);
+		if(mvl_vector_type(vectors[0])==LIBMVL_PACKED_LIST64)N--;
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			free(vec_data);
+			free(vectors);
+			return(R_NilValue);
+			}
+		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=m;
+		break;
+	default:
+		error("Cannot interpret R object as index");
+		free(vec_data);
+		free(vectors);
+		return(R_NilValue);		
+	}
+	
+ans=PROTECT(allocVector(REALSXP, N));
+pd=REAL(ans);
+if(mvl_hash_indices(N, v_idx, (LIBMVL_OFFSET64 *)pd, xlength(data_list), vectors, vec_data)) {
+	free(vec_data);
+	free(vectors);
+	free(v_idx);
+	error("Error hashing indices");
+	UNPROTECT(1);
+	return(R_NilValue);		
+	}
+po=(LIBMVL_OFFSET64 *)pd;
+for(LIBMVL_OFFSET64 m=0;m<N;m++)po[m]=(po[m] & ((1UL<<52)-1)) | (1023UL<<52);
+UNPROTECT(1);
+free(vec_data);
+free(vectors);
+free(v_idx);
+return(ans);	
+}
+
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
   R_RegisterCCallable("RMVL", "close_library",  (DL_FUNC) &close_library);
@@ -2005,4 +2166,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
   R_RegisterCCallable("RMVL", "fused_write_vector",  (DL_FUNC) &fused_write_vector);
   R_RegisterCCallable("RMVL", "order_vectors",  (DL_FUNC) &order_vectors);
+  R_RegisterCCallable("RMVL", "hash_vectors",  (DL_FUNC) &hash_vectors);
 }
