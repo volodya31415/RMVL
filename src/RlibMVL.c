@@ -1900,7 +1900,7 @@ switch(TYPEOF(indices)) {
 		return(R_NilValue);
 	}
 
-offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, moffset, 1024*1024*16);
+offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, *moffset, 1024*1024*16);
 	
 free(v_idx);
 
