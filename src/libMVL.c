@@ -1353,11 +1353,10 @@ LIBMVL_OFFSET64 mvl_hash_match_count(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 
 {
 LIBMVL_OFFSET64 i, k, hash_mask, match_count;
 LIBMVL_OFFSET64 *hash_map, *next, *hash;
-LIBMVL_OFFSET64 hash_count, hash_map_size;
+LIBMVL_OFFSET64 hash_map_size;
 
 
 hash_map_size=hm->hash_map_size;
-hash_count=hm->hash_count;
 hash=hm->hash;
 hash_map=hm->hash_map;
 next=hm->next;
@@ -1392,10 +1391,9 @@ return(match_count);
  */
 void mvl_find_first_hashes(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 *key_hash, LIBMVL_OFFSET64 *key_indices, HASH_MAP *hm)
 {
-LIBMVL_OFFSET64 i, k, hash_mask, hash_count, hash_map_size;
+LIBMVL_OFFSET64 i, k, hash_mask, hash_map_size;
 LIBMVL_OFFSET64 *hash_map, *next, *hash;
 
-hash_count=hm->hash_count;
 hash=hm->hash;
 hash_map_size=hm->hash_map_size;
 hash_map=hm->hash_map;
@@ -1433,9 +1431,8 @@ int mvl_compute_merge_plan(LIBMVL_OFFSET64 key_indices_count, LIBMVL_OFFSET64 *k
 			   LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm, 
 			   LIBMVL_OFFSET64 *key_last, LIBMVL_OFFSET64 pairs_size, LIBMVL_OFFSET64 *key_match_indices, LIBMVL_OFFSET64 *match_indices)
 {
-LIBMVL_OFFSET64 *hash, *hash_map, *next, *first;
-LIBMVL_OFFSET64 hash_map_size, first_count, i, k, hash_mask, N_matches;
-int err;
+LIBMVL_OFFSET64 *hash, *hash_map, *next;
+LIBMVL_OFFSET64 hash_map_size, i, k, hash_mask, N_matches;
 MVL_SORT_INFO key_si, si;
 MVL_SORT_UNIT key_su, su;
 

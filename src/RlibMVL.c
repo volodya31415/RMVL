@@ -1824,8 +1824,7 @@ return(ans);
 SEXP order_vectors(SEXP data_list, SEXP indices, SEXP s_sort_function)
 {
 int data_idx, sort_function;
-
-LIBMVL_OFFSET64 offset, char_offset, data_offset;
+LIBMVL_OFFSET64 data_offset;
 SEXP data;
 
 double *pd;
@@ -2079,16 +2078,15 @@ return(0);
 SEXP hash_vectors(SEXP data_list, SEXP indices)
 {
 int data_idx;
-
-LIBMVL_OFFSET64 offset, char_offset, data_offset;
+LIBMVL_OFFSET64 data_offset;
 SEXP data;
 
 double *pd;
 LIBMVL_OFFSET64 *po;
-int *pi, err;
+int err;
 
 void **vec_data;
-LIBMVL_VECTOR **vectors, *vec;
+LIBMVL_VECTOR **vectors;
 LIBMVL_OFFSET64 *v_idx;
 LIBMVL_OFFSET64 N;
 
@@ -2147,7 +2145,7 @@ if((err=mvl_hash_indices(N, v_idx, (LIBMVL_OFFSET64 *)pd, xlength(data_list), ve
 	return(R_NilValue);		
 	}
 po=(LIBMVL_OFFSET64 *)pd;
-for(LIBMVL_OFFSET64 m=0;m<N;m++)po[m]=(po[m] & ((1UL<<52)-1)) | (1023UL<<52);
+for(LIBMVL_OFFSET64 m=0;m<N;m++)po[m]=(po[m] & ((1LLU<<52)-1)) | (1023LLU<<52);
 UNPROTECT(1);
 free(vec_data);
 free(vectors);
@@ -2163,11 +2161,10 @@ LIBMVL_OFFSET64 offset, char_offset, data_offset, i, pairs_size;
 SEXP data;
 
 double *pd;
-LIBMVL_OFFSET64 *po;
-int *pi, err;
+int err;
 
 void **vec_data0, **vec_data1;
-LIBMVL_VECTOR **vectors0, *vec0, **vectors1, *vec1;
+LIBMVL_VECTOR **vectors0, **vectors1;
 LIBMVL_OFFSET64 *v_idx0, *v_idx1, *key_hash, *key_last, *key_match_indices, *match_indices;
 LIBMVL_OFFSET64 N0, N1;
 
