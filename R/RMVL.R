@@ -171,13 +171,30 @@ mvl_order_vectors<-function(L, indices=NULL, decreasing=FALSE, sort_function=ife
 #' we compute a hash value. Identical rows produce identical hash values. The hash values have good entropy and can be used to map row values into random numbers.
 #'
 #' @param L  list of vector like MVL_OBJECTs 
-#' @param indices  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to length of the object.
+#' @param indices  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
 #' @return hash values in numeric format, with 52 valid bits. Each value is uniform between 1 and 2.
 #'  
 #' @export
 #'
 mvl_hash_vectors<-function(L, indices=NULL) {
 	return(.Call("hash_vectors", L, indices)) 
+	}
+
+#' Return hash values for each row
+#'
+#' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. For each row, i.e. set of vector values with the same index
+#' we compute a hash value. Identical rows produce identical hash values. The hash values have good entropy and can be used to map row values into random numbers.
+#'
+#' @param L1  list of vector like MVL_OBJECTs 
+#' @param indices1  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
+#' @param L2  list of vector like MVL_OBJECTs 
+#' @param indices2  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
+#' @return hash values in numeric format, with 52 valid bits. Each value is uniform between 1 and 2.
+#'  
+#' @export
+#'
+mvl_merge_plan<-function(L1, L2, indices1=NULL, indices2=NULL) {
+	return(.Call("merge_vectors_plan", L1, indices1, L2, indices2)) 
 	}
 	
 mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL, class.override=NULL, names.override=NULL, rownames.override=NULL) {

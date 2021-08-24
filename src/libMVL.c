@@ -845,6 +845,88 @@ typedef struct {
 	MVL_SORT_INFO *info;
 	} MVL_SORT_UNIT;
 	
+	
+int mvl_equals(MVL_SORT_UNIT *a, MVL_SORT_UNIT *b)
+{
+LIBMVL_OFFSET64 i, ai, bi;
+LIBMVL_OFFSET64 N=a->info->nvec;
+LIBMVL_VECTOR *avec, *bvec;
+ai=a->index;
+bi=b->index;
+for(i=0;i<N;i++) {
+	avec=a->info->vec[i];
+	bvec=b->info->vec[i];
+		
+	switch(mvl_vector_type(avec)) {
+		case LIBMVL_VECTOR_CSTRING:
+		case LIBMVL_VECTOR_UINT8: {
+			unsigned char ad, bd;
+			ad=mvl_vector_data(avec).b[ai];
+			bd=mvl_vector_data(bvec).b[bi];
+			if(ad!=bd)return 0;
+			break;
+			}
+		case LIBMVL_VECTOR_INT32: {
+			int ad, bd;
+			ad=mvl_vector_data(avec).i[ai];
+			bd=mvl_vector_data(bvec).i[bi];
+			if(ad!=bd)return 0;
+			break;
+			}
+		case LIBMVL_VECTOR_FLOAT: {
+			float ad, bd;
+			ad=mvl_vector_data(avec).f[ai];
+			bd=mvl_vector_data(bvec).f[bi];
+			if(ad!=bd)return 0;
+			break;
+			}
+		case LIBMVL_VECTOR_INT64: {
+			long long ad, bd;
+			ad=mvl_vector_data(avec).i64[ai];
+			bd=mvl_vector_data(bvec).i64[bi];
+			if(ad!=bd)return 0;
+			break;
+			}
+		case LIBMVL_VECTOR_DOUBLE: {
+			double ad, bd;
+			ad=mvl_vector_data(avec).d[ai];
+			bd=mvl_vector_data(bvec).d[bi];
+			if(ad!=bd)return 0;
+			break;
+			}
+		case LIBMVL_VECTOR_OFFSET64: {
+			LIBMVL_OFFSET64 ad, bd;
+			ad=mvl_vector_data(avec).offset[ai];
+			bd=mvl_vector_data(bvec).offset[bi];
+			if(ad!=bd)return 0;
+			break;
+			}
+		case LIBMVL_PACKED_LIST64: {
+			LIBMVL_OFFSET64 al, bl, nn;
+			const unsigned char *ad, *bd;
+			al=mvl_packed_list_get_entry_bytelength(avec, ai);
+			bl=mvl_packed_list_get_entry_bytelength(bvec, bi);
+			ad=mvl_packed_list_get_entry(avec, a->info->data[i], ai);
+			bd=mvl_packed_list_get_entry(bvec, b->info->data[i], bi);
+			if(al!=bl)return 0;
+			nn=al;
+			for(LIBMVL_OFFSET64 j=0;j<nn;j++) {
+				if(ad[j]!=bd[j])return 0;
+				}
+			break;
+			}
+		default:
+			return(0);
+		}
+	}
+return 1;
+}
+
+/* The comparison functions below use absolute index as a last resort in comparison which preserves order for identical entries.
+ * This makes these functions unsuitable to check equality
+ * They also assume that a->info==b->info
+ */
+	
 int mvl_lexicographic_cmp(MVL_SORT_UNIT *a, MVL_SORT_UNIT *b)
 {
 LIBMVL_OFFSET64 i, ai, bi;
@@ -911,7 +993,7 @@ for(i=0;i<N;i++) {
 			al=mvl_packed_list_get_entry_bytelength(vec, ai);
 			bl=mvl_packed_list_get_entry_bytelength(vec, bi);
 			ad=mvl_packed_list_get_entry(vec, a->info->data[i], ai);
-			bd=mvl_packed_list_get_entry(vec, a->info->data[i], bi);
+			bd=mvl_packed_list_get_entry(vec, b->info->data[i], bi);
 			nn=al;
 			if(bl<nn)nn=bl;
 			for(LIBMVL_OFFSET64 j=0;j<nn;j++) {
@@ -999,7 +1081,7 @@ for(i=0;i<N;i++) {
 			al=mvl_packed_list_get_entry_bytelength(vec, ai);
 			bl=mvl_packed_list_get_entry_bytelength(vec, bi);
 			ad=mvl_packed_list_get_entry(vec, a->info->data[i], ai);
-			bd=mvl_packed_list_get_entry(vec, a->info->data[i], bi);
+			bd=mvl_packed_list_get_entry(vec, b->info->data[i], bi);
 			nn=al;
 			if(bl<nn)nn=bl;
 			for(LIBMVL_OFFSET64 j=0;j<nn;j++) {
@@ -1084,7 +1166,7 @@ return 0;
 }
 
 /* This function is used to compute 64 bit hash of vector values
- * "hash" is passed in and contains the result of the computations
+ * array hash[] is passed in and contains the result of the computation
  */
 int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
 {
@@ -1149,10 +1231,291 @@ for(j=0;j<vec_count;j++) {
 return 0;
 }
 
+LIBMVL_OFFSET64 mvl_compute_hash_map_size(LIBMVL_OFFSET64 hash_count)
+{
+LIBMVL_OFFSET64 hash_map_size;
+
+if(hash_count & (1LLU<<63))return 0; /* Too big */
+
+hash_map_size=1;
+while(hash_map_size<hash_count) {
+	hash_map_size=hash_map_size<<1;
+	}
+return(hash_map_size);
+}
+
+HASH_MAP *mvl_allocate_hash_map(LIBMVL_OFFSET64 max_index_count)
+{
+HASH_MAP *hm;
+
+hm=do_malloc(1, sizeof(*hm));
+hm->hash_count=0;
+hm->hash_size=max_index_count;
+hm->hash_map_size=mvl_compute_hash_map_size(max_index_count);
+
+hm->hash=do_malloc(hm->hash_size, sizeof(hm->hash));
+hm->hash_map=do_malloc(hm->hash_map_size, sizeof(*hm->hash_map));
+hm->first=do_malloc(hm->hash_size, sizeof(*hm->first));
+hm->next=do_malloc(hm->hash_size, sizeof(*hm->next));
+
+hm->flags=MVL_FLAG_OWN_HASH | MVL_FLAG_OWN_HASH_MAP | MVL_FLAG_OWN_FIRST | MVL_FLAG_OWN_NEXT;
+
+return(hm);
+}
+
+void mvl_free_hash_map(HASH_MAP *hash_map)
+{
+if(hash_map->flags & MVL_FLAG_OWN_HASH)free(hash_map->hash);
+if(hash_map->flags & MVL_FLAG_OWN_HASH_MAP)free(hash_map->hash_map);
+if(hash_map->flags & MVL_FLAG_OWN_FIRST)free(hash_map->first);
+if(hash_map->flags & MVL_FLAG_OWN_NEXT)free(hash_map->next);
+
+hash_map->hash_size=0;
+hash_map->hash_map_size=0;
+free(hash_map);
+}
+
+
+void mvl_compute_hash_map(HASH_MAP *hm)
+{
+LIBMVL_OFFSET64 i, k, hash_mask, N_first, hash_count;
+LIBMVL_OFFSET64 hash_map_size;
+LIBMVL_OFFSET64 *hash_map, *next, *first, *hash;
+ 
+hash_count=hm->hash_count;
+hash=hm->hash;
+hash_map=hm->hash_map;
+first=hm->first;
+next=hm->next;
+
+hash_map_size=hm->hash_map_size;
+hash_mask=hash_map_size-1;
+
+for(i=0;i<hash_map_size;i++) {
+	hash_map[i]=~0LLU;
+	}
+
+if(hash_mask & hash_map_size) {
+	N_first=0;
+	for(i=0;i<hash_count;i++) {
+		k=hash[i] % hash_map_size;
+		if(hash_map[k]==~0LLU) {
+			hash_map[k]=i;
+			first[N_first]=i;
+			next[i]=~0LLU;
+			N_first++;
+			continue;
+			}
+		next[i]=hash_map[k];
+		hash_map[k]=i;
+		}
+	} else {
+	N_first=0;
+	for(i=0;i<hash_count;i++) {
+		k=hash[i] & hash_mask;
+		if(hash_map[k]==~0LLU) {
+			hash_map[k]=i;
+			first[N_first]=i;
+			next[i]=~0LLU;
+			N_first++;
+			continue;
+			}
+		next[i]=hash_map[k];
+		hash_map[k]=i;
+		}
+	}
+hm->first_count=N_first;
+}
+
+/* Find count of matches between hashes of two sets. 
+ */
+LIBMVL_OFFSET64 mvl_hash_match_count(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 *key_hash, HASH_MAP *hm)
+{
+LIBMVL_OFFSET64 i, k, hash_mask, match_count;
+LIBMVL_OFFSET64 *hash_map, *next, *hash;
+LIBMVL_OFFSET64 hash_count, hash_map_size;
+
+
+hash_map_size=hm->hash_map_size;
+hash_count=hm->hash_count;
+hash=hm->hash;
+hash_map=hm->hash_map;
+next=hm->next;
+
+hash_mask=hash_map_size-1;
+
+match_count=0;
+if(hash_map_size & hash_mask) {
+	for(i=0;i<key_count;i++) {
+		k=hash_map[key_hash[i] % hash_map_size];
+		while(k!=~0LLU) {
+			if(hash[k]==key_hash[i])match_count++;
+			k=next[k];
+			}
+		}
+	} else {
+	for(i=0;i<key_count;i++) {
+		k=hash_map[key_hash[i] & hash_mask];
+		while(k!=~0LLU) {
+			if(hash[k]==key_hash[i])match_count++;
+			k=next[k];
+			}
+		}
+	}
+return(match_count);
+}
+
+/* Find indices of keys in set of hashes, using hash map. 
+ * Only the first matching hash is reported.
+ * If not found the index is set to ~0 (0xfff...fff)
+ * Output is in key_indices 
+ */
+void mvl_find_first_hashes(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 *key_hash, LIBMVL_OFFSET64 *key_indices, HASH_MAP *hm)
+{
+LIBMVL_OFFSET64 i, k, hash_mask, hash_count, hash_map_size;
+LIBMVL_OFFSET64 *hash_map, *next, *hash;
+
+hash_count=hm->hash_count;
+hash=hm->hash;
+hash_map_size=hm->hash_map_size;
+hash_map=hm->hash_map;
+next=hm->next;
+
+hash_mask=hash_map_size-1;
+
+if(hash_map_size & hash_mask) {
+	for(i=0;i<key_count;i++) {
+		k=hash_map[key_hash[i] % hash_map_size];
+		while(k!=~0LLU) {
+			if(hash[k]==key_hash[i])break;
+			k=next[k];
+			}
+		key_indices[i]=k;
+		}
+	} else {
+	for(i=0;i<key_count;i++) {
+		k=hash_map[key_hash[i] & hash_mask];
+		while(k!=~0LLU) {
+			if(hash[k]==key_hash[i])break;
+			k=next[k];
+			}
+		key_indices[i]=k;
+		}
+	}
+}
+
+/* This function computes pairs of merge indices. The pairs are stored in key_match_indices[] and match_indices[].
+ * All arrays should be provided by the caller. The size of match_indices arrays is computed with mvl_hash_match_count()
+ * An auxiliary array key_last of length key_indices_count stores the stop before index (in terms of matches array). 
+ * In particular the total number of matches is given by key_last[key_indices_count-1]
+ */
+int mvl_compute_merge_plan(LIBMVL_OFFSET64 key_indices_count, LIBMVL_OFFSET64 *key_indices, LIBMVL_OFFSET64 key_vec_count, LIBMVL_VECTOR **key_vec, void **key_vec_data, LIBMVL_OFFSET64 *key_hash,
+			   LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm, 
+			   LIBMVL_OFFSET64 *key_last, LIBMVL_OFFSET64 pairs_size, LIBMVL_OFFSET64 *key_match_indices, LIBMVL_OFFSET64 *match_indices)
+{
+LIBMVL_OFFSET64 *hash, *hash_map, *next, *first;
+LIBMVL_OFFSET64 hash_map_size, first_count, i, k, hash_mask, N_matches;
+int err;
+MVL_SORT_INFO key_si, si;
+MVL_SORT_UNIT key_su, su;
+
+key_si.vec=key_vec;
+key_si.data=key_vec_data;
+key_si.nvec=key_vec_count;
+
+si.vec=vec;
+si.data=vec_data;
+si.nvec=vec_count;
+
+key_su.info=&key_si;
+su.info=&si;
+
+hash_map_size=hm->hash_map_size;
+hash_mask=hash_map_size-1;
+hash_map=hm->hash_map;
+hash=hm->hash;
+next=hm->next;
+
+N_matches=0;
+
+if(hash_map_size & hash_mask) {
+	for(i=0;i<key_indices_count;i++) {
+		k=hash_map[key_hash[i] % hash_map_size];
+		key_su.index=key_indices[i];
+		while(k!=~0LLU) {
+			su.index=indices[k];
+			if((hash[k]==key_hash[i])  && mvl_equals(&key_su, &su) ) {
+				if(N_matches>=pairs_size)return(-1000);
+				key_match_indices[N_matches]=key_indices[i];
+				match_indices[N_matches]=indices[k];
+				N_matches++;
+				}
+			k=next[k];
+			}
+		key_last[i]=N_matches;
+		}
+	} else {
+	for(i=0;i<key_indices_count;i++) {
+		k=hash_map[key_hash[i] & hash_mask];
+		key_su.index=key_indices[i];
+		while(k!=~0LLU) {
+			su.index=indices[k];
+			if((hash[k]==key_hash[i])  && mvl_equals(&key_su, &su) ) {
+				if(N_matches>=pairs_size)return(-1000);
+				key_match_indices[N_matches]=key_indices[i];
+				match_indices[N_matches]=indices[k];
+				N_matches++;
+				}
+			k=next[k];
+			}
+		key_last[i]=N_matches;
+		}
+	}
+return(0);
+}
+
 /* This function is used to compute groups of indices which have the same value for all the supplied MVL vectors
  * first and next contain the result of the computation
  */
-int mvl_group_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *first, LIBMVL_OFFSET64 *next, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
+int mvl_group_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 *first, LIBMVL_OFFSET64 *next, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
 {
+int err;
+LIBMVL_OFFSET64 *hash_map;
+LIBMVL_OFFSET64 hash_map_size, hash_mask, i, k, N_first;
+if((err=mvl_hash_indices(indices_count, indices, hash, vec_count, vec, vec_data))!=0)return(err);
+
+if(indices_count & (1LLU<<63))return -10; /* Too big */
+
+hash_map_size=1;
+hash_mask=1;
+while(hash_map_size<indices_count) {
+	hash_map_size=hash_map_size<<1;
+	hash_mask=hash_mask<<1;
+	}
+hash_mask=hash_mask-1;
+
+hash_map=do_malloc(hash_map_size, sizeof(*hash_map));
+for(i=0;i<hash_map_size;i++) {
+	hash_map[i]=~0LLU;
+	}
+for(i=0;i<indices_count;i++) {
+	first[i]=~0LLU;
+	next[i]=~0LLU;
+	}
+	
+N_first=0;
+for(i=0;i<indices_count;i++) {
+	k=hash[i] & hash_mask;
+	if(hash_map[k]==~0LLU) {
+		hash_map[k]=i;
+		first[N_first]=i;
+		N_first++;
+		continue;
+		}
+	next[i]=next[hash_map[k]];
+	next[hash_map[k]]=i;
+	}
+
+free(hash_map);
 return 0;
 }

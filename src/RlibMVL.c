@@ -1986,9 +1986,99 @@ free(v_idx);
 return(ans);	
 }
 
+int get_indices(SEXP indices, LIBMVL_VECTOR *vector, LIBMVL_OFFSET64 *N0, LIBMVL_OFFSET64 **v_idx0)
+{
+LIBMVL_OFFSET64 *v_idx;
+LIBMVL_OFFSET64 N, data_offset;
+int data_idx;
+LIBMVL_VECTOR *vec;
+
+double *pd;
+int *pi;
+
+*N0=0;
+*v_idx0=NULL;
+
+switch(TYPEOF(indices)) {
+	case VECSXP:
+		decode_mvl_object(indices, &data_idx, &data_offset);
+		vec=get_mvl_vector(data_idx, data_offset);
+		
+		if(vec==NULL) {
+			error("Invalid MVL object or R vector passed as indices");
+			return(-1);
+			}
+		N=mvl_vector_length(vec);
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			return(-2);
+			}
+		
+		switch(mvl_vector_type(vec)) {
+			case LIBMVL_VECTOR_OFFSET64:
+				memcpy(v_idx, mvl_vector_data(vec).offset, N*sizeof(*v_idx));
+				break;
+			case LIBMVL_VECTOR_INT32:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i[m];
+				break;
+			case LIBMVL_VECTOR_INT64:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i64[m];
+				break;
+			case LIBMVL_VECTOR_DOUBLE:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).d[m];
+				break;
+			case LIBMVL_VECTOR_FLOAT:
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).f[m];
+				break;
+			default:
+				error("Cannot interpret MVL object as indices");
+				return(-3);
+				break;
+			}
+		break;
+	case REALSXP:
+		N=xlength(indices);
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			return(-4);
+			}
+		pd=REAL(indices);
+		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=pd[m]-1;
+		break;
+	case INTSXP:
+		N=xlength(indices);
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			return(-5);
+			}
+		pi=INTEGER(indices);
+		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=pi[m]-1;
+		break;
+	case NILSXP:
+		N=mvl_vector_length(vector);
+		if(mvl_vector_type(vector)==LIBMVL_PACKED_LIST64)N--;
+		v_idx=calloc(N, sizeof(*v_idx));
+		if(v_idx==NULL) {
+			error("Not enough memory");
+			return(-6);
+			}
+		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=m;
+		break;
+	default:
+		error("Cannot interpret R object as index");
+		return(-7);		
+	}
+*N0=N;
+*v_idx0=v_idx;
+return(0);
+}
+
 SEXP hash_vectors(SEXP data_list, SEXP indices)
 {
-int data_idx, sort_function;
+int data_idx;
 
 LIBMVL_OFFSET64 offset, char_offset, data_offset;
 SEXP data;
@@ -2040,6 +2130,7 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 	vec_data[k]=libraries[data_idx].data;
 	}
 	
+#if 0
 switch(TYPEOF(indices)) {
 	case VECSXP:
 		decode_mvl_object(indices, &data_idx, &data_offset);
@@ -2127,6 +2218,15 @@ switch(TYPEOF(indices)) {
 		free(vectors);
 		return(R_NilValue);		
 	}
+#else 
+
+if(get_indices(indices, vectors[0], &N, &v_idx)) {
+	free(vec_data);
+	free(vectors);
+	return(R_NilValue);		
+	}
+
+#endif
 	
 ans=PROTECT(allocVector(REALSXP, N));
 pd=REAL(ans);
@@ -2146,6 +2246,268 @@ free(vectors);
 free(v_idx);
 return(ans);	
 }
+
+SEXP merge_vectors_plan(SEXP data_list0, SEXP indices0, SEXP data_list1, SEXP indices1)
+{
+int data_idx;
+
+LIBMVL_OFFSET64 offset, char_offset, data_offset, i, pairs_size;
+SEXP data;
+
+double *pd;
+LIBMVL_OFFSET64 *po;
+int *pi, err;
+
+void **vec_data0, **vec_data1;
+LIBMVL_VECTOR **vectors0, *vec0, **vectors1, *vec1;
+LIBMVL_OFFSET64 *v_idx0, *v_idx1, *key_hash, *key_last, *key_match_indices, *match_indices;
+LIBMVL_OFFSET64 N0, N1;
+
+HASH_MAP *hm;
+
+SEXP ans, obj;
+	
+if(TYPEOF(data_list0)!=VECSXP) {
+	error("order_vectors first argument must be a list of data to merge");
+	return(R_NilValue);
+	}
+
+if(TYPEOF(data_list1)!=VECSXP) {
+	error("order_vectors third argument must be a list of data to merge");
+	return(R_NilValue);
+	}
+
+if(xlength(data_list0)<1 || xlength(data_list1)<1) {
+	error("Vector lists should not be empty");
+	return(R_NilValue);
+	}
+
+if(xlength(data_list0)!=xlength(data_list1)) {
+	error("Vector lists should have the same number of vectors");
+	return(R_NilValue);
+	}
+	
+if(TYPEOF(indices0)!=NILSXP && xlength(indices0)<1) {
+	error("Nothing to merge");
+	return(R_NilValue);
+	}
+
+if(TYPEOF(indices1)!=NILSXP && xlength(indices1)<1) {
+	error("Nothing to merge");
+	return(R_NilValue);
+	}
+	
+Rprintf("Allocating vectors\n");
+	
+vec_data0=calloc(xlength(data_list0), sizeof(*vec_data0));
+vectors0=calloc(xlength(data_list0), sizeof(*vectors0));
+vec_data1=calloc(xlength(data_list1), sizeof(*vec_data1));
+vectors1=calloc(xlength(data_list1), sizeof(*vectors1));
+if(vec_data0==NULL || vectors0==NULL || vec_data1==NULL || vectors1==NULL) {
+	error("Not enough memory");
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	return(R_NilValue);
+	}
+	
+Rprintf("Computing data lists\n");
+for(LIBMVL_OFFSET64 k=0;k<xlength(data_list0);k++) {
+	data=VECTOR_ELT(data_list0, k);
+	decode_mvl_object(data, &data_idx, &data_offset);
+	vectors0[k]=get_mvl_vector(data_idx, data_offset);
+	
+	if(vectors0[k]==NULL) {
+		error("Invalid MVL object in first data list");
+		free(vec_data0);
+		free(vectors0);
+		free(vec_data1);
+		free(vectors1);
+		return(R_NilValue);
+		}
+	vec_data0[k]=libraries[data_idx].data;
+	
+	data=VECTOR_ELT(data_list1, k);
+	decode_mvl_object(data, &data_idx, &data_offset);
+	vectors1[k]=get_mvl_vector(data_idx, data_offset);
+	
+	if(vectors1[k]==NULL) {
+		error("Invalid MVL object in second data list");
+		free(vec_data0);
+		free(vectors0);
+		free(vec_data1);
+		free(vectors1);
+		return(R_NilValue);
+		}
+	vec_data1[k]=libraries[data_idx].data;
+	
+	if(mvl_vector_type(vectors0[k])!=mvl_vector_type(vectors1[k])) {
+		error("Vector types do not match");
+		free(vec_data0);
+		free(vectors0);
+		free(vec_data1);
+		free(vectors1);
+		return(R_NilValue);
+		}
+	}
+	
+Rprintf("Extracting index0\n");
+if(get_indices(indices0, vectors0[0], &N0, &v_idx0)) {
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	return(R_NilValue);		
+	}
+
+Rprintf("Extracting index1\n");
+if(get_indices(indices1, vectors1[0], &N1, &v_idx1)) {
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	free(v_idx0);
+	return(R_NilValue);		
+	}
+	
+Rprintf("Computing key hash\n");
+
+key_hash=calloc(N0, sizeof(*key_hash));
+if(key_hash==NULL) {
+	error("Not enough memory");
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	free(v_idx0);
+	free(v_idx1);
+	return(R_NilValue);
+	}
+
+if((err=mvl_hash_indices(N0, v_idx0, key_hash, xlength(data_list0), vectors0, vec_data0))!=0) {
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	free(v_idx0);
+	free(v_idx1);
+	free(key_hash);
+	error("Error hashing key indices %d\n", err);
+	return(R_NilValue);
+	}
+	
+Rprintf("Allocating hash map\n");
+hm=mvl_allocate_hash_map(N1);
+hm->hash_count=N1;
+
+Rprintf("Computing data hash\n");
+if((err=mvl_hash_indices(N1, v_idx1, hm->hash, xlength(data_list1), vectors1, vec_data1))!=0) {
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	free(v_idx0);
+	free(v_idx1);
+	free(key_hash);
+	mvl_free_hash_map(hm);
+	error("Error hashing indices %d\n", err);
+	return(R_NilValue);
+	}
+	
+Rprintf("Computing hash map\n");
+mvl_compute_hash_map(hm);
+
+Rprintf("Estimating match count\n");
+pairs_size=mvl_hash_match_count(N0, key_hash, hm);
+
+if(1 || pairs_size>1e9) {
+	Rprintf("Expecting %lld matches\n", pairs_size);
+	}
+	
+key_last=calloc(N0, sizeof(*key_last));
+key_match_indices=calloc(pairs_size, sizeof(*key_match_indices));
+match_indices=calloc(pairs_size, sizeof(*match_indices));
+
+if(key_last==NULL || key_match_indices==NULL || match_indices==NULL) {
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	free(v_idx0);
+	free(v_idx1);
+	free(key_hash);
+	free(key_last);
+	free(key_match_indices);
+	free(match_indices);
+	mvl_free_hash_map(hm);
+	error("Not enough memory");
+	return(R_NilValue);
+	}
+
+Rprintf("Computing merge plan\n");
+if((err=mvl_compute_merge_plan(N0, v_idx0, xlength(data_list0), vectors0, vec_data0, key_hash,
+	N1, v_idx1, xlength(data_list1), vectors1, vec_data1, hm,
+	key_last, pairs_size, key_match_indices, match_indices))) {
+	error("Error computing merge plan %d\n", err);
+	free(vec_data0);
+	free(vectors0);
+	free(vec_data1);
+	free(vectors1);
+	free(v_idx0);
+	free(v_idx1);
+	free(key_hash);
+	free(key_last);
+	free(key_match_indices);
+	free(match_indices);
+	mvl_free_hash_map(hm);
+	return(R_NilValue);
+	}
+
+Rprintf("Formating results\n");
+	
+mvl_free_hash_map(hm);
+free(key_hash);
+	
+ans=PROTECT(allocVector(VECSXP, 3));
+
+obj=PROTECT(allocVector(REALSXP, N0));
+pd=REAL(obj);
+
+for(i=0;i<N0;i++) pd[i]=key_last[i]+1;
+
+SET_VECTOR_ELT(ans, 0, obj);
+UNPROTECT(1);
+
+obj=PROTECT(allocVector(REALSXP, key_last[N0-1]));
+pd=REAL(obj);
+
+for(i=0;i<key_last[N0-1];i++) pd[i]=key_match_indices[i]+1;
+
+SET_VECTOR_ELT(ans, 1, obj);
+UNPROTECT(1);
+
+obj=PROTECT(allocVector(REALSXP, key_last[N0-1]));
+pd=REAL(obj);
+
+for(i=0;i<key_last[N0-1];i++) pd[i]=match_indices[i]+1;
+
+SET_VECTOR_ELT(ans, 2, obj);
+UNPROTECT(1);
+UNPROTECT(1);
+
+free(vec_data0);
+free(vectors0);
+free(vec_data1);
+free(vectors1);
+free(v_idx0);
+free(v_idx1);
+free(key_last);
+free(key_match_indices);
+free(match_indices);
+return(ans);
+}
+
 
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
@@ -2167,4 +2529,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "fused_write_vector",  (DL_FUNC) &fused_write_vector);
   R_RegisterCCallable("RMVL", "order_vectors",  (DL_FUNC) &order_vectors);
   R_RegisterCCallable("RMVL", "hash_vectors",  (DL_FUNC) &hash_vectors);
+  R_RegisterCCallable("RMVL", "merge_vectors_plan",  (DL_FUNC) &merge_vectors_plan);
 }

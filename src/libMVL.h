@@ -443,4 +443,55 @@ x[7]=x7;
 
 int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data);
 
+/* This structure can either be allocated by libMVL or constructed by the caller 
+ * In the latter case read comments describing size constraints 
+ * 
+ * The purpose of having index_size is to facilitate memory reuse by allocating the structure with index_size large enough to accomodate subsequent calls with different index_count
+ */
+#define MVL_FLAG_OWN_HASH	(1<<0)
+#define MVL_FLAG_OWN_HASH_MAP	(1<<1)
+#define MVL_FLAG_OWN_FIRST	(1<<2)
+#define MVL_FLAG_OWN_NEXT	(1<<3)
+
+typedef struct {
+	LIBMVL_OFFSET64 flags;
+	LIBMVL_OFFSET64 hash_count;   
+	LIBMVL_OFFSET64 hash_size; /* hash_count < hash_size */
+	LIBMVL_OFFSET64 hash_map_size; /* hash_map_size > hash_count */
+	LIBMVL_OFFSET64 first_count;
+	LIBMVL_OFFSET64 *hash;     /* original hashes of entries */
+	LIBMVL_OFFSET64 *hash_map; /* has hash_map_size entries */
+	LIBMVL_OFFSET64 *first;  /* has hash_size entries */
+	LIBMVL_OFFSET64 *next; /* has hash_size entries */
+	} HASH_MAP;
+
+/* Compute suggested hash map size */
+LIBMVL_OFFSET64 mvl_compute_hash_map_size(LIBMVL_OFFSET64 hash_count);
+
+HASH_MAP *mvl_allocate_hash_map(LIBMVL_OFFSET64 max_index_count);
+void mvl_free_hash_map(HASH_MAP *hash_map);
+
+/* This uses data from hm->hash[] array */
+void mvl_compute_hash_map(HASH_MAP *hm);
+
+/* Find count of matches between hashes of two sets. 
+ */
+LIBMVL_OFFSET64 mvl_hash_match_count(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 *key_hash, HASH_MAP *hm);
+
+/* Find indices of keys in set of hashes, using hash map. 
+ * Only the first matching hash is reported.
+ * If not found the index is set to ~0 (0xfff...fff)
+ * Output is in key_indices 
+ */
+void mvl_find_first_hashes(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 *key_hash, LIBMVL_OFFSET64 *key_indices, HASH_MAP *hm);
+
+/* This function computes pairs of merge indices. The pairs are stored in key_match_indices[] and match_indices[].
+ * All arrays should be provided by the caller. The size of match_indices arrays is computed with mvl_hash_match_count()
+ * An auxiliary array key_last of length key_indices_count stores the stop before index (in terms of matches array). 
+ * In particular the total number of matches is given by key_last[key_indices_count-1]
+ */
+int mvl_compute_merge_plan(LIBMVL_OFFSET64 key_indices_count, LIBMVL_OFFSET64 *key_indices, LIBMVL_OFFSET64 key_vec_count, LIBMVL_VECTOR **key_vec, void **key_vec_data, LIBMVL_OFFSET64 *key_hash,
+			   LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm, 
+			   LIBMVL_OFFSET64 *key_last, LIBMVL_OFFSET64 pairs_size, LIBMVL_OFFSET64 *key_match_indices, LIBMVL_OFFSET64 *match_indices);
+
 #endif
