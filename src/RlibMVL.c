@@ -2130,103 +2130,11 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 	vec_data[k]=libraries[data_idx].data;
 	}
 	
-#if 0
-switch(TYPEOF(indices)) {
-	case VECSXP:
-		decode_mvl_object(indices, &data_idx, &data_offset);
-		vec=get_mvl_vector(data_idx, data_offset);
-		
-		if(vec==NULL) {
-			error("Invalid MVL object or R vector passed as indices");
-			free(vec_data);
-			free(vectors);
-			return(R_NilValue);
-			}
-		N=mvl_vector_length(vec);
-		v_idx=calloc(N, sizeof(*v_idx));
-		if(v_idx==NULL) {
-			error("Not enough memory");
-			free(vec_data);
-			free(vectors);
-			return(R_NilValue);
-			}
-		
-		switch(mvl_vector_type(vec)) {
-			case LIBMVL_VECTOR_OFFSET64:
-				memcpy(v_idx, mvl_vector_data(vec).offset, N*sizeof(*v_idx));
-				break;
-			case LIBMVL_VECTOR_INT32:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i[m];
-				break;
-			case LIBMVL_VECTOR_INT64:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i64[m];
-				break;
-			case LIBMVL_VECTOR_DOUBLE:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).d[m];
-				break;
-			case LIBMVL_VECTOR_FLOAT:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).f[m];
-				break;
-			default:
-				error("Cannot interpret MVL object as indices");
-				free(vec_data);
-				free(vectors);
-				free(v_idx);
-				return(R_NilValue);
-				break;
-			}
-		break;
-	case REALSXP:
-		N=xlength(indices);
-		v_idx=calloc(N, sizeof(*v_idx));
-		if(v_idx==NULL) {
-			error("Not enough memory");
-			free(vec_data);
-			free(vectors);
-			return(R_NilValue);
-			}
-		pd=REAL(indices);
-		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=pd[m]-1;
-		break;
-	case INTSXP:
-		N=xlength(indices);
-		v_idx=calloc(N, sizeof(*v_idx));
-		if(v_idx==NULL) {
-			error("Not enough memory");
-			free(vec_data);
-			free(vectors);
-			return(R_NilValue);
-			}
-		pi=INTEGER(indices);
-		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=pi[m]-1;
-		break;
-	case NILSXP:
-		N=mvl_vector_length(vectors[0]);
-		if(mvl_vector_type(vectors[0])==LIBMVL_PACKED_LIST64)N--;
-		v_idx=calloc(N, sizeof(*v_idx));
-		if(v_idx==NULL) {
-			error("Not enough memory");
-			free(vec_data);
-			free(vectors);
-			return(R_NilValue);
-			}
-		for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=m;
-		break;
-	default:
-		error("Cannot interpret R object as index");
-		free(vec_data);
-		free(vectors);
-		return(R_NilValue);		
-	}
-#else 
-
 if(get_indices(indices, vectors[0], &N, &v_idx)) {
 	free(vec_data);
 	free(vectors);
 	return(R_NilValue);		
 	}
-
-#endif
 	
 ans=PROTECT(allocVector(REALSXP, N));
 pd=REAL(ans);

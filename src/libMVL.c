@@ -1167,6 +1167,10 @@ return 0;
 
 /* This function is used to compute 64 bit hash of vector values
  * array hash[] is passed in and contains the result of the computation
+ * 
+ * Integer indices are computed by value, so that 100 produces the same hash whether it is stored as INT32 or INT64.
+ * 
+ * Floats and doubles are trickier - we can guarantee that the hash of float promoted to double is the same as the hash of the original float, but not the reverse.
  */
 int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
 {
@@ -1215,11 +1219,15 @@ for(j=0;j<vec_count;j++) {
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			for(i=0;i<indices_count;i++) {
-				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i[indices[i]]), 4);
+				hash[i]=mvl_accumulate_float_hash64(hash[i], &(mvl_vector_data(vec[j]).f[indices[i]]), 1);
+				}
+			break;
+		case LIBMVL_VECTOR_DOUBLE:
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_double_hash64(hash[i], &(mvl_vector_data(vec[j]).d[indices[i]]), 1);
 				}
 			break;
 		case LIBMVL_VECTOR_OFFSET64: /* TODO: we might want to do something more clever here */
-		case LIBMVL_VECTOR_DOUBLE:
 			for(i=0;i<indices_count;i++) {
 				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i64[indices[i]]), 8);
 				}
@@ -1236,6 +1244,10 @@ for(j=0;j<vec_count;j++) {
 			return(-1);
 		}
 	}
+for(i=0;i<indices_count;i++) {
+	hash[i]=mvl_randomize_bits64(hash[i]);
+	}
+	
 return 0;
 }
 

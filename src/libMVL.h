@@ -442,6 +442,7 @@ x[6]=x6;
 x[7]=x7;
 }
 
+
 /* This allows to accumulate hash value from several sources.
  * Initial x value can be anything except 0 
  * 
@@ -450,10 +451,14 @@ x[7]=x7;
 static inline LIBMVL_OFFSET64 mvl_accumulate_int32_hash64(LIBMVL_OFFSET64 x, const int *data, LIBMVL_OFFSET64 count)
 {
 LIBMVL_OFFSET64 i;
-long long int d_ext;
+long long int d;
+unsigned *d_ext=(unsigned *)&d;
 for(i=0;i<count;i++) {
-	d_ext=data[i];
-	x=(x + d_ext);
+	d=data[i];
+	x=(x + d_ext[0]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
+	x=(x + d_ext[1]);
 	x*=13397683724573242421LLU;
 	x^=x>>33;
 	}
@@ -468,110 +473,64 @@ return(x);
 static inline LIBMVL_OFFSET64 mvl_accumulate_int64_hash64(LIBMVL_OFFSET64 x, const long long int *data, LIBMVL_OFFSET64 count)
 {
 LIBMVL_OFFSET64 i;
-long long int d_ext;
+long long int d;
+unsigned *d_ext=(unsigned *)&d;
 for(i=0;i<count;i++) {
-	d_ext=data[i];
-	x=(x + d_ext);
+	d=data[i];
+	x=(x + d_ext[0]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
+	x=(x + d_ext[1]);
 	x*=13397683724573242421LLU;
 	x^=x>>33;
 	}
 return(x);
 }
 
-/* This allows to accumulate hash value from several sources. 
- * Initial x values can be anything except 0.
- * This function accumulates 32-bit signed ints by value
- * The accumulation is done in place and in parallel for 8 streams, count ints for each stream.
+/* This allows to accumulate hash value from several sources.
+ * Initial x value can be anything except 0 
+ * 
+ * This function accumulates 32-bit floats by value, so that a float promoted to double will have the same hash
  */
-static inline void mvl_accumulate_int32_hash64x8(LIBMVL_OFFSET64 *x, const int *data0, const int *data1, const int *data2, const int *data3, const int *data4, const int *data5, const int *data6, const int *data7, LIBMVL_OFFSET64 count)
+static inline LIBMVL_OFFSET64 mvl_accumulate_float_hash64(LIBMVL_OFFSET64 x, const float *data, LIBMVL_OFFSET64 count)
 {
-LIBMVL_OFFSET64 i, x0, x1, x2, x3, x4, x5, x6, x7;
-long long int d0, d1, d2, d3, d4, d5, d6, d7;
-
-x0=x[0];
-x1=x[1];
-x2=x[2];
-x3=x[3];
-x4=x[4];
-x5=x[5];
-x6=x[6];
-x7=x[7];
-
+LIBMVL_OFFSET64 i;
+double d;
+unsigned *d_ext=(unsigned *)&d;
 for(i=0;i<count;i++) {
-	#define STEP(k)  {\
-		d ## k=(data ## k)[i] ; \
-		x ## k=( (x ## k) +(d ## k)); \
-		(x ## k)*=13397683724573242421LLU; \
-		(x ## k) ^= (x ## k)>>33; \
-		}
-	STEP(0)
-	STEP(1)
-	STEP(2)
-	STEP(3)
-	STEP(4)
-	STEP(5)
-	STEP(6)
-	STEP(7)
-	#undef STEP
+	d=data[i];
+	x=(x + d_ext[0]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
+	x=(x + d_ext[1]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
 	}
-
-x[0]=x0;
-x[1]=x1;
-x[2]=x2;
-x[3]=x3;
-x[4]=x4;
-x[5]=x5;
-x[6]=x6;
-x[7]=x7;
+return(x);
 }
 
-
-/* This allows to accumulate hash value from several sources. 
- * Initial x values can be anything except 0.
- * This function accumulates 32-bit signed ints by value
- * The accumulation is done in place and in parallel for 8 streams, count ints for each stream.
+/* This allows to accumulate hash value from several sources.
+ * Initial x value can be anything except 0 
+ * 
+ * This function accumulates 64-bit doubles by value, so that a float promoted to double will have the same hash as original float
  */
-static inline void mvl_accumulate_int64_hash64x8(LIBMVL_OFFSET64 *x, const long long int *data0, const long long int *data1, const long long int *data2, const long long int *data3, const long long int *data4, const long long int *data5, const long long int *data6, const long long int *data7, LIBMVL_OFFSET64 count)
+static inline LIBMVL_OFFSET64 mvl_accumulate_double_hash64(LIBMVL_OFFSET64 x, const double *data, LIBMVL_OFFSET64 count)
 {
-LIBMVL_OFFSET64 i, x0, x1, x2, x3, x4, x5, x6, x7;
-long long int d0, d1, d2, d3, d4, d5, d6, d7;
-
-x0=x[0];
-x1=x[1];
-x2=x[2];
-x3=x[3];
-x4=x[4];
-x5=x[5];
-x6=x[6];
-x7=x[7];
-
+LIBMVL_OFFSET64 i;
+double d;
+unsigned *d_ext=(unsigned *)&d;
 for(i=0;i<count;i++) {
-	#define STEP(k)  {\
-		d ## k=(data ## k) [i]; \
-		x ## k=( (x ## k) +(d ## k)); \
-		(x ## k)*=13397683724573242421LLU; \
-		(x ## k) ^= (x ## k)>>33; \
-		}
-	STEP(0)
-	STEP(1)
-	STEP(2)
-	STEP(3)
-	STEP(4)
-	STEP(5)
-	STEP(6)
-	STEP(7)
-	#undef STEP
+	d=data[i];
+	x=(x + d_ext[0]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
+	x=(x + d_ext[1]);
+	x*=13397683724573242421LLU;
+	x^=x>>33;
 	}
-
-x[0]=x0;
-x[1]=x1;
-x[2]=x2;
-x[3]=x3;
-x[4]=x4;
-x[5]=x5;
-x[6]=x6;
-x[7]=x7;
+return(x);
 }
+
 
 int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data);
 
