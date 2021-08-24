@@ -2507,6 +2507,15 @@ free(match_indices);
 return(ans);
 }
 
+SEXP mvl_xlength(SEXP obj)
+{
+SEXP ans;
+
+ans=PROTECT(allocVector(REALSXP, 1));
+REAL(ans)[0]=xlength(obj);
+UNPROTECT(1);
+return(ans);
+}
 
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
@@ -2530,4 +2539,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "hash_vectors",  (DL_FUNC) &hash_vectors);
   R_RegisterCCallable("RMVL", "merge_vectors_plan",  (DL_FUNC) &merge_vectors_plan);
   R_RegisterCCallable("RMVL", "indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector);
+  R_RegisterCCallable("RMVL", "mvl_xlength",  (DL_FUNC) &mvl_xlength);
 }

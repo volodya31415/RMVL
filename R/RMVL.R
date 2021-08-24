@@ -87,6 +87,16 @@ mvl_get_vectors<-function(MVLHANDLE, offsets, raw=FALSE) {
 		else
 		return(.Call("read_vectors", MVLHANDLE[["handle"]], offsets))
 	}
+#' Return length of R vector in numeric format
+#' 
+#' Internally this calls R function xlength() rather than length(). This allows to obtain length of larger vectors
+#' @param x  any R object
+#' @return length of object in numeric format
+#' @export
+#'
+mvl_xlength<-function(x) {
+	return(.Call("mvl_xlength", x))
+	}
 	
 mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
@@ -203,11 +213,52 @@ mvl_merge_plan<-function(L1, L2, indices1=NULL, indices2=NULL) {
 #' @param x a suitable R object (vector, array, list, data.frame) or a vector-like MVL_OBJECT
 #' @param indices  list of indices into x
 #' @param name if specified add a named entry to MVL file directory
+#' @param only.columns if x is MVL_OBJECT with class data.frame copy only columns specified in this character or integer vector
 #'  
 #' @export
 #'
-mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, metadata.offset=NULL) {
+mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, only.columns=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	if(!inherits(x, "MVL_OBJECT")) stop("not an MVL object (2)")
+	
+	if(mvl_inherits(x, "data.frame")) {
+		if(is.null(only.columns)) {
+			j<-1:(dim(x)[2])
+			} else {
+			if(is.integer(only.columns) || is.numeric(only.columns)) {
+				j<-only.columns
+				} else {
+				j<-match(only.columns, names(x))
+				if(any(is.na(j))) {
+					stop("Unknown columns ", paste(only.columns[is.na(j)], collapse=" "))
+					}
+				}
+			}
+		if(length(j)<1) {
+			stop("No columns selected")
+			}
+		L<-list()
+		for(k in 1:length(j)) {
+			L[[k]]<-mvl_indexed_copy(MVLHANDLE, x[,j[k]], indices)
+			}
+		L<-unlist(L)
+		class(L)<-"MVL_OFFSET"
+		
+		metadata.offset<-mvl_write_object_metadata(MVLHANDLE, NULL, class.override="data.frame", names.override=names(x)[j], dim.override=c(mvl_xlength(indices), dim(x)[2]))
+		
+		offset<-mvl_write_vector(MVLHANDLE, L, metadata.offset)
+		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+		return(invisible(offset))
+		}
+	
+	cl<-NULL
+	m<-x[["metadata"]]
+	if(!is.null(m) && !is.null(m[["class"]]))cl<-m[["class"]]
+	if(!is.null(cl))
+		metadata.offset<-mvl_write_object_metadata(MVLHANDLE, NULL, class.override=cl)
+		else
+		metadata.offset<-NULL
+	
 	offset<-.Call("indexed_copy_vector", MVLHANDLE[["handle"]], x, indices, metadata.offset)
 	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 	return(invisible(offset))
