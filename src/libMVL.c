@@ -260,9 +260,9 @@ byte_length=length*elt_size;
 if(byte_length>0)mvl_rewrite(ctx, base_offset+elt_size*idx+sizeof(ctx->tmp_vh), byte_length, data);
 }
 
-LIBMVL_OFFSET64 mvl_indexed_copy_vector(LIBMVL_CONTEXT *ctx, long index_count, LIBMVL_OFFSET64 *indices, LIBMVL_VECTOR *vec, LIBMVL_OFFSET64 *data, LIBMVL_OFFSET64 metadata, LIBMVL_OFFSET64 max_buffer)
+LIBMVL_OFFSET64 mvl_indexed_copy_vector(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 index_count, LIBMVL_OFFSET64 *indices, LIBMVL_VECTOR *vec, LIBMVL_OFFSET64 *data, LIBMVL_OFFSET64 metadata, LIBMVL_OFFSET64 max_buffer)
 {
-LIBMVL_OFFSET64 char_length, vec_length, i, i_start, char_buf_length, vec_buf_length, N;
+LIBMVL_OFFSET64 char_length, vec_length, i, m, k, i_start, char_start, char_buf_length, vec_buf_length, N;
 LIBMVL_OFFSET64 offset, char_offset;
 unsigned char *char_buffer;
 void *vec_buffer;
@@ -284,6 +284,7 @@ vec_buf_length=vec_length;
 if(vec_buf_length*mvl_element_size(mvl_vector_type(vec))>max_buffer) {
 	vec_buf_length=max_buffer/mvl_element_size(mvl_vector_type(vec));
 	}
+if(vec_buf_length<50)vec_buf_length=50;
 vec_buffer=do_malloc(vec_buf_length, mvl_element_size(mvl_vector_type(vec)));
 
 offset=mvl_start_write_vector(ctx, mvl_vector_type(vec), vec_length, 0, NULL, metadata);
@@ -291,6 +292,7 @@ offset=mvl_start_write_vector(ctx, mvl_vector_type(vec), vec_length, 0, NULL, me
 if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64) {
 	char_buf_length=char_length;
 	if(char_buf_length>max_buffer)char_buf_length=max_buffer;
+	if(char_buf_length<100)char_buf_length=100;
 	char_buffer=do_malloc(char_buf_length, 1);
 	char_offset=mvl_start_write_vector(ctx, LIBMVL_VECTOR_UINT8, char_length, 0, NULL, LIBMVL_NO_METADATA);
 	i=char_offset+sizeof(LIBMVL_VECTOR_HEADER);
@@ -301,15 +303,38 @@ if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64) {
 	}
 
 i_start=0;
+char_start=0;
 while(i_start<index_count) {
 	switch(mvl_vector_type(vec)) {
-		case LIBMVL_PACKED_LIST64:
-			vec_length=index_count+1;
-			char_length=0;
-			for(i=0;i<index_count;i++) {
-				char_length+=mvl_packed_list_get_entry_bytelength(vec, indices[i]);
+		case LIBMVL_PACKED_LIST64: {
+			LIBMVL_OFFSET64 *po=(LIBMVL_OFFSET64 *)vec_buffer;
+			i=mvl_packed_list_get_entry_bytelength(vec, indices[i_start]);
+			//fprintf(stderr, "packed_list i_start=%lld char_start=%lld\n", i_start, char_start);
+			if(i>=char_buf_length) {
+				mvl_rewrite_vector(ctx, LIBMVL_VECTOR_UINT8, char_offset, char_start, i, mvl_packed_list_get_entry(vec, data, indices[i_start]));
+				po[0]=char_start+char_offset+sizeof(LIBMVL_VECTOR_HEADER);				
+				mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start+1, 1, po);
+				break;
 				}
+			N=0;
+			for(i=0;(i<char_buf_length) && (N<vec_buf_length) && (i_start+N<index_count);i+=mvl_packed_list_get_entry_bytelength(vec, indices[i_start+N])) {
+				N++;
+				}
+			//fprintf(stderr, "packed_list i=%lld N=%lld char_buf_len=%lld vec_buf_len=%lld index_count=%lld\n", i, N, char_buf_length, vec_buf_length, index_count);
+			k=0;
+			for(i=0;i<N;i++) {
+				m=mvl_packed_list_get_entry_bytelength(vec, indices[i_start+i]);
+				memcpy(&(char_buffer[k]), mvl_packed_list_get_entry(vec, data, indices[i_start+i]), m);
+				k+=m;
+				po[i]=char_offset+char_start+sizeof(LIBMVL_VECTOR_HEADER)+k;
+				}
+			//fprintf(stderr, "packed_list i=%lld N=%lld k=%lld char_buf_len=%lld vec_buf_len=%lld\n", i, N, k, char_buf_length, vec_buf_length);
+			mvl_rewrite_vector(ctx, LIBMVL_VECTOR_UINT8, char_offset, char_start, k, char_buffer);
+			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start+1, N, po);
+			i_start+=N;
+			char_start+=k;
 			break;
+			}
 		case LIBMVL_VECTOR_UINT8: {
 			unsigned char *pb=(unsigned char *)vec_buffer;
 			N=index_count-i_start;
@@ -333,7 +358,7 @@ while(i_start<index_count) {
 			break;
 			}
 		case LIBMVL_VECTOR_INT64: {
-			long long int *pi=(long long int *)vec_buffer;
+			long long *pi=(long long *)vec_buffer;
 			N=index_count-i_start;
 			if(N>vec_buf_length)N=vec_buf_length;
 			for(i=0;i<N;i++) {
