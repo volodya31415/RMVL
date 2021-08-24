@@ -1203,15 +1203,23 @@ for(j=0;j<vec_count;j++) {
 				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i[indices[i]]), 1);
 				}
 			break;
-		case LIBMVL_VECTOR_FLOAT:
 		case LIBMVL_VECTOR_INT32:
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_int32_hash64(hash[i], &(mvl_vector_data(vec[j]).i[indices[i]]), 1);
+				}
+			break;
+		case LIBMVL_VECTOR_INT64:
+			for(i=0;i<indices_count;i++) {
+				hash[i]=mvl_accumulate_int64_hash64(hash[i], &(mvl_vector_data(vec[j]).i64[indices[i]]), 1);
+				}
+			break;
+		case LIBMVL_VECTOR_FLOAT:
 			for(i=0;i<indices_count;i++) {
 				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i[indices[i]]), 4);
 				}
 			break;
 		case LIBMVL_VECTOR_OFFSET64: /* TODO: we might want to do something more clever here */
 		case LIBMVL_VECTOR_DOUBLE:
-		case LIBMVL_VECTOR_INT64: 
 			for(i=0;i<indices_count;i++) {
 				hash[i]=mvl_accumulate_hash64(hash[i], (const char *)&(mvl_vector_data(vec[j]).i64[indices[i]]), 8);
 				}
