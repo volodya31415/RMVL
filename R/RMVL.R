@@ -196,6 +196,22 @@ mvl_hash_vectors<-function(L, indices=NULL) {
 mvl_merge_plan<-function(L1, L2, indices1=NULL, indices2=NULL) {
 	return(.Call("merge_vectors_plan", L1, indices1, L2, indices2)) 
 	}
+
+#' Index copy vector
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param x a suitable R object (vector, array, list, data.frame) or a vector-like MVL_OBJECT
+#' @param indices  list of indices into x
+#' @param name if specified add a named entry to MVL file directory
+#'  
+#' @export
+#'
+mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, metadata.offset=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	offset<-.Call("indexed_copy_vector", MVLHANDLE[["handle"]], x, indices, metadata.offset)
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+	return(invisible(offset))
+	}
 	
 mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL, class.override=NULL, names.override=NULL, rownames.override=NULL) {
 	n<-mvl_write_string(MVLHANDLE, "MVL_LAYOUT")

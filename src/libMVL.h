@@ -170,6 +170,14 @@ void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 base_offs
 
 
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata);
+
+/* This computes vector vec[index] 
+ * Indices do not have to be distinct
+ * max_buffer is the maximum length of internal buffers in bytes (two buffers are needed for LIBMVL_PACKED_LIST64 vectors)
+ */
+LIBMVL_OFFSET64 mvl_indexed_copy_vector(LIBMVL_CONTEXT *ctx, long index_count, LIBMVL_OFFSET64 *indices, LIBMVL_VECTOR *vec, LIBMVL_OFFSET64 *data, LIBMVL_OFFSET64 metadata, LIBMVL_OFFSET64 max_buffer);
+
+
 /* Writes a single C string. In particular, this is handy for providing metadata tags */
 /* length can be specified as -1 to be computed automatically */
 LIBMVL_OFFSET64 mvl_write_string(LIBMVL_CONTEXT *ctx, long length, const char *data, LIBMVL_OFFSET64 metadata);
@@ -531,7 +539,13 @@ for(i=0;i<count;i++) {
 return(x);
 }
 
-
+/* This function is used to compute 64 bit hash of vector values
+ * array hash[] is passed in and contains the result of the computation
+ * 
+ * Integer indices are computed by value, so that 100 produces the same hash whether it is stored as INT32 or INT64.
+ * 
+ * Floats and doubles are trickier - we can guarantee that the hash of float promoted to double is the same as the hash of the original float, but not the reverse.
+ */
 int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data);
 
 /* This structure can either be allocated by libMVL or constructed by the caller 

@@ -260,6 +260,123 @@ byte_length=length*elt_size;
 if(byte_length>0)mvl_rewrite(ctx, base_offset+elt_size*idx+sizeof(ctx->tmp_vh), byte_length, data);
 }
 
+LIBMVL_OFFSET64 mvl_indexed_copy_vector(LIBMVL_CONTEXT *ctx, long index_count, LIBMVL_OFFSET64 *indices, LIBMVL_VECTOR *vec, LIBMVL_OFFSET64 *data, LIBMVL_OFFSET64 metadata, LIBMVL_OFFSET64 max_buffer)
+{
+LIBMVL_OFFSET64 char_length, vec_length, i, i_start, char_buf_length, vec_buf_length, N;
+LIBMVL_OFFSET64 offset, char_offset;
+unsigned char *char_buffer;
+void *vec_buffer;
+
+switch(mvl_vector_type(vec)) {
+	case LIBMVL_PACKED_LIST64:
+		vec_length=index_count+1;
+		char_length=0;
+		for(i=0;i<index_count;i++) {
+			char_length+=mvl_packed_list_get_entry_bytelength(vec, indices[i]);
+			}
+		break;
+	default:
+		vec_length=index_count;
+		char_length=0;
+	}
+	
+vec_buf_length=vec_length;
+if(vec_buf_length*mvl_element_size(mvl_vector_type(vec))>max_buffer) {
+	vec_buf_length=max_buffer/mvl_element_size(mvl_vector_type(vec));
+	}
+vec_buffer=do_malloc(vec_buf_length, mvl_element_size(mvl_vector_type(vec)));
+
+offset=mvl_start_write_vector(ctx, mvl_vector_type(vec), vec_length, 0, NULL, metadata);
+
+if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64) {
+	char_buf_length=char_length;
+	if(char_buf_length>max_buffer)char_buf_length=max_buffer;
+	char_buffer=do_malloc(char_buf_length, 1);
+	char_offset=mvl_start_write_vector(ctx, LIBMVL_VECTOR_UINT8, char_length, 0, NULL, LIBMVL_NO_METADATA);
+	i=char_offset+sizeof(LIBMVL_VECTOR_HEADER);
+	mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, 0, 1, &i);
+	} else {
+	char_buf_length=0;
+	char_buffer=NULL;
+	}
+
+i_start=0;
+while(i_start<index_count) {
+	switch(mvl_vector_type(vec)) {
+		case LIBMVL_PACKED_LIST64:
+			vec_length=index_count+1;
+			char_length=0;
+			for(i=0;i<index_count;i++) {
+				char_length+=mvl_packed_list_get_entry_bytelength(vec, indices[i]);
+				}
+			break;
+		case LIBMVL_VECTOR_UINT8: {
+			unsigned char *pb=(unsigned char *)vec_buffer;
+			N=index_count-i_start;
+			if(N>vec_buf_length)N=vec_buf_length;
+			for(i=0;i<N;i++) {
+				pb[i]=mvl_vector_data(vec).b[indices[i+i_start]];
+				}
+			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start, N, pb);
+			i_start+=N;
+			break;
+			}
+		case LIBMVL_VECTOR_INT32: {
+			int *pi=(int *)vec_buffer;
+			N=index_count-i_start;
+			if(N>vec_buf_length)N=vec_buf_length;
+			for(i=0;i<N;i++) {
+				pi[i]=mvl_vector_data(vec).i[indices[i+i_start]];
+				}
+			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start, N, pi);
+			i_start+=N;
+			break;
+			}
+		case LIBMVL_VECTOR_INT64: {
+			long long int *pi=(long long int *)vec_buffer;
+			N=index_count-i_start;
+			if(N>vec_buf_length)N=vec_buf_length;
+			for(i=0;i<N;i++) {
+				pi[i]=mvl_vector_data(vec).i64[indices[i+i_start]];
+				}
+			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start, N, pi);
+			i_start+=N;
+			break;
+			}
+		case LIBMVL_VECTOR_FLOAT: {
+			float *pf=(float *)vec_buffer;
+			N=index_count-i_start;
+			if(N>vec_buf_length)N=vec_buf_length;
+			for(i=0;i<N;i++) {
+				pf[i]=mvl_vector_data(vec).f[indices[i+i_start]];
+				}
+			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start, N, pf);
+			i_start+=N;
+			break;
+			}
+		case LIBMVL_VECTOR_DOUBLE: {
+			double *pd=(double *)vec_buffer;
+			N=index_count-i_start;
+			if(N>vec_buf_length)N=vec_buf_length;
+			for(i=0;i<N;i++) {
+				pd[i]=mvl_vector_data(vec).d[indices[i+i_start]];
+				}
+			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start, N, pd);
+			i_start+=N;
+			break;
+			}
+			
+		default:
+			mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+			i_start=index_count;
+		}
+	}
+
+free(vec_buffer);
+free(char_buffer);
+return(offset);
+}
+
 LIBMVL_OFFSET64 mvl_write_concat_vectors(LIBMVL_CONTEXT *ctx, int type, long nvec, long *lengths, void **data, LIBMVL_OFFSET64 metadata)
 {
 LIBMVL_OFFSET64 byte_length, length;

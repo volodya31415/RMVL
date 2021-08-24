@@ -1821,6 +1821,100 @@ UNPROTECT(2);
 return(ans);
 }
 
+SEXP indexed_copy_vector(SEXP idx0, SEXP mvl_object, SEXP indices, SEXP metadata_offset)
+{
+LIBMVL_OFFSET64 *v_idx;
+LIBMVL_OFFSET64 i, offset, data_offset, N_idx;
+double *doffset=(double *)&offset;
+int idx, data_idx;
+
+int *pi;
+double *pd;
+
+double dmoffset;
+LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
+
+LIBMVL_VECTOR *vec;
+
+SEXP ans, class;
+
+if(length(idx0)!=1) {
+	error("fused_write_vector first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("library not open for writing");
+	return(R_NilValue);
+	}
+		
+if(length(metadata_offset)<1) {
+	*moffset=0;
+	} else {
+	dmoffset=REAL(metadata_offset)[0];
+	}
+	
+if(TYPEOF(mvl_object)!=VECSXP) {
+	error("Not a valid MVL object");
+	return(R_NilValue);	
+	}
+	
+decode_mvl_object(mvl_object, &data_idx, &data_offset);
+vec=get_mvl_vector(data_idx, data_offset);
+
+if(vec==NULL) {
+	error("Not a valid MVL object (2)");
+	return(R_NilValue);	
+	}
+
+N_idx=xlength(indices);
+
+v_idx=calloc(N_idx, sizeof(*v_idx));
+if(v_idx==NULL) {
+	error("Out of memory");
+	return(R_NilValue);
+	}
+	
+libraries[idx].modified=1;
+
+switch(TYPEOF(indices)) {
+	case REALSXP:
+		pd=REAL(indices);
+		for(i=0;i<N_idx;i++)v_idx[i]=pd[i]-1;
+		break;
+	case INTSXP:
+		pi=INTEGER(indices);
+		for(i=0;i<N_idx;i++)v_idx[i]=pi[i]-1;
+		break;
+	default:
+		free(v_idx);
+		error("Indices must be real or integer");
+		return(R_NilValue);
+	}
+
+offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, moffset, 1024*1024*16);
+	
+free(v_idx);
+
+ans=PROTECT(allocVector(REALSXP, 1));
+REAL(ans)[0]=*doffset;
+
+class=PROTECT(allocVector(STRSXP, 1));
+SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+classgets(ans, class);
+UNPROTECT(2);
+
+return(ans);
+}
+
 SEXP order_vectors(SEXP data_list, SEXP indices, SEXP s_sort_function)
 {
 int data_idx, sort_function;
@@ -2435,4 +2529,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "order_vectors",  (DL_FUNC) &order_vectors);
   R_RegisterCCallable("RMVL", "hash_vectors",  (DL_FUNC) &hash_vectors);
   R_RegisterCCallable("RMVL", "merge_vectors_plan",  (DL_FUNC) &merge_vectors_plan);
+  R_RegisterCCallable("RMVL", "indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector);
 }
