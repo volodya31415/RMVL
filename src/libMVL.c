@@ -1471,6 +1471,10 @@ if(hash_mask & hash_map_size) {
 		next[i]=hash_map[k];
 		hash_map[k]=i;
 		}
+	for(i=0;i<N_first;i++) {
+		k=hash[first[i]] % hash_map_size;
+		first[i]=hash_map[k];
+		}
 	} else {
 	N_first=0;
 	for(i=0;i<hash_count;i++) {
@@ -1484,6 +1488,10 @@ if(hash_mask & hash_map_size) {
 			}
 		next[i]=hash_map[k];
 		hash_map[k]=i;
+		}
+	for(i=0;i<N_first;i++) {
+		k=hash[first[i]] & hash_mask;
+		first[i]=hash_map[k];
 		}
 	}
 hm->first_count=N_first;
@@ -1633,48 +1641,68 @@ if(hash_map_size & hash_mask) {
 return(0);
 }
 
-/* This function is used to compute groups of indices which have the same value for all the supplied MVL vectors
- * first and next contain the result of the computation
+/* This functions transforms HASH_MAP into a list of groups. 
+ * After calling hm->hash_map is invalid, but hm->first and hm->next describe exactly identical rows 
  */
-int mvl_group_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 *first, LIBMVL_OFFSET64 *next, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data)
+int mvl_find_groups(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm)
 {
-int err;
-LIBMVL_OFFSET64 *hash_map;
-LIBMVL_OFFSET64 hash_map_size, hash_mask, i, k, N_first;
-if((err=mvl_hash_indices(indices_count, indices, hash, vec_count, vec, vec_data))!=0)return(err);
+LIBMVL_OFFSET64 *hash, *tmp, *next;
+LIBMVL_OFFSET64 i, j, l, m, k, group_count, first_count, a;
+MVL_SORT_INFO si;
+MVL_SORT_UNIT su1, su2;
 
-if(indices_count & (1LLU<<63))return -10; /* Too big */
+si.vec=vec;
+si.data=vec_data;
+si.nvec=vec_count;
 
-hash_map_size=1;
-hash_mask=1;
-while(hash_map_size<indices_count) {
-	hash_map_size=hash_map_size<<1;
-	hash_mask=hash_mask<<1;
-	}
-hash_mask=hash_mask-1;
+su1.info=&si;
+su2.info=&si;
 
-hash_map=do_malloc(hash_map_size, sizeof(*hash_map));
-for(i=0;i<hash_map_size;i++) {
-	hash_map[i]=~0LLU;
-	}
-for(i=0;i<indices_count;i++) {
-	first[i]=~0LLU;
-	next[i]=~0LLU;
-	}
-	
-N_first=0;
-for(i=0;i<indices_count;i++) {
-	k=hash[i] & hash_mask;
-	if(hash_map[k]==~0LLU) {
-		hash_map[k]=i;
-		first[N_first]=i;
-		N_first++;
-		continue;
+tmp=hm->hash_map;
+hash=hm->hash;
+next=hm->next;
+
+group_count=hm->first_count;
+first_count=hm->first_count;
+
+for(i=0;i<first_count;i++) {
+	k=hm->first[i];
+	j=0;
+	while(k!=~0LLU) {
+		tmp[j]=k;
+		j++;
+		k=next[k];
 		}
-	next[i]=next[hash_map[k]];
-	next[hash_map[k]]=i;
+	while(j>1) {
+		m=j-1;
+		l=1;
+		su1.index=tmp[0];
+		while(l<=m) {
+			su2.index=tmp[l];
+			if((hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2))) {
+				if(l<m) {
+					a=tmp[m];
+					tmp[m]=tmp[l];
+					tmp[l]=a;
+					}
+				m--;
+				} else l++;
+			}
+		next[tmp[0]]=~0LLU;
+		for(m=1;m<l;m++)next[tmp[m]]=tmp[m-1];
+		if(l==j) {
+			hm->first[i]=tmp[l-1];
+			break;
+			} else {
+			hm->first[group_count]=tmp[l-1];
+			group_count++;
+			memmove(tmp, &(tmp[l]), (j-l)*sizeof(*tmp));
+			hm->first[i]=tmp[0];
+			hm->next[tmp[0]]=~0LLU;
+			j-=l;
+			}
+		}
+	
 	}
-
-free(hash_map);
-return 0;
+hm->first_count=group_count;
 }

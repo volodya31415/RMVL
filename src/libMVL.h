@@ -599,4 +599,9 @@ int mvl_compute_merge_plan(LIBMVL_OFFSET64 key_indices_count, LIBMVL_OFFSET64 *k
 			   LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm, 
 			   LIBMVL_OFFSET64 *key_last, LIBMVL_OFFSET64 pairs_size, LIBMVL_OFFSET64 *key_match_indices, LIBMVL_OFFSET64 *match_indices);
 
+/* This function transforms HASH_MAP into a list of groups. 
+ * After calling hm->hash_map is invalid, but hm->first and hm->next describe exactly identical rows 
+ */
+int mvl_find_groups(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm);
+
 #endif

@@ -95,6 +95,7 @@ mvl_get_vectors<-function(MVLHANDLE, offsets, raw=FALSE) {
 #' @export
 #'
 mvl_xlength<-function(x) {
+	if(inherits(x, "MVL_OBJECT"))return(x[["length"]])
 	return(.Call("mvl_xlength", x))
 	}
 	
@@ -190,23 +191,45 @@ mvl_hash_vectors<-function(L, indices=NULL) {
 	return(.Call("hash_vectors", L, indices)) 
 	}
 
-#' Return hash values for each row
+#' Find matching rows
 #'
-#' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. For each row, i.e. set of vector values with the same index
-#' we compute a hash value. Identical rows produce identical hash values. The hash values have good entropy and can be used to map row values into random numbers.
+#' This function is passed two lists of MVL vectors which are interpreted in data.frame fashion. 
+#' The indices of pairwise matches are returned in order of the first argument ("index1" and "index2"). 
+#' In addition we return indices describing stretches with "index1" value constant ( stretch_index[i] to stretch_index[i+1]-1)
 #'
 #' @param L1  list of vector like MVL_OBJECTs 
 #' @param indices1  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
 #' @param L2  list of vector like MVL_OBJECTs 
 #' @param indices2  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
-#' @return hash values in numeric format, with 52 valid bits. Each value is uniform between 1 and 2.
+#' @return A list of matches and match stretches
 #'  
 #' @export
 #'
-mvl_merge_plan<-function(L1, L2, indices1=NULL, indices2=NULL) {
-	return(.Call("merge_vectors_plan", L1, indices1, L2, indices2)) 
+mvl_find_matches<-function(L1, L2, indices1=NULL, indices2=NULL) {
+	L<-.Call("find_matches", L1, indices1, L2, indices2)
+	names(L)<-c("stretch_index1", "index1", "index2")
+	return(L) 
 	}
 
+#' Group identical rows
+#'
+#' This function groups identical rows. The result is formatted as two vectors \code{stretch_index} and \code{index}
+#' Vector \code{index} contains stretches of indices with identical rows. Vector \code{stretch_index} describes stretches as stretch_index[i] to stretch_index[i+1]-1
+#' This allows fast iteration over indices without creating excessive numbers of R objects when group sizes are small.
+#' 
+#'
+#' @param L  list of vector like MVL_OBJECTs 
+#' @param indices  list of indices into objects to group. If absent or NULL it is assumed to be from 1 to the length of the object.
+#' @return A list of groups and group stretches
+#'  
+#' @export
+#'
+mvl_group<-function(L, indices=NULL) {
+	L<-.Call("group_vectors", L, indices)
+	names(L)<-c("stretch_index", "index")
+	return(L) 
+	}
+	
 #' Index copy vector
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
