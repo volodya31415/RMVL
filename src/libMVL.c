@@ -1017,11 +1017,13 @@ for(i=0;i<N;i++) {
 					int bd;
 					bd=mvl_vector_data(bvec).i[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				case LIBMVL_VECTOR_INT64: {
 					long long bd;
 					bd=mvl_vector_data(bvec).i64[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				default:
 					return 0;
@@ -1037,11 +1039,13 @@ for(i=0;i<N;i++) {
 					int bd;
 					bd=mvl_vector_data(bvec).i[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				case LIBMVL_VECTOR_INT64: {
 					long long bd;
 					bd=mvl_vector_data(bvec).i64[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				default:
 					return 0;
@@ -1057,11 +1061,13 @@ for(i=0;i<N;i++) {
 					float bd;
 					bd=mvl_vector_data(bvec).f[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				case LIBMVL_VECTOR_DOUBLE: {
 					double bd;
 					bd=mvl_vector_data(bvec).d[bi];
-					if(ad!=bd)return 0;
+					if((double)ad!=bd)return 0;
+					break;
 					}
 				default:
 					return 0;
@@ -1074,14 +1080,16 @@ for(i=0;i<N;i++) {
 			ad=mvl_vector_data(avec).d[ai];
 			switch(mvl_vector_type(bvec)) {
 				case LIBMVL_VECTOR_FLOAT: {
-					float bd;
+					double bd;
 					bd=mvl_vector_data(bvec).f[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				case LIBMVL_VECTOR_DOUBLE: {
 					double bd;
 					bd=mvl_vector_data(bvec).d[bi];
 					if(ad!=bd)return 0;
+					break;
 					}
 				default:
 					return 0;
@@ -1734,7 +1742,7 @@ for(i=0;i<first_count;i++) {
 		su1.index=tmp[0];
 		while(l<=m) {
 			su2.index=tmp[l];
-			if((hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2))) {
+			if(hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2)) {
 				if(l<m) {
 					a=tmp[m];
 					tmp[m]=tmp[l];

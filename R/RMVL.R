@@ -901,7 +901,7 @@ names.MVL_OBJECT<-function(x) {
 				if(is.factor(j))j<-as.character(j)
 				j0<-match(j, n)
 				if(any(is.na(j0)))
-					stop("Unknown columns ", j[is.na(j0)])
+					stop("Unknown columns ", paste(j[is.na(j0)], collapse=" "))
 				j<-j0
 				}
 			n<-n[j]
