@@ -595,7 +595,7 @@ void mvl_find_first_hashes(LIBMVL_OFFSET64 key_count, LIBMVL_OFFSET64 *key_hash,
  * An auxiliary array key_last of length key_indices_count stores the stop before index (in terms of matches array). 
  * In particular the total number of matches is given by key_last[key_indices_count-1]
  */
-int mvl_compute_merge_plan(LIBMVL_OFFSET64 key_indices_count, LIBMVL_OFFSET64 *key_indices, LIBMVL_OFFSET64 key_vec_count, LIBMVL_VECTOR **key_vec, void **key_vec_data, LIBMVL_OFFSET64 *key_hash,
+int mvl_find_matches(LIBMVL_OFFSET64 key_indices_count, LIBMVL_OFFSET64 *key_indices, LIBMVL_OFFSET64 key_vec_count, LIBMVL_VECTOR **key_vec, void **key_vec_data, LIBMVL_OFFSET64 *key_hash,
 			   LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm, 
 			   LIBMVL_OFFSET64 *key_last, LIBMVL_OFFSET64 pairs_size, LIBMVL_OFFSET64 *key_match_indices, LIBMVL_OFFSET64 *match_indices);
 

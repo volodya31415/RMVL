@@ -2461,8 +2461,8 @@ if(key_last==NULL || key_match_indices==NULL || match_indices==NULL) {
 	return(R_NilValue);
 	}
 
-Rprintf("Computing merge plan\n");
-if((err=mvl_compute_merge_plan(N0, v_idx0, xlength(data_list0), vectors0, vec_data0, key_hash,
+Rprintf("Finding matches\n");
+if((err=mvl_find_matches(N0, v_idx0, xlength(data_list0), vectors0, vec_data0, key_hash,
 	N1, v_idx1, xlength(data_list1), vectors1, vec_data1, hm,
 	key_last, pairs_size, key_match_indices, match_indices))) {
 	error("Error computing merge plan %d\n", err);
