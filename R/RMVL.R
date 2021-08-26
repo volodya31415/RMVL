@@ -287,6 +287,76 @@ mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, only.columns=NULL) 
 	return(invisible(offset))
 	}
 	
+	
+#' Merge two MVL data frames and write the result
+#'
+#' @param MVLHANDLE a handle to MVL file produced by \code{mvl_open()}
+#' @param df1 a data.frame stored in MVL file
+#' @param df2 a data.frame stored in MVL file
+#' @param name if specified add a named entry to MVL file directory
+#' @param by  list of columns to use as key
+#' @param by.x  list of columns to use as key for \code{df1}
+#' @param by.y  list of columns to use as key for \code{df1}
+#' @param suffixes  rename columns with identical names using these suffixes
+#' @param only.columns.x only copy these columns from df1
+#' @param only.columns.y only copy these columns from df2
+#'  
+#' @export
+#'
+mvl_merge<-function(MVLHANDLE, df1, df2, name=NULL, by=NULL, by.x=by, by.y=by, suffixes=c(".x", ".y"), only.columns.x=NULL, only.columns.y=NULL)
+{
+if(is.null(by.x) || is.null(by.y))stop("You need to specify which columns to merge using by, or by.x and by.y")
+
+L1<-lapply(by.x, function(x){return(df1[,x,ref=TRUE])})
+L2<-lapply(by.y, function(x){return(df2[,x,ref=TRUE])})
+
+cols1<-names(df1)
+if(!is.null(only.columns.x)) {
+	cols1<-cols1[cols1 %in% only.columns.x]
+	}
+
+cols2<-names(df2)
+if(!is.null(only.columns.x)) {
+	cols2<-cols2[cols2 %in% only.columns.x]
+	}
+cols2<-cols2[!cols2 %in% by.y]
+
+rename.cols<-intersect(cols1, cols2)
+
+merge_plan<-mvl_find_matches(L1, L2)
+
+L<-list()
+
+if(length(cols1)>0)
+for(i in 1:length(cols1)) {
+	L[[length(L)+1]]<-mvl_indexed_copy(MVLHANDLE, df1[,cols1[[i]],ref=TRUE], merge_plan[["index1"]])
+	}
+
+if(length(cols2)>0)
+for(i in 1:length(cols2)) {
+	L[[length(L)+1]]<-mvl_indexed_copy(MVLHANDLE, df2[,cols2[[i]],ref=TRUE], merge_plan[["index2"]])
+	}
+	
+Fr<-cols1 %in% rename.cols
+if(any(Fr)) {
+	cols1[Fr]<-paste(cols1[Fr], suffixes[[1]])
+	}
+Fr<-cols2 %in% rename.cols
+if(any(Fr)) {
+	cols2[Fr]<-paste(cols2[Fr], suffixes[[2]])
+	}
+n<-as.character(c(cols1, cols2))
+
+L<-unlist(L)
+class(L)<-"MVL_OFFSET"
+
+m<-mvl_write_object_metadata(MVLHANDLE, NULL, dim.override=c(mvl_xlength(merge_plan[["index1"]]), length(n)), names.override=n, class.override="data.frame")
+
+offset<-mvl_write_vector(MVLHANDLE, L, m)
+if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+return(invisible(offset))
+}
+	
 mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL, class.override=NULL, names.override=NULL, rownames.override=NULL) {
 	n<-mvl_write_string(MVLHANDLE, "MVL_LAYOUT")
 	o<-mvl_write_string(MVLHANDLE, "R")
