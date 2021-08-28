@@ -315,11 +315,14 @@ if(!is.null(only.columns.x)) {
 	cols1<-cols1[cols1 %in% only.columns.x]
 	}
 
+cols1<-cols1[!(cols1 %in% by.x)]
+cols1<-c(by.x, cols1)
+
 cols2<-names(df2)
-if(!is.null(only.columns.x)) {
-	cols2<-cols2[cols2 %in% only.columns.x]
+if(!is.null(only.columns.y)) {
+	cols2<-cols2[cols2 %in% only.columns.y]
 	}
-cols2<-cols2[!cols2 %in% by.y]
+cols2<-cols2[!(cols2 %in% by.y)]
 
 rename.cols<-intersect(cols1, cols2)
 
@@ -632,9 +635,10 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 			vec<-.Call("read_vectors", MVLHANDLE[["handle"]], offset)[[1]]
 		} else {
 		if(raw)
-			vec<-.Call("read_vectors_idx_raw_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+			vec<-.Call("read_vectors_idx_raw2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 			else
-			vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+			vec<-.Call("read_vectors_idx2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+#			vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 		}
 	if(inherits(vec, "MVL_OFFSET")) {
 		lengths<-.Call("read_lengths", MVLHANDLE[["handle"]], vec)
@@ -655,7 +659,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		if(!is.null(cl)) {
-			if(!any(cl=="data.frame") && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
+			if(!any(cl %in% c("data.frame", "array")) && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 			if(any(cl=="factor") || any(cl=="character")) {
 				vec<-mvl_flatten_string(vec)
 				if(cl=="factor")vec<-as.factor(vec)
@@ -908,7 +912,7 @@ names.MVL_OBJECT<-function(x) {
 			}
 		if(missing(i)) {
 			if(length(j)==1 && drop) {
-				ofs<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
+				ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
 				metadata_offset<-.Call("read_metadata", obj[["handle"]], ofs)
 				metadata<-mvl_read_metadata(obj, metadata_offset)
 
@@ -926,10 +930,14 @@ names.MVL_OBJECT<-function(x) {
 			i<-which(i)
 			}
 		if(raw)
-			ofs<-.Call("read_vectors_idx_raw_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
+			ofs<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], j)[[1]]
 			else
-			ofs<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
-		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(as.numeric(i-1))))})
+			ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
+			
+		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(i)))})
+		
+#		df<-.Call("read_vectors_idx2", obj[["handle"]], ofs, i)
+		
 		names(df)<-n
 		class(df)<-"data.frame"
 		if(dim(df)[2]==1 && !is.null(drop) && drop)return(df[,1])
@@ -951,11 +959,11 @@ names.MVL_OBJECT<-function(x) {
 		
 		if(missing(i)) {
 			d<-od[1]
-			idx<-0:(od[1]-1)
+			idx<-1:(od[1])
 			} else {
 			if(is.logical(i))i<-which(i)
 			d<-length(i)
-			idx<-i-1
+			idx<-i
 			}
 		mult<-1
 		
@@ -979,7 +987,8 @@ names.MVL_OBJECT<-function(x) {
 		if(raw)
 			vec<-.Call("read_vectors_idx_raw_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 			else
-			vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
+			vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], idx)[[1]]
+#			vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		
 		if(is.null(drop) || drop==TRUE) {
 			d<-d[d!=1]
@@ -1002,9 +1011,10 @@ names.MVL_OBJECT<-function(x) {
 			#print(L)
 #			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
 			if(raw)
-				vec<-.Call("read_vectors_idx_raw", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+				vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
 				else
-				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+				vec<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], i)[[1]]
+#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
 #			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
 
 			if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
