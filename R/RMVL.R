@@ -891,7 +891,7 @@ names.MVL_OBJECT<-function(x) {
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
 	if(is.null(object_class))object_class<-"NULL"
-	if(object_class=="data.frame") {
+	if(any(object_class=="data.frame")) {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
 		if(...length()<1 || missing(..1)) {
@@ -953,7 +953,7 @@ names.MVL_OBJECT<-function(x) {
 			}
 		return(df)
 		}
-	if(object_class %in% c("array", "matrix")) {
+	if(any(object_class %in% c("array", "matrix"))) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		
@@ -998,15 +998,16 @@ names.MVL_OBJECT<-function(x) {
 		return(vec)
 		}
 	if(...length()==0) {
-		if(is.logical(i)) {
-			i<-which(i)
-			}
+# 		if(is.logical(i)) {
+# 			i<-which(i)
+# 			}
 		if(is.factor(i))i<-as.character(i)
 		if(is.character(i)) {
 			if(is.null(obj$metadata$names))stop("Object has no names")
 			i<-which.max(obj$metadata$names==i)
 			}
-		if(is.numeric(i)) {
+#		if(is.numeric(i)) 
+			{
 			#print(i)
 			#print(L)
 #			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
