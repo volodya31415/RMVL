@@ -659,11 +659,11 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		if(!is.null(cl)) {
-			if(!any(cl %in% c("data.frame", "array")) && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 			if(any(cl=="factor") || any(cl=="character")) {
 				vec<-mvl_flatten_string(vec)
 				if(cl=="factor")vec<-as.factor(vec)
 				}
+			if(!any(cl %in% c("data.frame")) && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 			#if(cl=="data.frame" && any(unlist(lapply(vec, class))=="MVL_OBJECT"))cl<-"MVL_OBJECT"
 			class(vec)<-cl
 			}

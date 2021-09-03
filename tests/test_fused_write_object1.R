@@ -34,7 +34,7 @@ flatten<-function(L) {
 	return(lapply(L, function(x) { 
 		if(!inherits(x, "MVL_OBJECT"))return(x)
 		if(!is.null(unclass(x)$metadata) && !is.null(unclass(x)$metadata$class) && any(unclass(x)$metadata$class=="data.frame"))return(x[,])
-		return(x[]) 
+		return(x[])
 		}))
 	}
 
