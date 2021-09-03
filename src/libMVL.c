@@ -1040,7 +1040,7 @@ for(i=0;i<N;i++) {
 			break;
 			}
 		case LIBMVL_VECTOR_INT64: {
-			long long ad, bd;
+			long long ad;
 			ad=mvl_vector_data(avec).i64[ai];
 			switch(mvl_vector_type(bvec)) {
 				case LIBMVL_VECTOR_INT32: {
