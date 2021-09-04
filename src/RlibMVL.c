@@ -179,6 +179,103 @@ UNPROTECT(1);
 return(ans);
 }
 
+SEXP remap_library(SEXP idx0, SEXP mode0)
+{
+int i, mode;
+int idx;
+MMAPED_LIBRARY *p;
+LIBMVL_OFFSET64 new_length;
+size_t cur;
+
+if(length(idx0)!=1) {
+	error("close_library requires a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0)return(R_NilValue);
+if(idx>=libraries_free)return(R_NilValue);
+
+p=&(libraries[idx]);
+
+
+if(length(mode0)!=1) {
+	error("mmap_library argument mode has to be length 1 integer");
+	return(R_NilValue);
+	}
+	
+mode=INTEGER(mode0)[0];
+
+if(p->f==NULL) {
+	error("Cannot remap read-only library");
+	return(R_NilValue);
+	}
+	
+if(mode==0) {
+	/* Read-only mapping; no need to use up a file descriptor */
+	if(p->modified) {
+		mvl_close(p->ctx);
+		}			
+	}
+	
+fflush(p->f);
+	
+cur=ftell(p->f);
+fseek(p->f, 0, SEEK_END);
+new_length=ftell(p->f);
+fseek(p->f, cur, SEEK_SET);
+
+if(new_length>0) {
+#ifdef __WIN32__
+	p->f_handle=(HANDLE)_get_osfhandle(fileno(p->f));
+	if(p->f_handle==NULL) {
+		error("Cannot obtain Win32 file handle");
+		fclose(p->f);
+		p->f=NULL;
+		return(R_NilValue);
+		}
+	
+	UnmapViewOfFile(p->data);
+	CloseHandle(p->f_map_handle);
+	p->length=new_length;
+	
+	p->f_map_handle=CreateFileMappingA(p->f_handle, NULL, PAGE_READONLY, 0, 0, NULL);
+	if(p->f_map_handle==NULL) {
+		error("Cannot obtain Win32 file mapping object");
+		fclose(p->f);
+		p->f=NULL;
+		return(R_NilValue);
+		}
+		
+	p->data=MapViewOfFile(p->f_map_handle, FILE_MAP_READ, 0, 0, p->length);
+	if(p->data==NULL) {
+		error("Cannot create Win32 File mapping view");
+		fclose(p->f);
+		p->f=NULL;
+		return(R_NilValue);
+		}
+
+#else
+	if(p->data!=NULL)munmap(p->data, p->length);
+
+	p->length=new_length;
+
+	p->data=mmap(NULL, p->length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
+	if(p->data==NULL) {
+		error("Memory mapping MVL library: %s", strerror(errno));
+		return(R_NilValue);
+		}
+#endif
+	if(mode==0) {
+		/* Read-only mapping; no need to use up a file descriptor */
+		fclose(p->f);
+		p->f=NULL;
+		p->ctx->f=NULL;
+		}
+	}
+	
+return(R_NilValue);
+}
+
 SEXP close_library(SEXP idx0)
 {
 int idx; 
@@ -2956,6 +3053,7 @@ return(ans);
 
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
+  R_RegisterCCallable("RMVL", "remap_library",  (DL_FUNC) &remap_library);
   R_RegisterCCallable("RMVL", "close_library",  (DL_FUNC) &close_library);
   R_RegisterCCallable("RMVL", "find_directory_entries",  (DL_FUNC) &find_directory_entries);
   R_RegisterCCallable("RMVL", "get_directory",  (DL_FUNC) &get_directory);
