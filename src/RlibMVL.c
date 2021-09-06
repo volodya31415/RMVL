@@ -585,7 +585,14 @@ for(i=0;i<xlength(offsets);i++) {
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
-	d_ans[i]=mvl_vector_length(vec);
+	switch(mvl_vector_type(vec)) {
+		case LIBMVL_PACKED_LIST64:
+			d_ans[i]=mvl_vector_length(vec)-1;
+			break;
+		default:
+			d_ans[i]=mvl_vector_length(vec);
+			break;
+		}
 	}
 
 UNPROTECT(1);

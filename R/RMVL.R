@@ -949,7 +949,9 @@ names.MVL_OBJECT<-function(x) {
 				
 				return(L)
 				}
-			i<-1:(obj[["metadata"]][["dim"]][1])
+			d<-obj[["metadata"]][["dim"]]
+			if(is.null(d))d<-length(obj)
+			i<-1:(d[1])
 			}
 		if(is.logical(i)) {
 			i<-which(i)
