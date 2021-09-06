@@ -865,7 +865,7 @@ print.MVL_OBJECT<-function(x, ..., small_length=10) {
 #'
 #' @export
 dim.MVL_OBJECT<-function(x) {
-	if(is.null(x[["metadata"]]))stop("Malformed MVL_OBJECT: missing metadata")
+	if(is.null(x[["metadata"]]))return(x[["length"]])
 	return(x[["metadata"]][["dim"]])
 	}
 	
@@ -888,7 +888,7 @@ length.MVL_OBJECT<-function(x) {
 #' @export
 names.MVL_OBJECT<-function(x) {
 	m<-unclass(x)[["metadata"]]
-	if(is.null(m))stop("Malformed MVL_OBJECT")
+	if(is.null(m))return(NULL)
 	return(m[["names"]])
 	}
 	
