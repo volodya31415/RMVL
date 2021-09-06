@@ -1312,7 +1312,7 @@ for(i=0;i<xlength(offsets);i++) {
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
-			warning("Converted 32-bit floats to doubles");
+			//warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
@@ -1448,7 +1448,7 @@ for(i=0;i<xlength(offsets);i++) {
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
-			warning("Converted 32-bit floats to doubles");
+			//warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
@@ -1586,7 +1586,7 @@ for(i=0;i<xlength(offsets);i++) {
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
-			warning("Converted 32-bit floats to doubles");
+			//warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
@@ -1730,7 +1730,7 @@ for(i=0;i<xlength(offsets);i++) {
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
-			warning("Converted 32-bit floats to doubles");
+			//warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			for(j=0;j<N;j++)
