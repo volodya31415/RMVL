@@ -255,7 +255,11 @@ if(new_length>0) {
 		}
 
 #else
-	if(p->data!=NULL)munmap(p->data, p->length);
+	if(p->data!=NULL) {
+		if(munmap(p->data, p->length)!=0) {
+			error("Unmapping data: %s", strerror(errno));
+			}
+		}
 
 	p->length=new_length;
 
@@ -294,7 +298,9 @@ if(p->ctx==NULL)return(R_NilValue);
 
 if(p->data!=NULL) {
 #ifndef __WIN32__
-	munmap(p->data, p->length);
+	if(munmap(p->data, p->length)!=0) {
+		error("Unmapping data: %s", strerror(errno));
+		}
 #else
 	UnmapViewOfFile(p->data);
 	CloseHandle(p->f_map_handle);
@@ -2970,7 +2976,7 @@ if(xlength(data_list)<1) {
 	}
 
 if(TYPEOF(indices)!=NILSXP && xlength(indices)<1) {
-	error("Nothing to merge");
+	error("Nothing to group");
 	return(R_NilValue);
 	}
 
@@ -3038,7 +3044,7 @@ j=0;
 for(i=0;i<hm->first_count;i++) {
 	k=hm->first[i];
 	while(k!=~0LLU) {
-		pd[j]=k+1;
+		pd[j]=v_idx[k]+1;
 		j++;
 		k=hm->next[k];
 		}

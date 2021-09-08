@@ -1747,9 +1747,9 @@ for(i=0;i<first_count;i++) {
 	while(j>1) {
 		m=j-1;
 		l=1;
-		su1.index=tmp[0];
+		su1.index=indices[tmp[0]];
 		while(l<=m) {
-			su2.index=tmp[l];
+			su2.index=indices[tmp[l]];
 			if(hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2)) {
 				if(l<m) {
 					a=tmp[m];
