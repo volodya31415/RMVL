@@ -229,6 +229,7 @@ mvl_hash_vectors<-function(L, indices=NULL) {
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
 #' @param L  list of vector like MVL_OBJECTs 
+#' @param name if specified add a named entry to MVL file directory
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}
 #'  
@@ -250,6 +251,7 @@ mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
 #' @param L  list of vector like MVL_OBJECTs 
+#' @param name if specified add a named entry to MVL file directory
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 #'  
@@ -269,7 +271,7 @@ mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 #' @param prev  MVL_OBJECT \code{prev} computed by \code{mvl_write_groups} 
 #' @param first_indices  indices from \code{first} vector computed by \code{mvl_write_groups} 
 #' @return a vector of indices
-#' @seealso \code{\link{mvl_group_vectors}}
+#' @seealso \code{\link{mvl_group}}
 #'  
 #' @export
 #'
