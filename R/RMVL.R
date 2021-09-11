@@ -213,7 +213,7 @@ mvl_order_vectors<-function(L, indices=NULL, decreasing=FALSE, sort_function=ife
 #' @param L  list of vector like MVL_OBJECTs 
 #' @param indices  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
 #' @return hash values in numeric format, with 52 valid bits. Each value is uniform between 1 and 2.
-#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_write_hash_vectors}}
 #'  
 #' @export
 #'
@@ -221,6 +221,62 @@ mvl_hash_vectors<-function(L, indices=NULL) {
 	return(.Call("hash_vectors", L, indices)) 
 	}
 
+#' Write hash values for each row
+#'
+#' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. For each row, i.e. set of vector values with the same index
+#' we compute a 64-bit hash value. Identical rows produce identical hash values. The hash values are written into 64-bit integer vector. 
+#' This function is meant for use with data that is too large to handle comfortably.
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param L  list of vector like MVL_OBJECTs 
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}
+#'  
+#' @export
+#'
+mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	offset<-.Call("hash_vectors", MVLHANDLE[["handle"]], L)
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
+	return(invisible(offset))
+	}
+
+#' Write hash values for each row
+#'
+#' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. These rows 
+#' are split into groups so that identical rows are guaranteed to belong to the same group. This is done internally based on 20-bit hash values.
+#' This function is convenient to use as a way to partition very large datasets before applying \code{mvl_group} or \code{mvl_find_matches}. 
+#' The groups can be obtained by using \code{mvl_get_groups}
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param L  list of vector like MVL_OBJECTs 
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
+#'  
+#' @export
+#'
+mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	offset<-.Call("write_groups", MVLHANDLE[["handle"]], L)
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
+	return(invisible(offset))
+	}
+
+#' Retrieve indices belong to one or more groups
+#'
+#' This function is passed the \code{prev} vector computed by \code{mvl_write_groups} and one or more indices from the \code{first} vector.
+#'
+#' @param prev  MVL_OBJECT \code{prev} computed by \code{mvl_write_groups} 
+#' @param first_indices  indices from \code{first} vector computed by \code{mvl_write_groups} 
+#' @return a vector of indices
+#' @seealso \code{\link{mvl_group_vectors}}
+#'  
+#' @export
+#'
+mvl_get_groups<-function(prev, first_indices) {
+	return(.Call("get_groups", prev, first_indices))
+	}
+	
 #' Find matching rows
 #'
 #' This function is passed two lists of MVL vectors which are interpreted in data.frame fashion. 
