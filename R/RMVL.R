@@ -319,6 +319,22 @@ mvl_group<-function(L, indices=NULL) {
 	names(L)<-c("stretch_index", "index")
 	return(L) 
 	}
+
+#' Apply function to index stretches
+#'
+#' Iteratively call function \code{fn} over index stretches previously computed with \code{mvl_group}
+#'
+#' @param G a list of groups and group stretches produced by \code{mvl_group}
+#' @param fn a function of one argument - list of indices
+#' @return a list of results of function \code{fn}
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @export
+#'
+mvl_group_lapply<-function(G, fn) {
+	L<-.Call("group_lapply", G$stretch_index[], G$index[], fn, new.env())
+	return(L) 
+	}
 	
 #' Index copy vector
 #'
@@ -732,7 +748,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 		if(raw)
 			vec<-.Call("read_vectors_idx_raw2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 			else
-			vec<-.Call("read_vectors_idx2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+			vec<-.Call("read_vectors_idx3", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 #			vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 		}
 	if(inherits(vec, "MVL_OFFSET")) {
@@ -1007,7 +1023,7 @@ names.MVL_OBJECT<-function(x) {
 			}
 		if(missing(i)) {
 			if(length(j)==1 && drop) {
-				ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
+				ofs<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], j)[[1]]
 				metadata_offset<-.Call("read_metadata", obj[["handle"]], ofs)
 				metadata<-mvl_read_metadata(obj, metadata_offset)
 
@@ -1029,7 +1045,7 @@ names.MVL_OBJECT<-function(x) {
 		if(raw)
 			ofs<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], j)[[1]]
 			else
-			ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
+			ofs<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], j)[[1]]
 			
 		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(i)))})
 		
@@ -1111,7 +1127,7 @@ names.MVL_OBJECT<-function(x) {
 			if(raw)
 				vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
 				else
-				vec<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], i)[[1]]
+				vec<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], i)[[1]]
 #				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
 #			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
 

@@ -1664,6 +1664,7 @@ LIBMVL_OFFSET64 *v_idx, N;
 double *pd;
 int *pi;
 unsigned char *pc;
+LIBMVL_OFFSET64 *poffs;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -1761,10 +1762,9 @@ for(i=0;i<xlength(offsets);i++) {
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, N));
-			pd=REAL(v);
+			poffs=(LIBMVL_OFFSET64 *)REAL(v);
 			for(j=0;j<N;j++) {
-				offset=mvl_vector_data(vec).offset[v_idx[j]];
-				pd[j]=*doffset2;
+				poffs[j]=mvl_vector_data(vec).offset[v_idx[j]];
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -1792,6 +1792,286 @@ free(v_idx);
 UNPROTECT(1);
 return(ans);
 }
+
+/* This function accepts vectors in variety of formats */
+SEXP read_vectors_idx3(SEXP idx0, SEXP offsets, SEXP indicies)
+{
+int idx;
+SEXP ans, v, class;
+long i, j;
+double doffset;
+LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
+LIBMVL_OFFSET64 offset, k, m;
+double *doffset2=(double *)&offset;
+LIBMVL_VECTOR *vec, *vec_idx=NULL;
+LIBMVL_OFFSET64 N, N0;
+
+double * restrict pd;
+int * restrict pi;
+unsigned char * restrict pc;
+LIBMVL_OFFSET64 * restrict poffs;
+double * restrict pd2;
+float * restrict pf2;
+int * restrict pi2;
+unsigned char * restrict pc2;
+LIBMVL_OFFSET64 * restrict poffs2;
+
+if(length(idx0)!=1) {
+	error("find_directory_entry first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+	
+if(TYPEOF(indicies)==VECSXP) {
+	int data_idx;
+	LIBMVL_OFFSET64 data_offset;
+	decode_mvl_object(indicies, &data_idx, &data_offset);
+	vec_idx=get_mvl_vector(data_idx, data_offset);
+		
+	if(vec_idx==NULL) {
+		error("Invalid MVL object or R vector passed as indices");
+		return(R_NilValue);
+		}
+	}
+	
+
+ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
+for(i=0;i<xlength(offsets);i++) {
+	doffset=REAL(offsets)[i];
+	offset=*offset0;
+	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+		SET_VECTOR_ELT(ans, i, R_NilValue);
+		continue;
+		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	N0=mvl_vector_length(vec);
+	
+		
+	switch(TYPEOF(indicies)) { 
+		case VECSXP: {
+			
+			switch(mvl_vector_type(vec_idx)) {
+				case LIBMVL_VECTOR_OFFSET64:
+				case LIBMVL_VECTOR_INT32:
+				case LIBMVL_VECTOR_INT64:
+				case LIBMVL_VECTOR_DOUBLE:
+				case LIBMVL_VECTOR_FLOAT:
+					N=mvl_vector_length(vec_idx);
+					break;
+				default:
+					error("Cannot interpret MVL object as indices");
+					UNPROTECT(1);
+					return(R_NilValue);
+					break;
+				}
+			
+			break;
+			}
+		case REALSXP:
+		case INTSXP: {
+			N=xlength(indicies);
+			break; 
+			} 
+		case LGLSXP: {
+			N=0;
+			int *pi=LOGICAL(indicies);
+			for(LIBMVL_OFFSET64 j=0;j<xlength(indicies);j++)
+				if(pi[j])N++;
+			break; 
+			}
+		case NILSXP: { 
+			N=N0;
+			break; 
+			} 
+		default:
+			N=0;
+			error("Cannot handle R index type %d", TYPEOF(indicies));
+			UNPROTECT(1);
+			return(R_NilValue);
+			break; 
+		}
+		
+#define INDEX_LOOP(line) \
+	{ \
+	switch(TYPEOF(indicies)) { \
+		case VECSXP: { \
+			switch(mvl_vector_type(vec_idx)) { \
+				case LIBMVL_VECTOR_OFFSET64: \
+					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).i64[j]-1; \
+						if(j0<N0) { \
+							line ;\
+							} \
+						} \
+					break; \
+				case LIBMVL_VECTOR_INT32: \
+					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).i[j]-1; \
+						if(j0<N0) { \
+							line ;\
+							} \
+						} \
+					break; \
+				case LIBMVL_VECTOR_INT64: \
+					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).i64[j]-1; \
+						if(j0<N0) { \
+							line ;\
+							} \
+						} \
+					break; \
+				case LIBMVL_VECTOR_DOUBLE: \
+					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).d[j]-1; \
+						if(j0<N0) { \
+							line ;\
+							} \
+						} \
+					break; \
+				case LIBMVL_VECTOR_FLOAT: \
+					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).f[j]-1; \
+						if(j0<N0) { \
+							line ;\
+							} \
+						} \
+					break; \
+				default: \
+					break; \
+				} \
+			break; \
+			} \
+		case REALSXP: {\
+			double * restrict pidx=REAL(indicies); \
+			for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+				LIBMVL_OFFSET64 j0=pidx[j]-1; \
+				if(j0<N0) { \
+					line ;\
+					} \
+				} \
+			break; \
+			} \
+		case INTSXP: { \
+			int * restrict pidx=INTEGER(indicies); \
+			for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+				LIBMVL_OFFSET64 j0=pidx[j]-1; \
+				if(j0<N0) { \
+					line ;\
+					} \
+				} \
+			break; \
+			} \
+		case LGLSXP: { \
+			int * restrict pi=LOGICAL(indicies); \
+			for(LIBMVL_OFFSET64 j0=0, k=0;j0<xlength(indicies);j0++) \
+				if(pi[j0]) { \
+					line; \
+					j++; \
+					} \
+			break; \
+			} \
+		case NILSXP: { \
+			for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
+				LIBMVL_OFFSET64 j0=j; \
+					{ \
+					line ;\
+					} \
+				} \
+			break; \
+			} \
+		default:\
+			break; \
+		} \
+	}
+
+	
+	switch(mvl_vector_type(vec)) {
+		case LIBMVL_VECTOR_UINT8:
+			v=PROTECT(allocVector(RAWSXP, N));
+			pc=RAW(v);
+			INDEX_LOOP(pc[j]=mvl_vector_data(vec).b[j0]);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
+		case LIBMVL_VECTOR_CSTRING:
+			error("String subset not supported");
+			return(R_NilValue);
+			v=PROTECT(allocVector(STRSXP, 1));
+			/* TODO: check that vector length is within R limits */
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			break;
+		case LIBMVL_VECTOR_INT32:
+			v=PROTECT(allocVector(INTSXP, N));
+			pi=INTEGER(v);
+			INDEX_LOOP(pi[j]=mvl_vector_data(vec).i[j0]);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_INT64:
+			warning("Converted 64-bit integers to doubles");
+			v=PROTECT(allocVector(REALSXP, N));
+			pd=REAL(v);
+			INDEX_LOOP(pd[j]=mvl_vector_data(vec).i64[j0]);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_FLOAT:
+			//warning("Converted 32-bit floats to doubles");
+			v=PROTECT(allocVector(REALSXP, N));
+			pd=REAL(v);
+			INDEX_LOOP(pd[j]=mvl_vector_data(vec).f[j0]);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_DOUBLE:
+			v=PROTECT(allocVector(REALSXP, N));
+			pd=REAL(v);
+			pd2=mvl_vector_data(vec).d;
+			INDEX_LOOP(pd[j]=pd2[j0]);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		case LIBMVL_VECTOR_OFFSET64:
+			v=PROTECT(allocVector(REALSXP, N));
+			poffs=(LIBMVL_OFFSET64 *)REAL(v);
+			INDEX_LOOP(poffs[j]=mvl_vector_data(vec).offset[j0]);
+			class=PROTECT(allocVector(STRSXP, 1));
+			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+			classgets(v, class);
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(2);
+			break;
+		case LIBMVL_PACKED_LIST64:
+			v=PROTECT(allocVector(STRSXP, N));
+			/* TODO: check that vector length is within R limits */
+			INDEX_LOOP(SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j0), mvl_packed_list_get_entry_bytelength(vec, j0))));
+			SET_VECTOR_ELT(ans, i, v);
+			UNPROTECT(1);
+			break;
+		default:
+			warning("Unknown vector type");
+			SET_VECTOR_ELT(ans, i, R_NilValue);
+			break;
+		}
+	}
+#undef INDEX_LOOP
+	
+UNPROTECT(1);
+return(ans);
+}
+
 
 SEXP read_metadata(SEXP idx0, SEXP offsets)
 {
@@ -3456,6 +3736,64 @@ UNPROTECT(3);
 return(ans);
 }
 
+SEXP group_lapply(SEXP si, SEXP index, SEXP fn, SEXP env)
+{
+LIBMVL_OFFSET64 N, Nidx, stretch_max;
+SEXP ans, vidx, R_fcall;
+
+double *psi, *pidx, *pidx2;
+
+if(xlength(si)<2) {
+	error("stretch index should have length of at least 2");
+	return(R_NilValue);
+	}
+if(!isFunction(fn)) {
+	error("third argument must be a function");
+	return(R_NilValue);
+	}
+if(!isEnvironment(env)) {
+	error("fourth argument should be an environment");
+	return(R_NilValue);
+	}
+	
+N=xlength(si)-1;
+psi=REAL(si);
+
+Nidx=xlength(index);
+pidx=REAL(index);
+
+ans=PROTECT(allocVector(VECSXP, N));
+
+R_fcall = PROTECT(lang2(fn, R_NilValue));
+
+stretch_max=1;
+for(LIBMVL_OFFSET64 i=0;i<N;i++) {
+	LIBMVL_OFFSET64 k=psi[i+1]-psi[i];
+	if(k>stretch_max)stretch_max=k;
+	}
+	
+vidx=PROTECT(allocVector(REALSXP, stretch_max));
+pidx2=REAL(vidx);
+
+for(LIBMVL_OFFSET64 i=0;i<N;i++) {
+	LIBMVL_OFFSET64 k0, k1;
+	k0=psi[i]-1;
+	k1=psi[i+1]-1;
+	if(k1<=k0)continue;
+	if(k0 >= Nidx || k1>Nidx)continue;
+	SETLENGTH(vidx, k1-k0);
+	
+	for(LIBMVL_OFFSET64 j=k0;j<k1;j++) {
+		pidx2[j-k0]=pidx[j];
+		}
+	SETCADR(R_fcall, vidx);
+	SET_VECTOR_ELT(ans, i, eval(R_fcall, env));
+	}
+
+UNPROTECT(3);
+return(ans);
+}
+
 
 void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
@@ -3475,6 +3813,7 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "read_vectors_idx",  (DL_FUNC) &read_vectors_idx);
   R_RegisterCCallable("RMVL", "read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real);
   R_RegisterCCallable("RMVL", "read_vectors_idx2",  (DL_FUNC) &read_vectors_idx2);
+  R_RegisterCCallable("RMVL", "read_vectors_idx3",  (DL_FUNC) &read_vectors_idx3);
   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
   R_RegisterCCallable("RMVL", "fused_write_vector",  (DL_FUNC) &fused_write_vector);
@@ -3485,6 +3824,7 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector);
   R_RegisterCCallable("RMVL", "mvl_xlength",  (DL_FUNC) &mvl_xlength);
   R_RegisterCCallable("RMVL", "group_vectors",  (DL_FUNC) &group_vectors);
+  R_RegisterCCallable("RMVL", "group_lapply",  (DL_FUNC) &group_lapply);
   R_RegisterCCallable("RMVL", "write_groups",  (DL_FUNC) &write_groups);
   R_RegisterCCallable("RMVL", "get_groups",  (DL_FUNC) &get_groups);
 }
