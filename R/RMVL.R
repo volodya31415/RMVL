@@ -1001,7 +1001,55 @@ names.MVL_OBJECT<-function(x) {
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class))object_class<-"NULL"
+	if(is.null(object_class)) {
+		if(...length()==0) {
+	# 		if(is.logical(i)) {
+	# 			i<-which(i)
+	# 			}
+			if(is.factor(i))i<-as.character(i)
+			if(is.character(i)) {
+				if(is.null(obj$metadata$names))stop("Object has no names")
+				i<-which.max(obj$metadata$names==i)
+				}
+	#		if(is.numeric(i)) 
+				{
+				#print(i)
+				#print(L)
+	#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
+				if(raw)
+					vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
+					else
+					vec<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], i)[[1]]
+	#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+	#			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
+
+				if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
+					vec<-mvl_read_object(obj, vec, recurse=FALSE)
+					} else {
+					#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
+					#metadata<-mvl_read_metadata(obj, metadata_offset)
+					#print(metadata)
+	# 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
+	# 					cl<-metadata[["class"]]
+	# 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
+	# 					if(cl=="factor" || cl=="character") {
+	# 						vec<-mvl_flatten_string(vec)
+	# 						if(cl=="factor")vec<-as.factor(vec)
+	# 						}
+	# 						class(vec)<-cl
+	# 					if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
+	# 					if(!is.null(metadata[["rownames"]]))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
+	# 					}				
+					}
+				if(inherits(vec, "MVL_OFFSET") && recurse) {
+					vec<-lapply(vec, function(x) {class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, recurse=recurse, raw=raw)) })
+					}
+				return(vec)
+				}
+			} else {
+			}
+		stop("Cannot process ", obj)
+		}
 	if(any(object_class=="data.frame")) {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
@@ -1109,52 +1157,6 @@ names.MVL_OBJECT<-function(x) {
 			} else
 			dim(vec)<-d
 		return(vec)
-		}
-	if(...length()==0) {
-# 		if(is.logical(i)) {
-# 			i<-which(i)
-# 			}
-		if(is.factor(i))i<-as.character(i)
-		if(is.character(i)) {
-			if(is.null(obj$metadata$names))stop("Object has no names")
-			i<-which.max(obj$metadata$names==i)
-			}
-#		if(is.numeric(i)) 
-			{
-			#print(i)
-			#print(L)
-#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
-			if(raw)
-				vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
-				else
-				vec<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], i)[[1]]
-#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
-#			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
-
-			if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
-				vec<-mvl_read_object(obj, vec, recurse=FALSE)
-				} else {
-				#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
-				#metadata<-mvl_read_metadata(obj, metadata_offset)
-				#print(metadata)
-# 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
-# 					cl<-metadata[["class"]]
-# 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
-# 					if(cl=="factor" || cl=="character") {
-# 						vec<-mvl_flatten_string(vec)
-# 						if(cl=="factor")vec<-as.factor(vec)
-# 						}
-# 						class(vec)<-cl
-# 					if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
-# 					if(!is.null(metadata[["rownames"]]))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
-# 					}				
-				}
-			if(inherits(vec, "MVL_OFFSET") && recurse) {
-				vec<-lapply(vec, function(x) {class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, recurse=recurse, raw=raw)) })
-				}
-			return(vec)
-			}
-		} else {
 		}
 	stop("Cannot process ", obj)
 	}
