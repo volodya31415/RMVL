@@ -242,7 +242,7 @@ mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 	return(invisible(offset))
 	}
 
-#' Write hash values for each row
+#' Write group information for each row
 #'
 #' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. These rows 
 #' are split into groups so that identical rows are guaranteed to belong to the same group. This is done internally based on 20-bit hash values.
@@ -260,6 +260,29 @@ mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	offset<-.Call("write_groups", MVLHANDLE[["handle"]], L)
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
+	return(invisible(offset))
+	}
+
+#' Write spatial group information for each row
+#'
+#' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. These rows 
+#' are split into groups so that identical rows are guaranteed to belong to the same group. This is done using partition into equal sized bins.
+#' This function is meant for constructing spatial indexes.
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param L  list of vector like MVL_OBJECTs 
+#' @param bits a vector of bit values to use for each member of L
+#' @param name if specified add a named entry to MVL file directory
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
+#'  
+#' @export
+#'
+mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	if(length(bits)==1)bits<-rep(bits, length(L))
+	offset<-.Call("write_spatial_groups", MVLHANDLE[["handle"]], L, as.integer(bits))
 	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
 	return(invisible(offset))
 	}

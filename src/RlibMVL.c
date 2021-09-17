@@ -2674,30 +2674,14 @@ if(vec==NULL) {
 	return(R_NilValue);	
 	}
 
-N_idx=xlength(indices);
-
-v_idx=calloc(N_idx, sizeof(*v_idx));
-if(v_idx==NULL) {
-	error("Out of memory");
+	
+if(get_indices(indices, vec, &N_idx, &v_idx)) {
+	error("Invalid indices");
 	return(R_NilValue);
 	}
 	
+	
 libraries[idx].modified=1;
-
-switch(TYPEOF(indices)) {
-	case REALSXP:
-		pd=REAL(indices);
-		for(i=0;i<N_idx;i++)v_idx[i]=pd[i]-1;
-		break;
-	case INTSXP:
-		pi=INTEGER(indices);
-		for(i=0;i<N_idx;i++)v_idx[i]=pi[i]-1;
-		break;
-	default:
-		free(v_idx);
-		error("Indices must be real or integer");
-		return(R_NilValue);
-	}
 
 offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, *moffset, 1024*1024*16);
 	
@@ -3164,7 +3148,7 @@ for(int i=0;i<N_BLOCK;i++) {
 	
 for(LIBMVL_OFFSET64 k=0;k<N;k+=N_BLOCK) {
 	int bcount=N_BLOCK;
-	if(k+bcount>mvl_vector_length(vectors[0]))bcount=N-k;
+	if(k+bcount>N)bcount=N-k;
 	for(int i=0;i<bcount;i++) {
 		v_idx[i]=k+i;
 		}
@@ -3231,6 +3215,508 @@ classgets(ans, class);
 UNPROTECT(2);
 
 return(ans);	
+}
+
+SEXP write_spatial_groups1(SEXP idx0, SEXP data_list, SEXP sbits)
+{
+int data_idx, idx, first_count;
+LIBMVL_OFFSET64 data_offset;
+SEXP data;
+
+int err;
+
+void **vec_data;
+LIBMVL_VECTOR **vectors;
+LIBMVL_OFFSET64  *count;
+double *values;
+LIBMVL_OFFSET64 N, offset;
+double *doffset=(double *)&offset;
+long long *first, *prev;
+int *hash, *bits;
+LIBMVL_VEC_STATS *vstats;
+unsigned block_length, block_bits;
+
+LIBMVL_NAMED_LIST *L;
+
+SEXP ans, class;
+	
+if(length(idx0)!=1) {
+	error("fused_write_vector first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("library not open for writing");
+	return(R_NilValue);
+	}
+
+if(TYPEOF(data_list)!=VECSXP) {
+	error("order_vectors first argument must be a list of data to sort");
+	return(R_NilValue);
+	}
+
+if(xlength(data_list)<1) {
+	error("No hashes to compute");
+	return(R_NilValue);
+	}
+	
+if(xlength(data_list)!=xlength(sbits)) {
+	error("Need to specify number of useful bits for each vector");
+	return(R_NilValue);
+	}
+	
+bits=INTEGER(sbits);
+block_bits=0;
+for(LIBMVL_OFFSET64 i=0; i< xlength(data_list);i++)block_bits+=bits[i];
+if(block_bits>30) {
+	error("Too many bits: %d total", block_bits);
+	return(R_NilValue);
+	}
+block_length=1<<block_bits;
+	
+vec_data=calloc(xlength(data_list), sizeof(*vec_data));
+vectors=calloc(xlength(data_list), sizeof(*vectors));
+vstats=calloc(xlength(data_list), sizeof(*vstats));
+values=calloc(N_BLOCK, sizeof(*values));
+hash=calloc(N_BLOCK, sizeof(*hash));
+count=calloc(block_length, sizeof(*count));
+first=calloc(block_length, sizeof(*first));
+prev=calloc(N_BLOCK, sizeof(*prev));
+if(vec_data==NULL || vectors==NULL || vstats==NULL || hash==NULL || first==NULL || prev==NULL || values==NULL) {
+	error("Not enough memory");
+	free(vec_data);
+	free(vectors);
+	free(vstats);
+	free(hash);
+	free(first);
+	free(prev);
+	free(values);
+	return(R_NilValue);
+	}
+
+for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
+	data=VECTOR_ELT(data_list, k);
+	decode_mvl_object(data, &data_idx, &data_offset);
+	vectors[k]=get_mvl_vector(data_idx, data_offset);
+	
+	if(vectors[k]==NULL) {
+		error("Invalid MVL object in data list");
+		free(vec_data);
+		free(vectors);
+		free(hash);
+		free(first);
+		free(prev);
+		free(count);
+		free(values);
+		return(R_NilValue);
+		}
+	vec_data[k]=libraries[data_idx].data;
+	mvl_compute_vec_stats(vectors[k], &(vstats[k]));
+	}
+
+N=mvl_vector_length(vectors[0]);
+for(LIBMVL_OFFSET64 k=1;k<xlength(data_list);k++) {
+	if(mvl_vector_length(vectors[k])!=N) {
+		error("All MVL vectors should be equal length");
+		free(vec_data);
+		free(vectors);
+		free(hash);
+		free(first);
+		free(prev);
+		free(count);
+		free(values);
+		return(R_NilValue);
+		}
+	}
+
+offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, N, 0, NULL, LIBMVL_NO_METADATA);
+
+for(int i=0;i<block_length;i++) {
+	first[i]=-1;
+	count[i]=0;
+	}
+	
+for(LIBMVL_OFFSET64 k=0;k<N;k+=N_BLOCK) {
+	int bcount=N_BLOCK;
+	if(k+bcount>N)bcount=N-k;
+	
+	memset(hash, 0, sizeof(*hash)*bcount);
+	
+	for(LIBMVL_OFFSET64 m=0;m<xlength(data_list);m++) {
+		mvl_normalize_vector(vectors[m], &(vstats[m]), k, k+bcount, values);
+		int shift=bits[m];
+		int mult=1<<shift;
+		int mask=mult-1;
+		for(int i=0;i<bcount;i++) {
+			hash[i]=hash[i]<<shift | ((int)floor(values[i]*mult) & mask);
+			}
+		}
+	
+	for(unsigned i=0;i<bcount;i++) {
+		unsigned j=hash[i] & (block_length-1);
+		count[j]++;
+		if(first[j]<0) {
+			first[j]=k+i;
+			prev[i]=-1;
+			} else {
+			prev[i]=first[j]+1;
+			first[j]=k+i;
+			}
+		}
+		
+	mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, offset, k, bcount, prev);
+	}
+	
+
+// first_count=0;
+// for(int i=0;i<block_length;i++) {
+// 	if(first[i]<0)continue;
+// 	first[first_count]=first[i]+1;
+// 	v_idx[first_count]=i;
+// 	if(first_count<i)
+// 		count[first_count]=count[i];
+// 	first_count++;
+// 	}
+	
+L=mvl_create_named_list(2);
+mvl_add_list_entry(L, -1, "first", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, block_length, first, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "count", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, block_length, count, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "bits", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT32, xlength(data_list), bits, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "vector_stats", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_DOUBLE, xlength(data_list)*sizeof(*vstats)/sizeof(double), vstats, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "prev", offset);
+
+offset=mvl_write_named_list(libraries[idx].ctx, L);
+mvl_free_named_list(L);
+
+free(vec_data);
+free(vectors);
+free(hash);
+free(first);
+free(prev);
+free(count);
+free(values);
+
+ans=PROTECT(allocVector(REALSXP, 1));
+REAL(ans)[0]=*doffset;
+
+class=PROTECT(allocVector(STRSXP, 1));
+SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+classgets(ans, class);
+UNPROTECT(2);
+
+return(ans);	
+}
+
+
+SEXP write_spatial_groups(SEXP idx0, SEXP data_list, SEXP sbits)
+{
+int data_idx, idx, first_count;
+LIBMVL_OFFSET64 data_offset;
+SEXP data;
+
+int err;
+
+void **vec_data;
+LIBMVL_VECTOR **vectors;
+LIBMVL_OFFSET64  *count, *hash, *first_hash;
+double *values;
+LIBMVL_OFFSET64 N, offset, first_idx_size, first_idx_free, N2;
+double *doffset=(double *)&offset;
+long long *first_idx, *prev, *first_idx_prev, *first;
+int *bits;
+LIBMVL_VEC_STATS *vstats;
+unsigned block_length, block_bits;
+
+LIBMVL_NAMED_LIST *L;
+
+SEXP ans, class;
+	
+if(length(idx0)!=1) {
+	error("fused_write_vector first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].f==NULL) {
+	error("library not open for writing");
+	return(R_NilValue);
+	}
+
+if(TYPEOF(data_list)!=VECSXP) {
+	error("order_vectors first argument must be a list of data to sort");
+	return(R_NilValue);
+	}
+
+if(xlength(data_list)<1) {
+	error("No hashes to compute");
+	return(R_NilValue);
+	}
+	
+if(xlength(data_list)!=xlength(sbits)) {
+	error("Need to specify number of useful bits for each vector");
+	return(R_NilValue);
+	}
+	
+bits=INTEGER(sbits);
+block_bits=0;
+for(LIBMVL_OFFSET64 i=0; i< xlength(data_list);i++)block_bits+=bits[i];
+if(block_bits>63) {
+	error("Too many bits: %d total", block_bits);
+	return(R_NilValue);
+	}
+	
+if(block_bits>25)block_length=1<<25;
+	else
+	block_length=1<<block_bits;
+
+first_idx_free=0;
+first_idx_size=N_BLOCK;
+
+first=calloc(first_idx_size, sizeof(*first_idx));
+first_idx_prev=calloc(first_idx_size, sizeof(*first_idx_prev));
+first_hash=calloc(first_idx_size, sizeof(*first_hash));
+count=calloc(first_idx_size, sizeof(*count));
+	
+vec_data=calloc(xlength(data_list), sizeof(*vec_data));
+vectors=calloc(xlength(data_list), sizeof(*vectors));
+vstats=calloc(xlength(data_list), sizeof(*vstats));
+values=calloc(N_BLOCK, sizeof(*values));
+hash=calloc(N_BLOCK, sizeof(*hash));
+first_idx=calloc(block_length, sizeof(*first));
+prev=calloc(N_BLOCK, sizeof(*prev));
+if(vec_data==NULL || vectors==NULL || vstats==NULL || hash==NULL || first==NULL || prev==NULL || values==NULL || first_idx==NULL || first_idx_prev==NULL || first_hash==NULL) {
+	error("Not enough memory");
+	free(vec_data);
+	free(vectors);
+	free(vstats);
+	free(hash);
+	free(first);
+	free(prev);
+	free(values);
+	free(first_idx);
+	free(first_idx_prev);
+	free(first_hash);
+	return(R_NilValue);
+	}
+
+for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
+	data=VECTOR_ELT(data_list, k);
+	decode_mvl_object(data, &data_idx, &data_offset);
+	vectors[k]=get_mvl_vector(data_idx, data_offset);
+	
+	if(vectors[k]==NULL) {
+		error("Invalid MVL object in data list");
+		free(vec_data);
+		free(vectors);
+		free(hash);
+		free(first);
+		free(prev);
+		free(count);
+		free(values);
+		free(first_idx);
+		free(first_idx_prev);
+		free(first_hash);
+		return(R_NilValue);
+		}
+	vec_data[k]=libraries[data_idx].data;
+	mvl_compute_vec_stats(vectors[k], &(vstats[k]));
+	}
+
+N=mvl_vector_length(vectors[0]);
+for(LIBMVL_OFFSET64 k=1;k<xlength(data_list);k++) {
+	if(mvl_vector_length(vectors[k])!=N) {
+		error("All MVL vectors should be equal length");
+		free(vec_data);
+		free(vectors);
+		free(hash);
+		free(first);
+		free(prev);
+		free(count);
+		free(values);
+		free(first_idx);
+		free(first_idx_prev);
+		free(first_hash);
+		return(R_NilValue);
+		}
+	}
+
+offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, N, 0, NULL, LIBMVL_NO_METADATA);
+
+for(int i=0;i<block_length;i++) {
+	first_idx[i]=-1;
+	}
+	
+for(LIBMVL_OFFSET64 k=0;k<N;k+=N_BLOCK) {
+	int bcount=N_BLOCK;
+	if(k+bcount>N)bcount=N-k;
+	
+	memset(hash, 0, sizeof(*hash)*bcount);
+	
+	for(LIBMVL_OFFSET64 m=0;m<xlength(data_list);m++) {
+		mvl_normalize_vector(vectors[m], &(vstats[m]), k, k+bcount, values);
+		int shift=bits[m];
+		int mult=1<<shift;
+		int mask=mult-1;
+		for(int i=0;i<bcount;i++) {
+			hash[i]=hash[i]<<shift | ((int)floor(values[i]*mult) & mask);
+			}
+		}
+	
+	for(unsigned i=0;i<bcount;i++) {
+		unsigned j=mvl_randomize_bits64(hash[i]) & (block_length-1);
+		long long idx;
+		idx=first_idx[j];
+		while(idx>=0) {
+			if(first_hash[idx]==hash[i])break;
+			idx=first_idx_prev[idx];
+			}
+		if(idx<0) {
+			idx=first_idx_free;
+			if(first_idx_free>=first_idx_size) {
+				first_idx_size=2*first_idx_size+256;
+				LIBMVL_OFFSET64 *p;
+				
+				p=calloc(first_idx_size, sizeof(*p));
+				if(p==NULL)goto cleanup1;
+				memcpy(p, first_hash, first_idx_free*sizeof(*p));
+				free(first_hash);
+				first_hash=p;
+				
+				p=calloc(first_idx_size, sizeof(*p));
+				if(p==NULL)goto cleanup1;
+				memcpy(p, count, first_idx_free*sizeof(*p));
+				free(count);
+				count=p;
+
+				p=calloc(first_idx_size, sizeof(*p));
+				if(p==NULL)goto cleanup1;
+				memcpy(p, first_idx_prev, first_idx_free*sizeof(*p));
+				free(first_idx_prev);
+				first_idx_prev=p;
+				
+				p=calloc(first_idx_size, sizeof(*p));
+				if(p==NULL)goto cleanup1;
+				memcpy(p, first, first_idx_free*sizeof(*p));
+				free(first);
+				first=p;				
+				}
+			first_idx_free++;
+			count[idx]=0;
+			first_hash[idx]=hash[i];
+			first_idx_prev[idx]=first_idx[j];
+			first_idx[j]=idx;
+			first[idx]=-1;
+			}
+			
+		count[idx]++;
+		
+		
+		if(first[idx]<0) {
+			first[idx]=k+i+1;
+			prev[i]=-1;
+			} else {
+			prev[i]=first[idx];
+			first[idx]=k+i+1;
+			}
+		}
+		
+	mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, offset, k, bcount, prev);
+	}
+	
+
+// first_count=0;
+// for(int i=0;i<block_length;i++) {
+// 	if(first[i]<0)continue;
+// 	first[first_count]=first[i]+1;
+// 	v_idx[first_count]=i;
+// 	if(first_count<i)
+// 		count[first_count]=count[i];
+// 	first_count++;
+// 	}
+	
+L=mvl_create_named_list(2);
+mvl_add_list_entry(L, -1, "first", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, first, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "count", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, count, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "mark", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, first_hash, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "bits", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT32, xlength(data_list), bits, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "vector_stats", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_DOUBLE, xlength(data_list)*sizeof(*vstats)/sizeof(double), vstats, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "prev", offset);
+
+N2=1;
+while(N2<first_idx_free)N2=N2<<1;
+if(N2>first_idx_size) {
+	error("Internal error: N2>first_idx_size (%lld > %lld)\n", N2, first_idx_size);
+	} else {
+	for(LIBMVL_OFFSET64 i=0;i<N2;i++)first[i]=-1;
+	
+	for(LIBMVL_OFFSET64 i=0;i<first_idx_free;i++) {
+		LIBMVL_OFFSET64 j=mvl_randomize_bits64(first_hash[i]) & (N2-1);
+		
+		if(first[j]<0) {
+			first_idx_prev[i]=-1;
+			first[j]=i+1;
+			} else {
+			first_idx_prev[i]=first[j];
+			first[j]=i+1;
+			}
+		}
+	}
+mvl_add_list_entry(L, -1, "first_mark", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, N2, first, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "prev_mark", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, first_idx_prev, LIBMVL_NO_METADATA));
+
+offset=mvl_write_named_list(libraries[idx].ctx, L);
+mvl_free_named_list(L);
+
+free(vec_data);
+free(vectors);
+free(hash);
+free(first);
+free(prev);
+free(count);
+free(values);
+free(first_idx);
+free(first_idx_prev);
+free(first_hash);
+
+ans=PROTECT(allocVector(REALSXP, 1));
+REAL(ans)[0]=*doffset;
+
+class=PROTECT(allocVector(STRSXP, 1));
+SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
+classgets(ans, class);
+UNPROTECT(2);
+
+return(ans);	
+
+cleanup1: {
+	error("Not enough memory");
+	free(vec_data);
+	free(vectors);
+	free(vstats);
+	free(hash);
+	free(first);
+	free(prev);
+	free(values);
+	free(first_idx);
+	free(first_idx_prev);
+	free(first_hash);
+	return(R_NilValue);
+	}
 }
 
 SEXP get_groups(SEXP prev, SEXP indices) 
@@ -3827,4 +4313,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "group_lapply",  (DL_FUNC) &group_lapply);
   R_RegisterCCallable("RMVL", "write_groups",  (DL_FUNC) &write_groups);
   R_RegisterCCallable("RMVL", "get_groups",  (DL_FUNC) &get_groups);
+  R_RegisterCCallable("RMVL", "write_spatial_groups",  (DL_FUNC) &write_spatial_groups);
 }
