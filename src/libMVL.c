@@ -1802,7 +1802,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0+a1)*0.5;
 		if(a1>a0)
-			stats->scale=0.5/(a1-a0);
+			stats->scale=2/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -1821,7 +1821,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0+a1)*0.5;
 		if(a1>a0)
-			stats->scale=0.5/(a1-a0);
+			stats->scale=2/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -1838,9 +1838,9 @@ switch(mvl_vector_type(vec)) {
 			}
 		stats->max=a1;
 		stats->min=a0;
-		stats->center=(a0+a1)*0.5;
+		stats->center=(a0*1.0+a1*1.0)*0.5;
 		if(a1>a0)
-			stats->scale=0.5/(a1-a0);
+			stats->scale=2/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -1859,7 +1859,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0*1.0+a1*1.0)*0.5;
 		if(a1>a0)
-			stats->scale=0.5/(a1-a0);
+			stats->scale=2/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -1876,7 +1876,7 @@ void mvl_normalize_vector(LIBMVL_VECTOR *vec, LIBMVL_VEC_STATS *stats, LIBMVL_OF
 {
 double scale, center;
 scale=0.5*stats->scale;
-center=1.5-stats->center*stats->scale;
+center=1.5-stats->center*scale;
 if(i0>mvl_vector_length(vec))return;
 if(i1>mvl_vector_length(vec)) {
 	LIBMVL_OFFSET64 i=mvl_vector_length(vec);

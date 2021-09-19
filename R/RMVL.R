@@ -264,6 +264,21 @@ mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 	return(invisible(offset))
 	}
 
+#' Retrieve indices belonging to one or more groups
+#'
+#' This function is passed the \code{prev} vector computed by \code{mvl_write_groups} and one or more indices from the \code{first} vector.
+#'
+#' @param prev  MVL_OBJECT \code{prev} computed by \code{mvl_write_groups} 
+#' @param first_indices  indices from \code{first} vector computed by \code{mvl_write_groups} 
+#' @return a vector of indices
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @export
+#'
+mvl_get_groups<-function(prev, first_indices) {
+	return(.Call("get_groups", prev, first_indices))
+	}
+
 #' Write spatial group information for each row
 #'
 #' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. These rows 
@@ -287,19 +302,20 @@ mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
 	return(invisible(offset))
 	}
 
-#' Retrieve indices belong to one or more groups
+#' Retrieve indices of nearby rows.
 #'
-#' This function is passed the \code{prev} vector computed by \code{mvl_write_groups} and one or more indices from the \code{first} vector.
+#' This function is passed the index computed by \code{mvl_write_spatial_groups} and a list of vectors, which rows are interpreted as points.
+#' For each row, the function returns a list of indices describing rows that are close to it.
 #'
-#' @param prev  MVL_OBJECT \code{prev} computed by \code{mvl_write_groups} 
-#' @param first_indices  indices from \code{first} vector computed by \code{mvl_write_groups} 
-#' @return a vector of indices
-#' @seealso \code{\link{mvl_group}}
+#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_groups} 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @return a list of vectors of indices
+#' @seealso \code{\link{mvl_write_spatial_groups}}
 #'  
 #' @export
 #'
-mvl_get_groups<-function(prev, first_indices) {
-	return(.Call("get_groups", prev, first_indices))
+mvl_get_neighbors<-function(spatial_index, data_list) {
+	return(.Call("get_neighbors", spatial_index, data_list))
 	}
 	
 #' Find matching rows
@@ -1024,55 +1040,6 @@ names.MVL_OBJECT<-function(x) {
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class)) {
-		if(...length()==0) {
-	# 		if(is.logical(i)) {
-	# 			i<-which(i)
-	# 			}
-			if(is.factor(i))i<-as.character(i)
-			if(is.character(i)) {
-				if(is.null(obj$metadata$names))stop("Object has no names")
-				i<-which.max(obj$metadata$names==i)
-				}
-	#		if(is.numeric(i)) 
-				{
-				#print(i)
-				#print(L)
-	#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
-				if(raw)
-					vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
-					else
-					vec<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], i)[[1]]
-	#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
-	#			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
-
-				if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
-					vec<-mvl_read_object(obj, vec, recurse=FALSE)
-					} else {
-					#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
-					#metadata<-mvl_read_metadata(obj, metadata_offset)
-					#print(metadata)
-	# 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
-	# 					cl<-metadata[["class"]]
-	# 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
-	# 					if(cl=="factor" || cl=="character") {
-	# 						vec<-mvl_flatten_string(vec)
-	# 						if(cl=="factor")vec<-as.factor(vec)
-	# 						}
-	# 						class(vec)<-cl
-	# 					if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
-	# 					if(!is.null(metadata[["rownames"]]))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
-	# 					}				
-					}
-				if(inherits(vec, "MVL_OFFSET") && recurse) {
-					vec<-lapply(vec, function(x) {class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, recurse=recurse, raw=raw)) })
-					}
-				return(vec)
-				}
-			} else {
-			}
-		stop("Cannot process ", obj)
-		}
 	if(any(object_class=="data.frame")) {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
@@ -1180,6 +1147,64 @@ names.MVL_OBJECT<-function(x) {
 			} else
 			dim(vec)<-d
 		return(vec)
+		}
+	if(is.null(object_class) || any(object_class=="list")) {
+		if(...length()==0) {
+	# 		if(is.logical(i)) {
+	# 			i<-which(i)
+	# 			}
+			if(is.factor(i))i<-as.character(i)
+			if(is.character(i)) {
+				if(is.null(obj$metadata$names))stop("Object has no names")
+				i<-which.max(obj$metadata$names==i)
+				}
+	#		if(is.numeric(i)) 
+				{
+				#print(i)
+				#print(L)
+	#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
+				if(raw)
+					vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
+					else
+					vec<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], i)[[1]]
+	#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+	#			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
+
+				if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
+					if(ref) {
+						metadata_offset<-.Call("read_metadata", obj[["handle"]], vec)
+						
+						L<-list(handle=obj[["handle"]], offset=vec, length=.Call("read_lengths", obj[["handle"]], vec), type=.Call("read_types", obj[["handle"]], vec),metadata_offset=metadata_offset)
+						L[["metadata"]]<-mvl_read_metadata(obj, metadata_offset)
+						class(L)<-"MVL_OBJECT"
+						vec<-L
+						} else {
+						vec<-mvl_read_object(obj, vec, recurse=FALSE, ref=ref)
+						}
+					} else {
+					#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
+					#metadata<-mvl_read_metadata(obj, metadata_offset)
+					#print(metadata)
+	# 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
+	# 					cl<-metadata[["class"]]
+	# 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
+	# 					if(cl=="factor" || cl=="character") {
+	# 						vec<-mvl_flatten_string(vec)
+	# 						if(cl=="factor")vec<-as.factor(vec)
+	# 						}
+	# 						class(vec)<-cl
+	# 					if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
+	# 					if(!is.null(metadata[["rownames"]]))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
+	# 					}				
+					}
+				if(inherits(vec, "MVL_OFFSET") && recurse) {
+					vec<-lapply(vec, function(x) {class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, recurse=recurse, ref=ref, raw=raw)) })
+					}
+				return(vec)
+				}
+			} else {
+			}
+		stop("Cannot process ", obj)
 		}
 	stop("Cannot process ", obj)
 	}
