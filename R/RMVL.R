@@ -72,6 +72,13 @@ mvl_open<-function(filename, append=FALSE, create=FALSE) {
 #' @param append specify FALSE when you do not intend to write the file.
 #' @return handle to MVL file, with updated directory.
 #' @seealso \code{\link{mvl_open}}, \code{\link{mvl_close}}
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(Mtmp["vec1"])
+#' }
 #' @export
 #'
 mvl_remap<-function(MVLHANDLE, append=TRUE) {
@@ -199,6 +206,13 @@ mvl_write_string<-function(MVLHANDLE, x, metadata.offset=NULL) {
 #' @return sorted indices
 #' @seealso \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' permutation1<-mvl_order_vectors(list(Mtmp["vec1", ref=TRUE]))
+#' }
 #' @export
 #'
 mvl_order_vectors<-function(L, indices=NULL, decreasing=FALSE, sort_function=ifelse(decreasing, 2, 1)) {
@@ -215,6 +229,13 @@ mvl_order_vectors<-function(L, indices=NULL, decreasing=FALSE, sort_function=ife
 #' @return hash values in numeric format, with 52 valid bits. Each value is uniform between 1 and 2.
 #' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_write_hash_vectors}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' hash1<-mvl_hash_vectors(list(Mtmp["vec1", ref=TRUE]))
+#' }
 #' @export
 #'
 mvl_hash_vectors<-function(L, indices=NULL) {
@@ -233,6 +254,15 @@ mvl_hash_vectors<-function(L, indices=NULL) {
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_hash_vectors(Mtmp, list(Mtmp["vec1", ref=TRUE]), "vec1_hash")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(length(Mtmp["vec1_hash"]))
+#' }
 #' @export
 #'
 mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
@@ -255,6 +285,13 @@ mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), "df1_groups")
+#' }
 #' @export
 #'
 mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
@@ -273,6 +310,15 @@ mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 #' @return a vector of indices
 #' @seealso \code{\link{mvl_group}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), "df1_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(mvl_get_groups(Mtmp$df1_groups$prev, Mtmp$df1_groups$first[1:5])
+#' }
 #' @export
 #'
 mvl_get_groups<-function(prev, first_indices) {
@@ -292,6 +338,15 @@ mvl_get_groups<-function(prev, first_indices) {
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
+#' }
 #' @export
 #'
 mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
@@ -312,6 +367,15 @@ mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
 #' @return a list of vectors of indices
 #' @seealso \code{\link{mvl_write_spatial_groups}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
+#' }
 #' @export
 #'
 mvl_get_neighbors<-function(spatial_index, data_list) {
@@ -330,6 +394,15 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 #' @return a list of results of function \code{fn}
 #' @seealso \code{\link{mvl_group}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)), function(i, idx) { return(list(i, idx))})
+#' }
 #' @export
 #'
 mvl_neighbors_lapply<-function(spatial_index, data_list, fn) {
@@ -350,6 +423,14 @@ mvl_neighbors_lapply<-function(spatial_index, data_list, fn) {
 #' @return A list of matches and match stretches
 #' @seealso \code{\link{mvl_hash_vectors}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=1:100), "df1")
+#' mvl_write_object(Mtmp, data.frame(x=rep(c("b", "c"), 50), y=21:120), "df2")
+#' Mtmp<-mvl_remap(Mtmp)
+#' L<-mvl_find_matches(list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), list(Mtmp$df2[,"x",ref=TRUE], Mtmp$df2[,"y", ref=TRUE]))
+#' }
 #' @export
 #'
 mvl_find_matches<-function(L1, L2, indices1=NULL, indices2=NULL) {
@@ -370,6 +451,16 @@ mvl_find_matches<-function(L1, L2, indices1=NULL, indices2=NULL) {
 #' @return A list of groups and group stretches
 #' @seealso \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=(1:100)/5), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' df1<-Mtmp$df1
+#' G<-mvl_group(Mtmp, list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_group_lapply(G, function(idx) { return(sum(df1[idx, "y"]))})
+#' }
 #' @export
 #'
 mvl_group<-function(L, indices=NULL) {
@@ -387,6 +478,16 @@ mvl_group<-function(L, indices=NULL) {
 #' @return a list of results of function \code{fn}
 #' @seealso \code{\link{mvl_group}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=(1:100)/5), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' df1<-Mtmp$df1
+#' G<-mvl_group(Mtmp, list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_group_lapply(G, function(idx) { return(sum(df1[idx, "y"]))})
+#' }
 #' @export
 #'
 mvl_group_lapply<-function(G, fn) {
@@ -404,6 +505,14 @@ mvl_group_lapply<-function(G, fn) {
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_merge}}, \code{\link{mvl_write_object}}, \code{\link{mvl_fused_write_objects}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' permutation1<-mvl_order_vectors(list(Mtmp["vec1", ref=TRUE]))
+#' mvl_indexed_copy(Mtmp, Mtmp[,"vec1", ref=TRUE], permutation1, name="vec1_sorted")
+#' }
 #' @export
 #'
 mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, only.columns=NULL) {
@@ -469,6 +578,14 @@ mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, only.columns=NULL) 
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_fused_write_objects}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=1:100), "df1")
+#' mvl_write_object(Mtmp, data.frame(x=rep(c("b", "c"), 50), y=runif(100), z=21:120), "df2")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_merge(Mtmp, Mtmp$df1, Mtmp$df2, by.x="y", by.y="z", only.columns.y=c("x"))
+#' }
 #' @export
 #'
 mvl_merge<-function(MVLHANDLE, df1, df2, name=NULL, by=NULL, by.x=by, by.y=by, suffixes=c(".x", ".y"), only.columns.x=NULL, only.columns.y=NULL)
@@ -602,7 +719,7 @@ mvl_class<-function(x) {
 
 #' Check inheritance of R or MVL objects
 #'
-#' This functions works just like the usual R \code{inherit()}, except that it takes MVL_OBJECT class into account.
+#' This functions works just like the usual R \code{inherits()}, except that it takes MVL_OBJECT class into account.
 #' For non-MVL objects the function simply calls the usual R \code{inherit()}, so it can be used instead of \code{inherit()} for code that operates on both usual R objects and MVL objects.
 #'
 #' @param x  any object
@@ -629,6 +746,11 @@ mvl_inherits<-function(x, clstr, which=FALSE) {
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #' @seealso \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' }
 #' @export
 #'
 mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
@@ -665,6 +787,14 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 #' @param drop.rownames set to TRUE to prevent rownames from being written
 #' @return any object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
 #'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, runif(100), "vec1")
+#' mvl_write_object(Mtmp, runif(100), "vec2")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_fused_write_objects(Mtmp, list(Mtmp["vec1", ref=TRUE], Mtmp["vec2", ref=TRUE], runif(3)), name="vec3")
+#' }
 #' @export
 #'
 mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
@@ -761,7 +891,7 @@ mvl_read_metadata<-function(MVLHANDLE, metadata_offset) {
 #' The function returns list of object parameters including total number of elements, element type (as used by libMVL) and a pointer to the underlying data
 #' The pointer is passed via a cast to double and can be used with custom C code, for example by using package inline.
 #'
-#' @param MVLHANDLE either a handle provided by mvl_open() or and MVL object such as produced by indexing operators
+#' @param MVLHANDLE either a handle provided by mvl_open() or an MVL object such as produced by indexing operators
 #' @param offset offset to the object which properties are to be retrieved
 #' @return list with object properties
 #' @export
