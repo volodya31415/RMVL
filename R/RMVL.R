@@ -345,7 +345,8 @@ mvl_get_groups<-function(prev, first_indices) {
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#'                                                              c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
 #' print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
 #' }
@@ -374,7 +375,8 @@ mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#'                                                               c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
 #' print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
 #' }
@@ -401,9 +403,11 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#'                                                                c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)), function(i, idx) { return(list(i, idx))})
+#' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)),
+#'                                            function(i, idx) { return(list(i, idx))})
 #' }
 #' @export
 #'
@@ -431,7 +435,8 @@ mvl_neighbors_lapply<-function(spatial_index, data_list, fn) {
 #' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=1:100), "df1")
 #' mvl_write_object(Mtmp, data.frame(x=rep(c("b", "c"), 50), y=21:120), "df2")
 #' Mtmp<-mvl_remap(Mtmp)
-#' L<-mvl_find_matches(list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), list(Mtmp$df2[,"x",ref=TRUE], Mtmp$df2[,"y", ref=TRUE]))
+#' L<-mvl_find_matches(list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), 
+#'                         list(Mtmp$df2[,"x",ref=TRUE], Mtmp$df2[,"y", ref=TRUE]))
 #' }
 #' @export
 #'
@@ -804,7 +809,8 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 #' mvl_write_object(Mtmp, runif(100), "vec1")
 #' mvl_write_object(Mtmp, runif(100), "vec2")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_fused_write_objects(Mtmp, list(Mtmp["vec1", ref=TRUE], Mtmp["vec2", ref=TRUE], runif(3)), name="vec3")
+#' mvl_fused_write_objects(Mtmp, list(Mtmp["vec1", ref=TRUE], Mtmp["vec2", ref=TRUE], runif(3)),
+#'                                                                                   name="vec3")
 #' }
 #' @export
 #'
