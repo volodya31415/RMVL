@@ -1812,8 +1812,7 @@ SEXP ans, v, class;
 long i, j;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
-LIBMVL_OFFSET64 offset, k, m;
-double *doffset2=(double *)&offset;
+LIBMVL_OFFSET64 offset;
 LIBMVL_VECTOR *vec, *vec_idx=NULL;
 LIBMVL_OFFSET64 N, N0;
 
@@ -1822,10 +1821,6 @@ int * restrict pi;
 unsigned char * restrict pc;
 LIBMVL_OFFSET64 * restrict poffs;
 double * restrict pd2;
-float * restrict pf2;
-int * restrict pi2;
-unsigned char * restrict pc2;
-LIBMVL_OFFSET64 * restrict poffs2;
 
 if(length(idx0)!=1) {
 	error("find_directory_entry first argument must be a single integer");
@@ -1982,7 +1977,7 @@ for(i=0;i<xlength(offsets);i++) {
 			} \
 		case LGLSXP: { \
 			int * restrict pi=LOGICAL(indicies); \
-			for(LIBMVL_OFFSET64 j0=0, k=0;j0<xlength(indicies);j0++) \
+			for(LIBMVL_OFFSET64 j0=0;j0<xlength(indicies);j0++) \
 				if(pi[j0]) { \
 					line; \
 					j++; \
@@ -2634,12 +2629,9 @@ return(ans);
 SEXP indexed_copy_vector(SEXP idx0, SEXP mvl_object, SEXP indices, SEXP metadata_offset)
 {
 LIBMVL_OFFSET64 *v_idx;
-LIBMVL_OFFSET64 i, offset, data_offset, N_idx;
+LIBMVL_OFFSET64 offset, data_offset, N_idx;
 double *doffset=(double *)&offset;
 int idx, data_idx;
-
-int *pi;
-double *pd;
 
 double dmoffset;
 LIBMVL_OFFSET64 *moffset=(LIBMVL_OFFSET64 *)&dmoffset;
@@ -3230,11 +3222,9 @@ return(ans);
 
 SEXP write_spatial_groups1(SEXP idx0, SEXP data_list, SEXP sbits)
 {
-int data_idx, idx, first_count;
+int data_idx, idx;
 LIBMVL_OFFSET64 data_offset;
 SEXP data;
-
-int err;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
@@ -3429,11 +3419,9 @@ return(ans);
 
 SEXP write_spatial_groups(SEXP idx0, SEXP data_list, SEXP sbits)
 {
-int data_idx, idx, first_count;
+int data_idx, idx;
 LIBMVL_OFFSET64 data_offset;
 SEXP data;
-
-int err;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
@@ -3791,7 +3779,7 @@ switch(TYPEOF(sexp)) {
 
 SEXP get_neighbors(SEXP spatial_index, SEXP data_list) 
 {
-LIBMVL_OFFSET64 count, data_offset, index_offset, i, k, N, *query_mark, Nv, N2, indices_size, indices_free, *indices;
+LIBMVL_OFFSET64 data_offset, index_offset, *query_mark, Nv, N2, indices_size, indices_free, *indices;
 int data_idx, index_idx;
 LIBMVL_VECTOR *vec_bits, *vec_first, *vec_first_mark, *vec_prev_mark, *vec_mark, *vec_prev, *vec, *vec_stats, *vec_max_count;
 SEXP ans, sa;
@@ -4016,10 +4004,250 @@ UNPROTECT(1);
 return(ans);
 }
 
+SEXP neighbors_lapply(SEXP spatial_index, SEXP data_list, SEXP fn, SEXP env) 
+{
+LIBMVL_OFFSET64 data_offset, index_offset, *query_mark, Nv, N2, indices_size, indices_free, *indices;
+int data_idx, index_idx;
+LIBMVL_VECTOR *vec_bits, *vec_first, *vec_first_mark, *vec_prev_mark, *vec_mark, *vec_prev, *vec, *vec_stats, *vec_max_count;
+SEXP ans, sa, R_fcall, tmp;
+double *values, *pd;
+LIBMVL_NAMED_LIST *L;
+int *bits, Nbits;
+long long *first, *first_mark, *prev_mark, *mark, *prev, max_count, ball_size;
+LIBMVL_VEC_STATS *vstats;
+char *ball;
+
+if(TYPEOF(data_list)!=VECSXP) {
+	error("Second argument should be a list (or data frame) of vectors to query");
+	return(R_NilValue);
+	}
+
+decode_mvl_object(spatial_index, &index_idx, &index_offset);
+L=get_mvl_named_list(index_idx, index_offset);
+
+if(L==NULL) {
+	error("Not a spatial index (1)");
+	return(R_NilValue);
+	}
+
+vec_bits=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "bits"));
+vec_mark=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "mark"));
+vec_first=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "first"));
+vec_first_mark=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "first_mark"));
+vec_prev_mark=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "prev_mark"));
+vec_prev=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "prev"));
+vec_stats=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "vector_stats"));
+vec_max_count=get_mvl_vector(index_idx, mvl_find_list_entry(L, -1, "max_count"));
+
+if(vec_bits==NULL || vec_mark==NULL || vec_first==NULL || vec_first_mark==NULL || vec_prev==NULL || vec_stats==NULL || vec_max_count==NULL) {
+	mvl_free_named_list(L);
+	error("Not a spatial index (2)");
+	return(R_NilValue);
+	}
+
+if(mvl_vector_type(vec_bits)!=LIBMVL_VECTOR_INT32 
+	|| mvl_vector_type(vec_first)!=LIBMVL_VECTOR_INT64
+	|| mvl_vector_type(vec_mark)!=LIBMVL_VECTOR_INT64
+	|| mvl_vector_type(vec_first_mark)!=LIBMVL_VECTOR_INT64
+	|| mvl_vector_type(vec_prev_mark)!=LIBMVL_VECTOR_INT64
+	|| mvl_vector_type(vec_prev)!=LIBMVL_VECTOR_INT64
+	|| mvl_vector_type(vec_stats)!=LIBMVL_VECTOR_DOUBLE
+	|| mvl_vector_type(vec_max_count)!=LIBMVL_VECTOR_INT64
+	) {
+	mvl_free_named_list(L);
+	error("Not a spatial index (3)");
+	return(R_NilValue);
+	}
+	
+N2=mvl_vector_length(vec_first_mark);
+	
+bits=mvl_vector_data(vec_bits).i;
+Nbits=mvl_vector_length(vec_bits);
+
+if(Nbits!=length(data_list) || length(data_list)==0) {
+	mvl_free_named_list(L);
+	error("Query columns do not match spatial index: %d vs %s", length(data_list), Nbits);
+	return(R_NilValue);
+	}
+	
+if(Nbits*4!=mvl_vector_length(vec_stats)) {
+	mvl_free_named_list(L);
+	error("Not a spatial index (4)");
+	return(R_NilValue);
+	}
+	
+vstats=(LIBMVL_VEC_STATS *)mvl_vector_data(vec_stats).f;
+
+first_mark=mvl_vector_data(vec_first_mark).i64;
+prev_mark=mvl_vector_data(vec_prev_mark).i64;
+mark=mvl_vector_data(vec_mark).i64;
+prev=mvl_vector_data(vec_prev).i64;
+first=mvl_vector_data(vec_first).i64;
+max_count=mvl_vector_data(vec_max_count).i64[0];
+
+
+switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
+	case REALSXP:
+	case INTSXP:
+		Nv=xlength(VECTOR_ELT(data_list, 0));
+		break;
+	case VECSXP:
+		decode_mvl_object(VECTOR_ELT(data_list, 0), &data_idx, &data_offset);
+		vec=get_mvl_vector(data_idx, data_offset);
+		if(vec==NULL) {
+			mvl_free_named_list(L);
+			error("Not an MVL object");
+			return(R_NilValue);
+			}
+		Nv=mvl_vector_length(vec);
+		if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64)Nv--;
+		break;
+	default:
+		mvl_free_named_list(L);
+		error("Cannot handle R vector of type %d", TYPEOF(VECTOR_ELT(data_list, 0)));
+		return(R_NilValue);
+		break;
+	}
+	
+ball_size=1;
+for(int i=0;i<Nbits;i++)
+	ball_size*=3;
+
+values=calloc(Nv, sizeof(*values));
+query_mark=calloc(Nv, sizeof(*query_mark));
+indices_size=max_count*ball_size;
+indices=calloc(indices_size, sizeof(*indices));
+ball=calloc(ball_size*Nbits, sizeof(*ball));
+for(long long b=0;b<ball_size; b++) {
+	long long b0=b;
+	for(int i=0;i<Nbits;i++) {
+		ball[b*Nbits+i]=b0 % 3;
+		b0=b0/3;
+		}
+	}
+
+if(values==NULL || query_mark==NULL || indices==NULL || ball==NULL) {
+	error("Not enough memory");
+	free(values);
+	free(query_mark);
+	free(indices);
+	free(ball);
+	mvl_free_named_list(L);
+	return(R_NilValue);
+	}
+	
+memset(query_mark, 0, Nv*sizeof(*query_mark));
+
+for(int i=0;i<Nbits;i++) {
+	int shift=bits[i];
+	int mult=1<<shift;
+	int mask=mult-1;
+	normalize_vector(VECTOR_ELT(data_list, i), &(vstats[i]), 0, Nv, values);
+	for(LIBMVL_OFFSET64 k=0;k<Nv;k++) {
+		int m=floor(values[k]*mult)-mult;
+		if(m<0)m=0;
+		if(m>mask)m=mask;
+		query_mark[k]=query_mark[k]<<shift | (m);
+		//fprintf(stderr, "%d %lld m=%d shift=%d mult=%d mask=%d mark=%lld value=%g\n", i, k, m, shift, mult, mask, query_mark[k], values[k]);
+		}
+	}
+
+ans=PROTECT(allocVector(VECSXP, Nv));	
+
+R_fcall = PROTECT(lang3(fn, R_NilValue, R_NilValue));
+	
+sa=PROTECT(allocVector(REALSXP, indices_size));
+// ENABLE_REFCNT(sa);
+// INCREMENT_REFCNT(sa);
+// INCREMENT_NAMED(sa);
+pd=REAL(sa);
+
+
+
+for(LIBMVL_OFFSET64 i=0;i<Nv;i++) {
+	indices_free=0;
+	
+	for(long long b=0;b<ball_size;b++) {
+		LIBMVL_OFFSET64 center_mark=query_mark[i];
+		LIBMVL_OFFSET64 nmark=0;
+		int shift=0;
+		int skip=0;
+		
+		for(int j=Nbits-1;j>=0;j--) {
+			LIBMVL_OFFSET64 mask=(1<<bits[j])-1;
+			LIBMVL_OFFSET64 pm=(center_mark>>shift) & mask;
+			char nudge=ball[b*Nbits+j];
+			if(nudge==2) {
+				if(pm==mask) {
+					skip=1;
+					break;
+					}
+				pm++;
+				} else
+			if(nudge==0) {
+				if(pm==0) {
+					skip=1;
+					break;
+					}
+				pm--;
+				}
+			nmark|=pm<<shift;
+			shift+=bits[j];
+			}
+		if(skip)continue;
+			
+		//fprintf(stderr, "b=%lld center=0x%08llx mark=%08llx (%lld %lld)\n", b, center_mark, nmark, center_mark, nmark);
+		
+		LIBMVL_OFFSET64 j=mvl_randomize_bits64(nmark) & (N2-1);
+		long long k;
+
+		
+		//fprintf(stderr, "%lld %lld\n", query_mark[i], j);
+		
+		k=first_mark[j];
+		while(k>=0) {
+			if(mark[k-1]==nmark)break;
+			k=prev_mark[k-1];
+			}
+		if(k<0)continue;
+		
+	//	fprintf(stderr, "%lld %lld %lld\n", query_mark[i], j, k);
+		
+		for(long long m=first[k-1]; m>=0 ; m=prev[m-1]) {
+			pd[indices_free]=m;
+			indices_free++;
+			}
+			
+		if(indices_free>indices_size) {
+			Rprintf("*** INTERNAL ERROR: array overflow");
+			}
+		}
+
+	SETLENGTH(sa, indices_free);
+	SETCADR(R_fcall, ScalarReal(i+1));
+	SETCADDR(R_fcall, duplicate(sa));
+//	fprintf(stderr, "%lld %d %d %d (a)\n", i, MAYBE_REFERENCED(sa), -1, -1);
+	tmp=eval(R_fcall, env);
+//	if(MAYBE_REFERENCED(tmp))tmp=duplicate(tmp);
+//	fprintf(stderr, "%lld %d %d %d (b)\n", i, MAYBE_REFERENCED(sa), -1, MAYBE_REFERENCED(tmp));
+
+	SET_VECTOR_ELT(ans, i, tmp);
+	}
+	
+free(values);
+free(query_mark);
+free(indices);
+free(ball);
+mvl_free_named_list(L);
+
+UNPROTECT(3);
+return(ans);
+}
+
 
 SEXP get_groups(SEXP prev, SEXP indices) 
 {
-LIBMVL_OFFSET64 count, data_offset, i, k, N, *v_idx, Nv;
+LIBMVL_OFFSET64 count, data_offset, k, N, *v_idx, Nv;
 int data_idx;
 LIBMVL_VECTOR *vec;
 SEXP ans;
@@ -4570,7 +4798,7 @@ for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 	for(LIBMVL_OFFSET64 j=k0;j<k1;j++) {
 		pidx2[j-k0]=pidx[j];
 		}
-	SETCADR(R_fcall, vidx);
+	SETCADR(R_fcall, duplicate(vidx));
 	SET_VECTOR_ELT(ans, i, eval(R_fcall, env));
 	}
 
@@ -4613,4 +4841,5 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "get_groups",  (DL_FUNC) &get_groups);
   R_RegisterCCallable("RMVL", "write_spatial_groups",  (DL_FUNC) &write_spatial_groups);
   R_RegisterCCallable("RMVL", "get_neighbors",  (DL_FUNC) &get_neighbors);
+  R_RegisterCCallable("RMVL", "neighbors_lapply",  (DL_FUNC) &neighbors_lapply);
 }

@@ -318,6 +318,25 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 	return(.Call("get_neighbors", spatial_index, data_list))
 	}
 	
+	
+#' Apply function to indices of nearby rows
+#'
+#' This function is passed the index computed by \code{mvl_write_spatial_groups} and a list of vectors, which rows are interpreted as points.
+#' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
+#'
+#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_groups} 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @param fn a function of one argument - list of indices
+#' @return a list of results of function \code{fn}
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @export
+#'
+mvl_neighbors_lapply<-function(spatial_index, data_list, fn) {
+	L<-.Call("neighbors_lapply", spatial_index, data_list, fn, new.env())
+	return(L)
+	}
+	
 #' Find matching rows
 #'
 #' This function is passed two lists of MVL vectors which are interpreted in data.frame fashion. 
