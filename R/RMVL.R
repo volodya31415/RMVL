@@ -267,7 +267,7 @@ mvl_hash_vectors<-function(L, indices=NULL) {
 #'
 mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
-	offset<-.Call("hash_vectors", MVLHANDLE[["handle"]], L)
+	offset<-.Call("write_hash_vectors", MVLHANDLE[["handle"]], L)
 	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
 	return(invisible(offset))
 	}
@@ -291,6 +291,8 @@ mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
 #' mvl_write_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), "df1_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(mvl_get_groups(Mtmp["df1_groups", ref=TRUE]["prev", ref=TRUE], Mtmp$df1_groups$first[1:5]))
 #' }
 #' @export
 #'
@@ -317,7 +319,7 @@ mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 #' Mtmp<-mvl_remap(Mtmp)
 #' mvl_write_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), "df1_groups")
 #' Mtmp<-mvl_remap(Mtmp)
-#' print(mvl_get_groups(Mtmp$df1_groups$prev, Mtmp$df1_groups$first[1:5])
+#' print(mvl_get_groups(Mtmp["df1_groups", ref=TRUE]["prev", ref=TRUE], Mtmp$df1_groups$first[1:5]))
 #' }
 #' @export
 #'
@@ -456,9 +458,8 @@ mvl_find_matches<-function(L1, L2, indices1=NULL, indices2=NULL) {
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=(1:100)/5), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' df1<-Mtmp$df1
-#' G<-mvl_group(Mtmp, list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
-#' Mtmp<-mvl_remap(Mtmp)
+#' df1<-Mtmp["df1", ref=TRUE]
+#' G<-mvl_group(list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
 #' mvl_group_lapply(G, function(idx) { return(sum(df1[idx, "y"]))})
 #' }
 #' @export
@@ -484,8 +485,7 @@ mvl_group<-function(L, indices=NULL) {
 #' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=(1:100)/5), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
 #' df1<-Mtmp$df1
-#' G<-mvl_group(Mtmp, list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
-#' Mtmp<-mvl_remap(Mtmp)
+#' G<-mvl_group(list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
 #' mvl_group_lapply(G, function(idx) { return(sum(df1[idx, "y"]))})
 #' }
 #' @export
@@ -511,7 +511,9 @@ mvl_group_lapply<-function(G, fn) {
 #' mvl_write_object(Mtmp, runif(100), "vec1")
 #' Mtmp<-mvl_remap(Mtmp)
 #' permutation1<-mvl_order_vectors(list(Mtmp["vec1", ref=TRUE]))
-#' mvl_indexed_copy(Mtmp, Mtmp[,"vec1", ref=TRUE], permutation1, name="vec1_sorted")
+#' mvl_indexed_copy(Mtmp, Mtmp["vec1", ref=TRUE], permutation1, name="vec1_sorted")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(Mtmp$vec1_sorted)
 #' }
 #' @export
 #'
@@ -584,7 +586,9 @@ mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, only.columns=NULL) 
 #' mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=1:100), "df1")
 #' mvl_write_object(Mtmp, data.frame(x=rep(c("b", "c"), 50), y=runif(100), z=21:120), "df2")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_merge(Mtmp, Mtmp$df1, Mtmp$df2, by.x="y", by.y="z", only.columns.y=c("x"))
+#' mvl_merge(Mtmp, Mtmp$df1, Mtmp$df2, by.x="y", by.y="z", only.columns.y=c("x"), name="df_merged")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(Mtmp$df_merged[1:10,])
 #' }
 #' @export
 #'
@@ -627,11 +631,11 @@ for(i in 1:length(cols2)) {
 	
 Fr<-cols1 %in% rename.cols
 if(any(Fr)) {
-	cols1[Fr]<-paste(cols1[Fr], suffixes[[1]])
+	cols1[Fr]<-paste(cols1[Fr], suffixes[[1]], sep="")
 	}
 Fr<-cols2 %in% rename.cols
 if(any(Fr)) {
-	cols2[Fr]<-paste(cols2[Fr], suffixes[[2]])
+	cols2[Fr]<-paste(cols2[Fr], suffixes[[2]], sep="")
 	}
 n<-as.character(c(cols1, cols2))
 
@@ -750,6 +754,13 @@ mvl_inherits<-function(x, clstr, which=FALSE) {
 #' \dontrun{
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, runif(100), "vec1")
+#' L<-list()
+#' L[["x"]]<-mvl_write_object(Mtmp, 1:5)
+#' L[["y"]]<-mvl_write_object(Mtmp, c("a", "b"))
+#' L[["df"]]<-mvl_write_object(Mtmp, data.frame(x=1:100, z=runif(100)))
+#' mvl_write_object(Mtmp, L, "L")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(Mtmp$L)
 #' }
 #' @export
 #'

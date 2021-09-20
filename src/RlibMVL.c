@@ -1668,7 +1668,6 @@ long i, j;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset, k, m;
-double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
 LIBMVL_OFFSET64 *v_idx, N;
 
@@ -1809,7 +1808,7 @@ SEXP read_vectors_idx3(SEXP idx0, SEXP offsets, SEXP indicies)
 {
 int idx;
 SEXP ans, v, class;
-long i, j;
+long i;
 double doffset;
 LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
 LIBMVL_OFFSET64 offset;
