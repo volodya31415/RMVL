@@ -1977,7 +1977,7 @@ for(i=0;i<xlength(offsets);i++) {
 			} \
 		case LGLSXP: { \
 			int * restrict pi=LOGICAL(indicies); \
-			for(LIBMVL_OFFSET64 j0=0;j0<xlength(indicies);j0++) \
+			for(LIBMVL_OFFSET64 j0=0,j=0;j0<xlength(indicies);j0++) \
 				if(pi[j0]) { \
 					line; \
 					j++; \
