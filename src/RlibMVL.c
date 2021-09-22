@@ -4805,40 +4805,89 @@ UNPROTECT(3);
 return(ans);
 }
 
+static const R_CMethodDef cMethods[] = {
+//    {"foo", (DL_FUNC) &foo, 4, foo_t},
+//    {"bar_sym", (DL_FUNC) &bar, 0},
+   {NULL, NULL, 0, NULL}
+};
+
+static const R_CallMethodDef callMethods[] = {
+   {"mmap_library", (DL_FUNC) &mmap_library, 2},
+   {"remap_library", (DL_FUNC) &remap_library, 2},
+  {"close_library",  (DL_FUNC) &close_library, 1},
+  {"find_directory_entries",  (DL_FUNC) &find_directory_entries, 2},
+  {"get_directory",  (DL_FUNC) &get_directory, 1},
+  {"read_metadata",  (DL_FUNC) &read_metadata, 2},
+  {"read_lengths",  (DL_FUNC) &read_lengths, 2},
+  {"read_types",  (DL_FUNC) &read_types, 2},
+  {"get_vector_data_ptr",  (DL_FUNC) &get_vector_data_ptr, 2},
+  {"read_vectors_raw",  (DL_FUNC) &read_vectors_raw, 2},
+  {"read_vectors_idx_raw",  (DL_FUNC) &read_vectors_idx_raw, 3},
+  {"read_vectors_idx_raw_real",  (DL_FUNC) &read_vectors_idx_raw_real, 3},
+  {"read_vectors_idx_raw2",  (DL_FUNC) &read_vectors_idx_raw2, 3},
+  {"read_vectors",  (DL_FUNC) &read_vectors, 2},
+  {"read_vectors_idx",  (DL_FUNC) &read_vectors_idx, 3},
+  {"read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real, 3},
+  {"read_vectors_idx2",  (DL_FUNC) &read_vectors_idx2, 3},
+  {"read_vectors_idx3",  (DL_FUNC) &read_vectors_idx3, 3},
+  {"add_directory_entries",  (DL_FUNC) &add_directory_entries, 3},
+  {"write_vector",  (DL_FUNC) &write_vector, 4},
+  {"fused_write_vector",  (DL_FUNC) &fused_write_vector, 4},
+  {"order_vectors",  (DL_FUNC) &order_vectors, 3},
+  {"hash_vectors",  (DL_FUNC) &hash_vectors, 2},
+  {"write_hash_vectors",  (DL_FUNC) &write_hash_vectors, 2},
+  {"find_matches",  (DL_FUNC) &find_matches, 4},
+  {"indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector, 4},
+  {"mvl_xlength_int",  (DL_FUNC) &mvl_xlength_int, 1},
+  {"group_vectors",  (DL_FUNC) &group_vectors, 2},
+  {"group_lapply",  (DL_FUNC) &group_lapply, 4},
+  {"write_groups",  (DL_FUNC) &write_groups, 2},
+  {"get_groups",  (DL_FUNC) &get_groups, 2},
+  {"write_spatial_groups",  (DL_FUNC) &write_spatial_groups, 3},
+  {"get_neighbors",  (DL_FUNC) &get_neighbors, 2},
+  {"neighbors_lapply",  (DL_FUNC) &neighbors_lapply, 4},
+   {NULL, NULL, 0}
+};
+
+
 
 void R_init_RMVL(DllInfo *info) {
-  R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
-  R_RegisterCCallable("RMVL", "remap_library",  (DL_FUNC) &remap_library);
-  R_RegisterCCallable("RMVL", "close_library",  (DL_FUNC) &close_library);
-  R_RegisterCCallable("RMVL", "find_directory_entries",  (DL_FUNC) &find_directory_entries);
-  R_RegisterCCallable("RMVL", "get_directory",  (DL_FUNC) &get_directory);
-  R_RegisterCCallable("RMVL", "read_metadata",  (DL_FUNC) &read_metadata);
-  R_RegisterCCallable("RMVL", "read_lengths",  (DL_FUNC) &read_lengths);
-  R_RegisterCCallable("RMVL", "read_types",  (DL_FUNC) &read_types);
-  R_RegisterCCallable("RMVL", "get_vector_data_ptr",  (DL_FUNC) &get_vector_data_ptr);
-  R_RegisterCCallable("RMVL", "read_vectors_raw",  (DL_FUNC) &read_vectors_raw);
-  R_RegisterCCallable("RMVL", "read_vectors_idx_raw",  (DL_FUNC) &read_vectors_idx_raw);
-  R_RegisterCCallable("RMVL", "read_vectors_idx_raw_real",  (DL_FUNC) &read_vectors_idx_raw_real);
-  R_RegisterCCallable("RMVL", "read_vectors_idx_raw2",  (DL_FUNC) &read_vectors_idx_raw2);
-  R_RegisterCCallable("RMVL", "read_vectors",  (DL_FUNC) &read_vectors);
-  R_RegisterCCallable("RMVL", "read_vectors_idx",  (DL_FUNC) &read_vectors_idx);
-  R_RegisterCCallable("RMVL", "read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real);
-  R_RegisterCCallable("RMVL", "read_vectors_idx2",  (DL_FUNC) &read_vectors_idx2);
-  R_RegisterCCallable("RMVL", "read_vectors_idx3",  (DL_FUNC) &read_vectors_idx3);
-  R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
-  R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
-  R_RegisterCCallable("RMVL", "fused_write_vector",  (DL_FUNC) &fused_write_vector);
-  R_RegisterCCallable("RMVL", "order_vectors",  (DL_FUNC) &order_vectors);
-  R_RegisterCCallable("RMVL", "hash_vectors",  (DL_FUNC) &hash_vectors);
-  R_RegisterCCallable("RMVL", "write_hash_vectors",  (DL_FUNC) &write_hash_vectors);
-  R_RegisterCCallable("RMVL", "find_matches",  (DL_FUNC) &find_matches);
-  R_RegisterCCallable("RMVL", "indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector);
-  R_RegisterCCallable("RMVL", "mvl_xlength_int",  (DL_FUNC) &mvl_xlength_int);
-  R_RegisterCCallable("RMVL", "group_vectors",  (DL_FUNC) &group_vectors);
-  R_RegisterCCallable("RMVL", "group_lapply",  (DL_FUNC) &group_lapply);
-  R_RegisterCCallable("RMVL", "write_groups",  (DL_FUNC) &write_groups);
-  R_RegisterCCallable("RMVL", "get_groups",  (DL_FUNC) &get_groups);
-  R_RegisterCCallable("RMVL", "write_spatial_groups",  (DL_FUNC) &write_spatial_groups);
-  R_RegisterCCallable("RMVL", "get_neighbors",  (DL_FUNC) &get_neighbors);
-  R_RegisterCCallable("RMVL", "neighbors_lapply",  (DL_FUNC) &neighbors_lapply);
+
+  R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
+  R_useDynamicSymbols(info, FALSE);
+
+//   R_RegisterCCallable("RMVL", "mmap_library",  (DL_FUNC) &mmap_library);
+//   R_RegisterCCallable("RMVL", "remap_library",  (DL_FUNC) &remap_library);
+//   R_RegisterCCallable("RMVL", "close_library",  (DL_FUNC) &close_library);
+//   R_RegisterCCallable("RMVL", "find_directory_entries",  (DL_FUNC) &find_directory_entries);
+//   R_RegisterCCallable("RMVL", "get_directory",  (DL_FUNC) &get_directory);
+//   R_RegisterCCallable("RMVL", "read_metadata",  (DL_FUNC) &read_metadata);
+//   R_RegisterCCallable("RMVL", "read_lengths",  (DL_FUNC) &read_lengths);
+//   R_RegisterCCallable("RMVL", "read_types",  (DL_FUNC) &read_types);
+//   R_RegisterCCallable("RMVL", "get_vector_data_ptr",  (DL_FUNC) &get_vector_data_ptr);
+//   R_RegisterCCallable("RMVL", "read_vectors_raw",  (DL_FUNC) &read_vectors_raw);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx_raw",  (DL_FUNC) &read_vectors_idx_raw);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx_raw_real",  (DL_FUNC) &read_vectors_idx_raw_real);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx_raw2",  (DL_FUNC) &read_vectors_idx_raw2);
+//   R_RegisterCCallable("RMVL", "read_vectors",  (DL_FUNC) &read_vectors);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx",  (DL_FUNC) &read_vectors_idx);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx2",  (DL_FUNC) &read_vectors_idx2);
+//   R_RegisterCCallable("RMVL", "read_vectors_idx3",  (DL_FUNC) &read_vectors_idx3);
+//   R_RegisterCCallable("RMVL", "add_directory_entries",  (DL_FUNC) &add_directory_entries);
+//   R_RegisterCCallable("RMVL", "write_vector",  (DL_FUNC) &write_vector);
+//   R_RegisterCCallable("RMVL", "fused_write_vector",  (DL_FUNC) &fused_write_vector);
+//   R_RegisterCCallable("RMVL", "order_vectors",  (DL_FUNC) &order_vectors);
+//   R_RegisterCCallable("RMVL", "hash_vectors",  (DL_FUNC) &hash_vectors);
+//   R_RegisterCCallable("RMVL", "write_hash_vectors",  (DL_FUNC) &write_hash_vectors);
+//   R_RegisterCCallable("RMVL", "find_matches",  (DL_FUNC) &find_matches);
+//   R_RegisterCCallable("RMVL", "indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector);
+//   R_RegisterCCallable("RMVL", "mvl_xlength_int",  (DL_FUNC) &mvl_xlength_int);
+//   R_RegisterCCallable("RMVL", "group_vectors",  (DL_FUNC) &group_vectors);
+//   R_RegisterCCallable("RMVL", "group_lapply",  (DL_FUNC) &group_lapply);
+//   R_RegisterCCallable("RMVL", "write_groups",  (DL_FUNC) &write_groups);
+//   R_RegisterCCallable("RMVL", "get_groups",  (DL_FUNC) &get_groups);
+//   R_RegisterCCallable("RMVL", "write_spatial_groups",  (DL_FUNC) &write_spatial_groups);
+//   R_RegisterCCallable("RMVL", "get_neighbors",  (DL_FUNC) &get_neighbors);
+//   R_RegisterCCallable("RMVL", "neighbors_lapply",  (DL_FUNC) &neighbors_lapply);
 }
