@@ -1,5 +1,5 @@
 
-#' @useDynLib RMVL
+#' @useDynLib RMVL , add_directory_entries,close_library,find_matches,fused_write_vector,get_directory,get_groups,get_neighbors,get_vector_data_ptr,group_lapply,group_vectors,hash_vectors,indexed_copy_vector,mmap_library,mvl_xlength_int,neighbors_lapply,order_vectors,read_lengths,read_metadata,read_types,read_vectors,read_vectors_idx,read_vectors_idx2,read_vectors_idx3,read_vectors_idx_raw2,read_vectors_idx_raw_real,read_vectors_idx_real,read_vectors_raw,remap_library,write_groups,write_hash_vectors,write_spatial_groups,write_vector
 
 MVL_SMALL_LENGTH<-1024
 
@@ -51,7 +51,7 @@ MVL_SMALL_LENGTH<-1024
 #' @export
 #'
 mvl_open<-function(filename, append=FALSE, create=FALSE) {
-	MVLHANDLE<-list(handle=.Call("mmap_library", as.character(filename), as.integer(ifelse(append, 1, 0)+ifelse(create, 2, 0))))
+	MVLHANDLE<-list(handle=.Call(mmap_library, as.character(filename), as.integer(ifelse(append, 1, 0)+ifelse(create, 2, 0))))
 	class(MVLHANDLE)<-"MVL"
 	MVLHANDLE[["directory"]]<-mvl_get_directory(MVLHANDLE)
 	return(MVLHANDLE)
@@ -131,7 +131,7 @@ mvl_get_vectors<-function(MVLHANDLE, offsets, raw=FALSE) {
 #'
 mvl_xlength<-function(x) {
 	if(inherits(x, "MVL_OBJECT"))return(x[["length"]])
-	return(.Call("mvl_xlength", x))
+	return(.Call("mvl_xlength_int", x))
 	}
 	
 mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {

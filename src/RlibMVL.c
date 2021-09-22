@@ -4620,7 +4620,7 @@ free(match_indices);
 return(ans);
 }
 
-SEXP mvl_xlength(SEXP obj)
+SEXP mvl_xlength_int(SEXP obj)
 {
 SEXP ans;
 
@@ -4833,7 +4833,7 @@ void R_init_RMVL(DllInfo *info) {
   R_RegisterCCallable("RMVL", "write_hash_vectors",  (DL_FUNC) &write_hash_vectors);
   R_RegisterCCallable("RMVL", "find_matches",  (DL_FUNC) &find_matches);
   R_RegisterCCallable("RMVL", "indexed_copy_vector",  (DL_FUNC) &indexed_copy_vector);
-  R_RegisterCCallable("RMVL", "mvl_xlength",  (DL_FUNC) &mvl_xlength);
+  R_RegisterCCallable("RMVL", "mvl_xlength_int",  (DL_FUNC) &mvl_xlength_int);
   R_RegisterCCallable("RMVL", "group_vectors",  (DL_FUNC) &group_vectors);
   R_RegisterCCallable("RMVL", "group_lapply",  (DL_FUNC) &group_lapply);
   R_RegisterCCallable("RMVL", "write_groups",  (DL_FUNC) &write_groups);
