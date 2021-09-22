@@ -77,6 +77,9 @@ return(ctx);
 
 void mvl_free_context(LIBMVL_CONTEXT *ctx)
 {
+for(LIBMVL_OFFSET64 i=0;i<ctx->dir_free;i++)
+	free(ctx->directory[i].tag);
+free(ctx->directory);
 mvl_free_named_list(ctx->cached_strings);
 free(ctx);
 }
@@ -592,6 +595,7 @@ if(ctx->dir_free>=ctx->dir_size) {
 	free(ctx->directory);
 	ctx->directory=p;
 	}
+//fprintf(stderr, "Adding entry %d \"%s\"=0x%016x\n", ctx->dir_free, tag, offset);
 ctx->directory[ctx->dir_free].offset=offset;
 ctx->directory[ctx->dir_free].tag=strdup(tag);
 ctx->dir_free++;
@@ -640,10 +644,9 @@ if((long long)offset<0) {
 	}
 
 mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, 2*ctx->dir_free, p, LIBMVL_NO_METADATA);
-	
-ctx->dir_free=0;
 
 ctx->directory_offset=offset;
+free(p);
 return(offset);
 }
 
