@@ -43,6 +43,7 @@ if(length(mode0)!=1) {
 	}
 	
 mode=INTEGER(mode0)[0];
+fn=CHAR(asChar(filename));
 
 idx=-1;
 for(i=0;i<libraries_free;i++) {
@@ -67,8 +68,6 @@ if(idx<0) {
 	idx=libraries_free;
 	libraries_free++;
 	}
-
-fn=CHAR(asChar(filename));
 
 //Rprintf("Accessing MVL library from %s\n", fn);
 
