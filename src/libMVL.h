@@ -85,6 +85,21 @@ typedef struct {
 	LIBMVL_OFFSET64 metadata;
 	} LIBMVL_VECTOR_HEADER;
 	
+	
+#ifndef MVL_STATIC_MEMBERS
+#ifdef __SANITIZE_ADDRESS__ || __has_feature(address_sanitizer)
+#define MVL_STATIC_MEMBERS 1
+#else
+#define MVL_STATIC_MEMBERS 0
+#endif	
+#endif
+	
+#if MVL_STATIC_MEMBERS
+/* This short and concise definition is portable and works with older compilers.
+ * However, when the code is instrumented with an address sanitizer it chokes on it 
+ * thinking that data arrays are smaller than they are.
+ */
+	
 typedef struct {
 	LIBMVL_VECTOR_HEADER header;
 	union {
@@ -96,6 +111,42 @@ typedef struct {
 		LIBMVL_OFFSET64 offset[1];
 		} u;
 	} LIBMVL_VECTOR;
+	
+#else
+/* This requires flexible array members and unnamed structs and unions which only appear in C11 standard 
+ * The complexity arises because the standard does not allow flexible array members in a union which makes it cumbersome 
+ * to describe variable size payloads.
+ */
+	
+typedef struct {
+	union {
+		struct {
+		LIBMVL_VECTOR_HEADER header;
+		unsigned char b[];
+		};
+		struct {
+		LIBMVL_VECTOR_HEADER header1;
+		int i[];
+		};
+		struct {
+		LIBMVL_VECTOR_HEADER header2;
+		long long i64[];
+		};
+		struct {
+		LIBMVL_VECTOR_HEADER header3;
+		float f[];
+		};
+		struct {
+		LIBMVL_VECTOR_HEADER header4;
+		double d[];
+		};
+		struct {
+		LIBMVL_VECTOR_HEADER header5;
+		LIBMVL_OFFSET64 offset[];
+		};
+		};
+	} LIBMVL_VECTOR;
+#endif
 
 typedef struct {
 	LIBMVL_OFFSET64 offset;
@@ -247,7 +298,11 @@ void mvl_write_postamble(LIBMVL_CONTEXT *ctx);
 
 #define mvl_vector_type(data)   (((LIBMVL_VECTOR_HEADER *)(data))->type)
 #define mvl_vector_length(data)   (((LIBMVL_VECTOR_HEADER *)(data))->length)
+#if STATIC_MEMBERS
 #define mvl_vector_data(data)   ((((LIBMVL_VECTOR *)(data))->u))
+#else
+#define mvl_vector_data(data)   (*(((LIBMVL_VECTOR *)(data))))
+#endif
 #define mvl_vector_metadata_offset(data)   ((((LIBMVL_VECTOR_HEADER *)(data))->metadata))
 
 /* These two convenience functions are meant for retrieving a few values, such as stored configuration parameters.

@@ -923,13 +923,13 @@ return(p->length>>1);
 LIBMVL_OFFSET64 mvl_directory_tag(const void *data, int i)
 {
 LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
-return(p->u.offset[i]);
+return(mvl_vector_data(p).offset[i]);
 }
 
 LIBMVL_OFFSET64 mvl_directory_entry(void *data, int i)
 {
 LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
-return(p->u.offset[i+(p->header.length>>1)]);
+return(mvl_vector_data(p).offset[i+(p->header.length>>1)]);
 }
 
 LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, const char *tag)
@@ -981,9 +981,9 @@ if(ctx->dir_free >= ctx->dir_size) {
 	}
 	
 for(i=0;i<ctx->dir_free;i++) {
-	ctx->directory[i].offset=dir->u.offset[i+ctx->dir_free];
-	a=(LIBMVL_VECTOR *)&(((unsigned char *)data)[dir->u.offset[i]]);
-	ctx->directory[i].tag=memndup(a->u.b, a->header.length);
+	ctx->directory[i].offset=mvl_vector_data(dir).offset[i+ctx->dir_free];
+	a=(LIBMVL_VECTOR *)&(((unsigned char *)data)[mvl_vector_data(dir).offset[i]]);
+	ctx->directory[i].tag=memndup(mvl_vector_data(a).b, a->header.length);
 	}
 }
 

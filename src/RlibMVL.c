@@ -2444,7 +2444,7 @@ for(k=0;k<xlength(data_list);k++) {
 		vec=get_mvl_vector(data_idx, data_offset);
 		
 		if(mvl_vector_type(vec)==type) {
-			mvl_rewrite_vector(libraries[idx].ctx, type, offset, vec_idx, mvl_vector_length(vec), &(mvl_vector_data(vec)));
+			mvl_rewrite_vector(libraries[idx].ctx, type, offset, vec_idx, mvl_vector_length(vec), (mvl_vector_data(vec).b));
 			vec_idx+=mvl_vector_length(vec);
 			continue;
 			}
