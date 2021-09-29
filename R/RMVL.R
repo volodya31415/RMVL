@@ -928,6 +928,26 @@ mvl_object_stats<-function(MVLHANDLE, offset=NULL) {
 	return(L)
 	}
 	
+make_mvl_object<-function(MVLHANDLE, offset) {
+	L<-list(handle=MVLHANDLE[["handle"]], offset=offset, length=.Call(read_lengths, MVLHANDLE[["handle"]], offset), type=.Call(read_types, MVLHANDLE[["handle"]], offset),metadata_offset=.Call(read_metadata, MVLHANDLE[["handle"]], offset))
+	L[["metadata"]]<-mvl_read_metadata(MVLHANDLE, L[["metadata_offset"]])
+	
+	object_class<-L[["metadata"]][["class"]]
+	if(any(object_class=="data.frame")) {
+		L[["bracket_dispatch"]]<-1
+		} else 
+	if(any(object_class %in% c("array", "matrix"))) {
+		L[["bracket_dispatch"]]<-2
+		} else
+	if(is.null(object_class) || any(object_class=="list")) {
+		L[["bracket_dispatch"]]<-3
+		} else
+		L[["bracket_dispatch"]]<-0
+		
+	class(L)<-"MVL_OBJECT"
+	return(L)
+	}
+	
 mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE, ref=FALSE) {
 	if(!inherits(MVLHANDLE, "MVL") && !inherits(MVLHANDLE, "MVL_OBJECT")) stop("not an MVL object")
 	if(!inherits(offset, "MVL_OFFSET"))stop("not an MVL offset")
@@ -938,10 +958,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 	cl<-metadata[["class"]]
 	
 	if(any(metadata[["MVL_LAYOUT"]]=="R") && !recurse && !is.null(cl) && any(cl=="data.frame")) {
-		L<-list(handle=MVLHANDLE[["handle"]], offset=offset, length=.Call(read_lengths, MVLHANDLE[["handle"]], offset), type=.Call(read_types, MVLHANDLE[["handle"]], offset),metadata_offset=metadata_offset)
-		L[["metadata"]]<-metadata
-		class(L)<-"MVL_OBJECT"
-		return(L)
+		return(make_mvl_object(MVLHANDLE, offset))
 		}
 	
 	if(is.null(idx)) {
@@ -963,13 +980,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 		 } else {
 			Fsmall<-lengths<MVL_SMALL_LENGTH & !ref
 			vec[Fsmall]<-lapply(vec[Fsmall], function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(MVLHANDLE, x, recurse=FALSE, raw=raw))})
-			vec[!Fsmall]<-lapply(vec[!Fsmall], function(x) {
-				class(x)<-"MVL_OFFSET"
-				L<-list(handle=MVLHANDLE[["handle"]], offset=x, length=.Call(read_lengths, MVLHANDLE[["handle"]], x), type=.Call(read_types, MVLHANDLE[["handle"]], x),metadata_offset=.Call(read_metadata, MVLHANDLE[["handle"]], x))
-				L[["metadata"]]<-mvl_read_metadata(MVLHANDLE, L[["metadata_offset"]])
-				class(L)<-"MVL_OBJECT"
-				return(L)} 
-				)
+			vec[!Fsmall]<-lapply(vec[!Fsmall], function(x) {class(x)<-"MVL_OFFSET"; return(make_mvl_object(MVLHANDLE, x)) } )
 			}
 		}
 #	attr(vec, "metadata")<-metadata
@@ -1048,12 +1059,7 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 		offset<-MVLHANDLE[["directory"]][[y]]
 		if(is.null(offset))return(NULL)
 		
-		obj<-list(handle=MVLHANDLE[["handle"]], offset=offset, 
-			length=.Call(read_lengths, MVLHANDLE[["handle"]], offset), 
-			type=.Call(read_types, MVLHANDLE[["handle"]], offset),
-			metadata_offset=.Call(read_metadata, MVLHANDLE[["handle"]], offset))
-		obj[["metadata"]]<-mvl_read_metadata(MVLHANDLE, obj[["metadata_offset"]])
-		class(obj)<-"MVL_OBJECT"
+		obj<-make_mvl_object(MVLHANDLE, offset)
 		
 		if(!ref && obj[["length"]]<MVL_SMALL_LENGTH)obj<-mvl_read_object(MVLHANDLE, obj[["offset"]], recurse=FALSE, raw=raw)
 		
@@ -1205,8 +1211,7 @@ names.MVL_OBJECT<-function(x) {
 		return(mvl_read_object(obj, unclass(obj)[["offset"]], recurse=recurse, raw=raw, ref=ref))
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
-	object_class<-obj[["metadata"]][["class"]]
-	if(any(object_class=="data.frame")) {
+	if(obj[["bracket_dispatch"]]==1) {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
 		if(...length()<1 || missing(..1)) {
@@ -1228,12 +1233,8 @@ names.MVL_OBJECT<-function(x) {
 		if(missing(i)) {
 			if(length(j)==1 && drop) {
 				ofs<-.Call(read_vectors_idx3, obj[["handle"]], obj[["offset"]], j)[[1]]
-				metadata_offset<-.Call(read_metadata, obj[["handle"]], ofs)
-				metadata<-mvl_read_metadata(obj, metadata_offset)
-
-				L<-list(handle=obj[["handle"]], offset=ofs, length=.Call(read_lengths, obj[["handle"]], ofs), type=.Call(read_types, obj[["handle"]], ofs),metadata_offset=metadata_offset)
-				L[["metadata"]]<-metadata
-				class(L)<-"MVL_OBJECT"
+				
+				L<-make_mvl_object(obj, ofs)
 				
 				if(!ref && (length(L)<MVL_SMALL_LENGTH || recurse) )L<-mvl_read_object(L, unclass(L)[["offset"]], recurse=recurse, ref=ref, raw=raw)
 				
@@ -1270,7 +1271,7 @@ names.MVL_OBJECT<-function(x) {
 			}
 		return(df)
 		}
-	if(any(object_class %in% c("array", "matrix"))) {
+	if(obj[["bracket_dispatch"]]==2) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		
@@ -1314,7 +1315,7 @@ names.MVL_OBJECT<-function(x) {
 			dim(vec)<-d
 		return(vec)
 		}
-	if(is.null(object_class) || any(object_class=="list")) {
+	if(obj[["bracket_dispatch"]]==3) {
 		if(...length()==0) {
 	# 		if(is.logical(i)) {
 	# 			i<-which(i)
@@ -1338,11 +1339,7 @@ names.MVL_OBJECT<-function(x) {
 
 				if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
 					if(ref) {
-						metadata_offset<-.Call(read_metadata, obj[["handle"]], vec)
-						
-						L<-list(handle=obj[["handle"]], offset=vec, length=.Call(read_lengths, obj[["handle"]], vec), type=.Call(read_types, obj[["handle"]], vec),metadata_offset=metadata_offset)
-						L[["metadata"]]<-mvl_read_metadata(obj, metadata_offset)
-						class(L)<-"MVL_OBJECT"
+						L<-make_mvl_object(obj, vec)
 						vec<-L
 						} else {
 						vec<-mvl_read_object(obj, vec, recurse=FALSE, ref=ref)
