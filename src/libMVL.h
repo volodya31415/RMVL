@@ -87,10 +87,18 @@ typedef struct {
 	
 	
 #ifndef MVL_STATIC_MEMBERS
-#ifdef __SANITIZE_ADDRESS__ || __has_feature(address_sanitizer)
-#define MVL_STATIC_MEMBERS 1
-#else
+#ifdef __SANITIZE_ADDRESS__
 #define MVL_STATIC_MEMBERS 0
+#else
+#ifdef __clang__
+#if __has_feature(address_sanitizer)
+#define MVL_STATIC_MEMBERS 0
+#else
+#define MVL_STATIC_MEMBERS 1
+#endif
+#else
+#define MVL_STATIC_MEMBERS 1
+#endif
 #endif	
 #endif
 	
@@ -298,7 +306,7 @@ void mvl_write_postamble(LIBMVL_CONTEXT *ctx);
 
 #define mvl_vector_type(data)   (((LIBMVL_VECTOR_HEADER *)(data))->type)
 #define mvl_vector_length(data)   (((LIBMVL_VECTOR_HEADER *)(data))->length)
-#if STATIC_MEMBERS
+#if MVL_STATIC_MEMBERS
 #define mvl_vector_data(data)   ((((LIBMVL_VECTOR *)(data))->u))
 #else
 #define mvl_vector_data(data)   (*(((LIBMVL_VECTOR *)(data))))
