@@ -2163,6 +2163,7 @@ const char *ch, **strvec2;
 LIBMVL_OFFSET64 *strvec;
 long long *idata;
 float *fdata;
+unsigned char *bdata;
 
 double *pd;
 int *pi;
@@ -2202,7 +2203,45 @@ if(length(metadata_offset)<1) {
 	}
 switch(type) {
 	case LIBMVL_VECTOR_UINT8:
-		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), RAW(data), *moffset);
+		switch(TYPEOF(data)) {
+			case RAWSXP:
+				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), RAW(data), *moffset);
+				break;
+			case INTSXP:
+				bdata=calloc(xlength(data), 1);
+				if(bdata==NULL) {
+					error("Out of memory");
+					return(R_NilValue);
+					}
+				int *id=INTEGER(data);
+				for(i=0;i<xlength(data);i++)bdata[i]=id[i];
+				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), bdata, *moffset);
+				free(bdata);
+				break;
+			case REALSXP:
+				bdata=calloc(xlength(data), 1);
+				if(bdata==NULL) {
+					error("Out of memory");
+					return(R_NilValue);
+					}
+				double *fd=REAL(data);
+				for(i=0;i<xlength(data);i++)bdata[i]=fd[i];
+				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), bdata, *moffset);
+				free(bdata);
+				break;
+			case STRSXP:
+				if(xlength(data)!=1) {
+					error("Can only convert a single string to UINT8");
+					return(R_NilValue);
+					}
+				const char *bd=CHAR(STRING_ELT(data, 0));
+				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, strlen(bd), bd, *moffset);
+				break;
+			default:
+				error("Cannot convert R type %d to UINT8", TYPEOF(data));
+				return(R_NilValue);
+				break;
+			}
 		break;
 	case LIBMVL_VECTOR_INT32:
 		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT32, xlength(data), INTEGER(data), *moffset);
