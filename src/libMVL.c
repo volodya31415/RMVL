@@ -665,7 +665,6 @@ L->tag=do_malloc(L->size, sizeof(*L->tag));
 L->hash_size=0;
 L->next_item=NULL;
 L->first_item=NULL;
-L->hash_mult=217596121;
 
 return(L);
 }
@@ -680,6 +679,36 @@ free(L->offset);
 free(L->tag);
 free(L->tag_length);
 free(L);
+}
+
+void mvl_recompute_named_list_hash(LIBMVL_NAMED_LIST *L)
+{
+LIBMVL_OFFSET64 mask;
+if(L->hash_size<L->size) {
+	LIBMVL_OFFSET64 hs=1;
+	
+	while(hs<L->size && hs)hs=hs<<1;
+	
+	L->hash_size=hs;
+	free(L->next_item);
+	free(L->first_item);
+	
+	/* This can only happen if L->size is greater than 2^63 - unlikely */
+	if(hs==0) {
+		L->next_item=NULL;
+		L->first_item=NULL;
+		return;
+		}
+	L->next_item=do_malloc(L->hash_size, sizeof(*L->next_item));
+	L->first_item=do_malloc(L->hash_size, sizeof(*L->first_item));
+	}
+mask=L->hash_size-1;
+for(LIBMVL_OFFSET64 i=0;i<L->hash_size;i++)L->first_item[i]=-1;
+for(LIBMVL_OFFSET64 i=0;i<L->free;i++) {
+	LIBMVL_OFFSET64 h=mvl_accumulate_hash64(MVL_SEED_HASH_VALUE, L->tag[i], L->tag_length[i]) & mask;
+	L->next_item[i]=L->first_item[h];
+	L->first_item[h]=i;	
+	}
 }
 
 long mvl_add_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag, LIBMVL_OFFSET64 offset)
@@ -704,6 +733,9 @@ if(L->free>=L->size) {
 	free(L->tag);
 	L->tag=p;
 	}
+
+if(L->hash_size && (L->free>=L->hash_size))mvl_recompute_named_list_hash(L);
+
 k=L->free;
 L->free++;
 L->offset[k]=offset;
@@ -712,7 +744,10 @@ L->tag_length[k]=tag_length;
 L->tag[k]=memndup(tag, tag_length);
 
 if(L->hash_size>0) {
-	/* TODO: automatically add to hash table if present */
+	LIBMVL_OFFSET64 mask=L->hash_size-1;
+	LIBMVL_OFFSET64 h=mvl_accumulate_hash64(MVL_SEED_HASH_VALUE, tag, tag_length) & mask;
+	L->next_item[k]=L->first_item[h];
+	L->first_item[h]=k;	
 	}
 return(k);
 }
@@ -720,11 +755,22 @@ return(k);
 LIBMVL_OFFSET64 mvl_find_list_entry(LIBMVL_NAMED_LIST *L, long tag_length, const char *tag)
 {
 long i, tl;
-if(L->hash_size>0) {
-	/* TODO: use has table */
-	}
 tl=tag_length;
 if(tl<0)tl=strlen(tag);
+
+if(L->hash_size>0) {
+	/* Hash table present */
+	LIBMVL_OFFSET64 mask=L->hash_size-1;
+	LIBMVL_OFFSET64 h=mvl_accumulate_hash64(MVL_SEED_HASH_VALUE, tag, tag_length) & mask;
+	for(i=L->first_item[h]; i>=0; i=L->next_item[i]) {
+		if(L->tag_length[i]!=tl)continue;
+		if(!memcmp(L->tag[i], tag, tl)) {
+			return(L->offset[i]);
+			}
+		}
+	return(LIBMVL_NULL_OFFSET);
+	}
+
 for(i=0;i<L->free;i++) {
 	if(L->tag_length[i]!=tl)continue;
 	if(!memcmp(L->tag[i], tag, tl)) {
@@ -831,6 +877,7 @@ for(i=0;i<nattr;i++) {
 		mvl_vector_data(p).offset[i+nattr]);
 	}
 
+mvl_recompute_named_list_hash(L);
 return(L);
 }
 
@@ -891,6 +938,8 @@ switch(mvl_vector_type(&(d[names_ofs]))) {
 	}
 
 mvl_free_named_list(Lattr);
+
+mvl_recompute_named_list_hash(L);
 return(L);
 }
 
