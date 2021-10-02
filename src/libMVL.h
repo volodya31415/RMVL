@@ -40,7 +40,9 @@ first 0 byte */
  */
 #define LIBMVL_PACKED_LIST64 	102     
 
-#define LIBMVL_VECTOR_POSTAMBLE 1000
+
+#define LIBMVL_VECTOR_POSTAMBLE1 1000		/* Old format using DIRECTORY_ENTRY */
+#define LIBMVL_VECTOR_POSTAMBLE2 1001		/* New format using named list */
 
 static inline int mvl_element_size(int type) 
 {
@@ -179,9 +181,7 @@ typedef struct {
 	int alignment;
 	int error;
 
-	long dir_size;
-	long dir_free;
-	LIBMVL_DIRECTORY_ENTRY *directory;	
+	LIBMVL_NAMED_LIST *directory;	
 	LIBMVL_OFFSET64 directory_offset;
 
 	LIBMVL_NAMED_LIST *cached_strings;

@@ -62,10 +62,9 @@ ctx->error=0;
 ctx->abort_on_error=1;
 ctx->alignment=32;
 
-ctx->dir_size=100;
-ctx->dir_free=0;
-
-ctx->directory=do_malloc(ctx->dir_size, sizeof(*ctx->directory));
+//ctx->directory=do_malloc(ctx->dir_size, sizeof(*ctx->directory));
+ctx->directory=mvl_create_named_list(100);
+mvl_recompute_named_list_hash(ctx->directory);
 ctx->directory_offset=-1;
 
 ctx->character_class_offset=0;
@@ -77,9 +76,10 @@ return(ctx);
 
 void mvl_free_context(LIBMVL_CONTEXT *ctx)
 {
-for(LIBMVL_OFFSET64 i=0;i<ctx->dir_free;i++)
-	free(ctx->directory[i].tag);
-free(ctx->directory);
+mvl_free_named_list(ctx->directory);
+// for(LIBMVL_OFFSET64 i=0;i<ctx->dir_free;i++)
+// 	free(ctx->directory[i].tag);
+// free(ctx->directory);
 mvl_free_named_list(ctx->cached_strings);
 free(ctx);
 }
@@ -138,7 +138,11 @@ void mvl_write_postamble(LIBMVL_CONTEXT *ctx)
 {
 memset(&(ctx->tmp_postamble), 0, sizeof(ctx->tmp_postamble));
 ctx->tmp_postamble.directory=ctx->directory_offset;
-ctx->tmp_postamble.type=LIBMVL_VECTOR_POSTAMBLE;
+#ifdef MVL_OLD_DIRECTORY
+ctx->tmp_postamble.type=LIBMVL_VECTOR_POSTAMBLE1;
+#else
+ctx->tmp_postamble.type=LIBMVL_VECTOR_POSTAMBLE2;
+#endif
 mvl_write(ctx, sizeof(ctx->tmp_postamble), &ctx->tmp_postamble);
 }
 
@@ -586,35 +590,37 @@ return(ctx->character_class_offset);
 
 void mvl_add_directory_entry(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag)
 {
-LIBMVL_DIRECTORY_ENTRY *p;
-if(ctx->dir_free>=ctx->dir_size) {
-	ctx->dir_size+=ctx->dir_size+10;
-	
-	p=do_malloc(ctx->dir_size, sizeof(*p));
-	if(ctx->dir_free>0)memcpy(p, ctx->directory, ctx->dir_free*sizeof(*p));
-	free(ctx->directory);
-	ctx->directory=p;
-	}
-//fprintf(stderr, "Adding entry %d \"%s\"=0x%016x\n", ctx->dir_free, tag, offset);
-ctx->directory[ctx->dir_free].offset=offset;
-ctx->directory[ctx->dir_free].tag=strdup(tag);
-ctx->dir_free++;
+// LIBMVL_DIRECTORY_ENTRY *p;
+// if(ctx->dir_free>=ctx->dir_size) {
+// 	ctx->dir_size+=ctx->dir_size+10;
+// 	
+// 	p=do_malloc(ctx->dir_size, sizeof(*p));
+// 	if(ctx->dir_free>0)memcpy(p, ctx->directory, ctx->dir_free*sizeof(*p));
+// 	free(ctx->directory);
+// 	ctx->directory=p;
+// 	}
+// //fprintf(stderr, "Adding entry %d \"%s\"=0x%016x\n", ctx->dir_free, tag, offset);
+// ctx->directory[ctx->dir_free].offset=offset;
+// ctx->directory[ctx->dir_free].tag=strdup(tag);
+// ctx->dir_free++;
+mvl_add_list_entry(ctx->directory, -1, tag, offset);
 }
 
 void mvl_add_directory_entry_n(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 offset, const char *tag, LIBMVL_OFFSET64 tag_size)
 {
-LIBMVL_DIRECTORY_ENTRY *p;
-if(ctx->dir_free>=ctx->dir_size) {
-	ctx->dir_size+=ctx->dir_size+10;
-	
-	p=do_malloc(ctx->dir_size, sizeof(*p));
-	if(ctx->dir_free>0)memcpy(p, ctx->directory, ctx->dir_free*sizeof(*p));
-	free(ctx->directory);
-	ctx->directory=p;
-	}
-ctx->directory[ctx->dir_free].offset=offset;
-ctx->directory[ctx->dir_free].tag=memndup(tag, tag_size);
-ctx->dir_free++;
+// LIBMVL_DIRECTORY_ENTRY *p;
+// if(ctx->dir_free>=ctx->dir_size) {
+// 	ctx->dir_size+=ctx->dir_size+10;
+// 	
+// 	p=do_malloc(ctx->dir_size, sizeof(*p));
+// 	if(ctx->dir_free>0)memcpy(p, ctx->directory, ctx->dir_free*sizeof(*p));
+// 	free(ctx->directory);
+// 	ctx->directory=p;
+// 	}
+// ctx->directory[ctx->dir_free].offset=offset;
+// ctx->directory[ctx->dir_free].tag=memndup(tag, tag_size);
+// ctx->dir_free++;
+mvl_add_list_entry(ctx->directory, tag_size, tag, offset);
 }
 
 LIBMVL_OFFSET64 mvl_write_directory(LIBMVL_CONTEXT *ctx)
@@ -624,15 +630,19 @@ LIBMVL_OFFSET64 offset;
 int i;
 
 
-if(ctx->dir_free<1) {
+if(ctx->directory->free<1) {
 	mvl_set_error(ctx, LIBMVL_ERR_EMPTY_DIRECTORY);
 	return(0);
 	}
 
-p=do_malloc(ctx->dir_free*2, sizeof(*p));
-for(i=0;i<ctx->dir_free;i++) {
-	p[i]=mvl_write_vector(ctx, LIBMVL_VECTOR_UINT8,  strlen(ctx->directory[i].tag), ctx->directory[i].tag, LIBMVL_NO_METADATA);
-	p[i+ctx->dir_free]=ctx->directory[i].offset;
+#ifdef MVL_OLD_DIRECTORY
+	
+p=do_malloc(ctx->directory->free*2, sizeof(*p));
+for(i=0;i<ctx->directory->free;i++) {
+// 	p[i]=mvl_write_vector(ctx, LIBMVL_VECTOR_UINT8,  strlen(ctx->directory[i].tag), ctx->directory[i].tag, LIBMVL_NO_METADATA);
+// 	p[i+ctx->dir_free]=ctx->directory[i].offset;
+	p[i]=mvl_write_vector(ctx, LIBMVL_VECTOR_UINT8,  ctx->directory->tag_length[i], ctx->directory->tag[i], LIBMVL_NO_METADATA);
+	p[i+ctx->directory->free]=ctx->directory->offset[i];
 	}
 
 	
@@ -643,10 +653,15 @@ if((long long)offset<0) {
 	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
 	}
 
-mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, 2*ctx->dir_free, p, LIBMVL_NO_METADATA);
+mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, 2*ctx->directory->free, p, LIBMVL_NO_METADATA);
 
 ctx->directory_offset=offset;
 free(p);
+
+#else 
+ctx->directory_offset=mvl_write_named_list(ctx, ctx->directory);
+#endif
+
 return(offset);
 }
 
@@ -761,7 +776,7 @@ if(tl<0)tl=strlen(tag);
 if(L->hash_size>0) {
 	/* Hash table present */
 	LIBMVL_OFFSET64 mask=L->hash_size-1;
-	LIBMVL_OFFSET64 h=mvl_accumulate_hash64(MVL_SEED_HASH_VALUE, tag, tag_length) & mask;
+	LIBMVL_OFFSET64 h=mvl_accumulate_hash64(MVL_SEED_HASH_VALUE, tag, tl) & mask;
 	for(i=L->first_item[h]; i>=0; i=L->next_item[i]) {
 		if(L->tag_length[i]!=tl)continue;
 		if(!memcmp(L->tag[i], tag, tl)) {
@@ -969,25 +984,26 @@ if(p->length &1) {
 return(p->length>>1);
 }
 
-LIBMVL_OFFSET64 mvl_directory_tag(const void *data, int i)
-{
-LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
-return(mvl_vector_data(p).offset[i]);
-}
-
-LIBMVL_OFFSET64 mvl_directory_entry(void *data, int i)
-{
-LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
-return(mvl_vector_data(p).offset[i+(p->header.length>>1)]);
-}
+// LIBMVL_OFFSET64 mvl_directory_tag(const void *data, int i)
+// {
+// LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
+// return(mvl_vector_data(p).offset[i]);
+// }
+// 
+// LIBMVL_OFFSET64 mvl_directory_entry(void *data, int i)
+// {
+// LIBMVL_VECTOR *p=(LIBMVL_VECTOR *)data;
+// return(mvl_vector_data(p).offset[i+(p->header.length>>1)]);
+// }
 
 LIBMVL_OFFSET64 mvl_find_directory_entry(LIBMVL_CONTEXT *ctx, const char *tag)
 {
-int i;
-for(i=ctx->dir_free-1;i>=0;i--) {
-	if(!strcmp(tag, ctx->directory[i].tag))return(ctx->directory[i].offset);
-	}
-return(0);
+// int i;
+// for(i=ctx->dir_free-1;i>=0;i--) {
+// 	if(!strcmp(tag, ctx->directory[i].tag))return(ctx->directory[i].offset);
+// 	}
+// return(0);
+return(mvl_find_list_entry(ctx->directory, -1, tag));
 }
 
 void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *data)
@@ -995,6 +1011,7 @@ void mvl_load_image(LIBMVL_CONTEXT *ctx, LIBMVL_OFFSET64 length, const void *dat
 LIBMVL_PREAMBLE *pr=(LIBMVL_PREAMBLE *)data;
 LIBMVL_POSTAMBLE *pa=(LIBMVL_POSTAMBLE *)&(((unsigned char *)data)[length-sizeof(LIBMVL_POSTAMBLE)]);
 LIBMVL_VECTOR *dir, *a;
+LIBMVL_OFFSET64 k;
 int i;
 
 if(strncmp(pr->signature, LIBMVL_SIGNATURE, 4)) {
@@ -1006,33 +1023,51 @@ if(pr->endianness!=LIBMVL_ENDIANNESS_FLAG) {
 	mvl_set_error(ctx, LIBMVL_ERR_WRONG_ENDIANNESS);
 	return;
 	}
-	
-if(pa->type!=LIBMVL_VECTOR_POSTAMBLE) {
-	mvl_set_error(ctx, LIBMVL_ERR_CORRUPT_POSTAMBLE);
-	return;
-	}
 
 //fprintf(stderr, "Reading MVL directory at offset 0x%08llx\n", pa->directory);
-dir=(LIBMVL_VECTOR *)&(((unsigned char *)data)[pa->directory]);
 
-for(i=0;i<ctx->dir_free;i++) {
-	free(ctx->directory[i].tag);
-	ctx->directory[i].tag=NULL;
-	ctx->directory[i].offset=0;
-	}
+mvl_free_named_list(ctx->directory);
 
-ctx->dir_free=dir->header.length>>1;
-//fprintf(stderr, "Reading MVL with %ld directory entries\n", ctx->dir_free);
-if(ctx->dir_free >= ctx->dir_size) {
-	ctx->dir_size=ctx->dir_free;
-	free(ctx->directory);
-	ctx->directory=do_malloc(ctx->dir_size, sizeof(*ctx->directory));
-	}
-	
-for(i=0;i<ctx->dir_free;i++) {
-	ctx->directory[i].offset=mvl_vector_data(dir).offset[i+ctx->dir_free];
-	a=(LIBMVL_VECTOR *)&(((unsigned char *)data)[mvl_vector_data(dir).offset[i]]);
-	ctx->directory[i].tag=memndup(mvl_vector_data(a).b, a->header.length);
+switch(pa->type) {
+	case LIBMVL_VECTOR_POSTAMBLE2:
+		ctx->directory=mvl_read_named_list(ctx, data, pa->directory);
+		break;
+	case LIBMVL_VECTOR_POSTAMBLE1:
+		dir=(LIBMVL_VECTOR *)&(((unsigned char *)data)[pa->directory]);
+		k=dir->header.length>>1;
+
+		ctx->directory=mvl_create_named_list(k);
+
+		// for(i=0;i<ctx->dir_free;i++) {
+		// 	free(ctx->directory[i].tag);
+		// 	ctx->directory[i].tag=NULL;
+		// 	ctx->directory[i].offset=0;
+		// 	}
+
+		// ctx->dir_free=dir->header.length>>1;
+		// //fprintf(stderr, "Reading MVL with %ld directory entries\n", ctx->dir_free);
+		// if(ctx->dir_free >= ctx->dir_size) {
+		// 	ctx->dir_size=ctx->dir_free;
+		// 	free(ctx->directory);
+		// 	ctx->directory=do_malloc(ctx->dir_size, sizeof(*ctx->directory));
+		// 	}
+			
+		// for(i=0;i<ctx->dir_free;i++) {
+		// 	ctx->directory[i].offset=mvl_vector_data(dir).offset[i+ctx->dir_free];
+		// 	a=(LIBMVL_VECTOR *)&(((unsigned char *)data)[mvl_vector_data(dir).offset[i]]);
+		// 	ctx->directory[i].tag=memndup(mvl_vector_data(a).b, a->header.length);
+		// 	}
+		for(i=0;i<k;i++) {
+			a=(LIBMVL_VECTOR *)&(((unsigned char *)data)[mvl_vector_data(dir).offset[i]]);
+			
+			mvl_add_list_entry(ctx->directory, a->header.length, mvl_vector_data(a).b, mvl_vector_data(dir).offset[i+k]); 
+			}
+		mvl_recompute_named_list_hash(ctx->directory);
+		break;
+	default:
+		ctx->directory=mvl_create_named_list(100);		
+		mvl_set_error(ctx, LIBMVL_ERR_CORRUPT_POSTAMBLE);
+		return;
 	}
 }
 

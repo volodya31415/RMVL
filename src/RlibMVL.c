@@ -534,6 +534,7 @@ SEXP ans, class, names;
 long i;
 LIBMVL_OFFSET64 offset;
 double *doffset=(double *)&offset;
+LIBMVL_NAMED_LIST *dir;
 
 double *dp;
 
@@ -550,12 +551,13 @@ if(libraries[idx].ctx==NULL){
 	error("no such library");
 	return(R_NilValue);
 	}
-ans=PROTECT(allocVector(REALSXP, libraries[idx].ctx->dir_free));
-names=PROTECT(allocVector(STRSXP, libraries[idx].ctx->dir_free));
+dir=libraries[idx].ctx->directory;
+ans=PROTECT(allocVector(REALSXP, dir->free));
+names=PROTECT(allocVector(STRSXP, dir->free));
 dp=REAL(ans);
-for(i=0;i<libraries[idx].ctx->dir_free;i++) {
-	SET_STRING_ELT(names, i, mkChar(libraries[idx].ctx->directory[i].tag));
-	offset=libraries[idx].ctx->directory[i].offset;
+for(i=0;i<dir->free;i++) {
+	SET_STRING_ELT(names, i, mkChar(dir->tag[i]));
+	offset=dir->offset[i];
 	dp[i]=*doffset;
 	}
 setAttrib(ans, R_NamesSymbol, names);
@@ -801,7 +803,7 @@ int *pi, *pidx;
 unsigned char *pc;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx_raw first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -942,7 +944,7 @@ int *pi;
 unsigned char *pc;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx_raw_real first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1083,7 +1085,7 @@ int *pi;
 unsigned char *pc;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx_raw2 first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1231,7 +1233,7 @@ LIBMVL_VECTOR *vec;
 double *p_offsets, *p_ans;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx_raw2 first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1278,7 +1280,7 @@ int *pi;
 unsigned char *pc;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1400,7 +1402,7 @@ int *pi, *pidx;
 unsigned char *pc;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1538,7 +1540,7 @@ int *pi;
 unsigned char *pc;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx_real first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1676,7 +1678,7 @@ unsigned char *pc;
 LIBMVL_OFFSET64 *poffs;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx2 first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -1821,7 +1823,7 @@ LIBMVL_OFFSET64 * restrict poffs;
 double * restrict pd2;
 
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_vectors_idx3 first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
@@ -2088,7 +2090,7 @@ LIBMVL_OFFSET64 offset;
 double *doffset2=(double *)&offset;
 LIBMVL_VECTOR *vec;
 if(length(idx0)!=1) {
-	error("find_directory_entry first argument must be a single integer");
+	error("read_metadata first argument must be a single integer");
 	return(R_NilValue);
 	}
 idx=INTEGER(idx0)[0];
