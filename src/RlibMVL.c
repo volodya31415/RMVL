@@ -359,11 +359,17 @@ if((*idx)>=0 && sofs!=R_NilValue && length(sofs)==1) {
 
 LIBMVL_VECTOR * get_mvl_vector(int idx, LIBMVL_OFFSET64 offset)
 {
+int err;
 if(idx<0 || idx>=libraries_free || offset==0)return(NULL);
 
 if(libraries[idx].ctx==NULL)return(NULL);
 
 if(libraries[idx].data==NULL)return(NULL);
+
+if((err=mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length))<0) {
+	error("Invalid vector: error %d", err);
+	return(NULL);
+	}
 
 return((LIBMVL_VECTOR *)(&libraries[idx].data[offset]));
 }
@@ -2500,7 +2506,7 @@ for(k=0;k<xlength(data_list);k++) {
 			case LIBMVL_VECTOR_DOUBLE:
 				break;
 			case 10000:
-				pc=(unsigned char *)get_mvl_vector(data_idx, mvl_vector_data(vec).offset[0]);
+				pc=sizeof(LIBMVL_VECTOR_HEADER)+(unsigned char *)get_mvl_vector(data_idx, mvl_vector_data(vec).offset[0]-sizeof(LIBMVL_VECTOR_HEADER));
 				if(pc==NULL) {
 					error("Invalid packed list");
 					return(R_NilValue);
