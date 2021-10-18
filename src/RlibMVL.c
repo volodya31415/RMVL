@@ -616,7 +616,7 @@ for(i=0;i<xlength(offsets);i++) {
 	doffset=d_offsets[i];
 	offset=*offset0;
 	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
-		REAL(ans)[i]=NA_REAL;
+		d_ans[i]=NA_REAL;
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
@@ -633,6 +633,53 @@ for(i=0;i<xlength(offsets);i++) {
 UNPROTECT(1);
 return(ans);
 }
+
+SEXP compute_vector_stats(SEXP idx0, SEXP offsets)
+{
+int idx;
+SEXP ans;
+long i, j;
+double doffset;
+LIBMVL_OFFSET64 *offset0=(LIBMVL_OFFSET64 *)&doffset;
+LIBMVL_OFFSET64 offset;
+LIBMVL_VECTOR *vec;
+double *d_ans, *d_offsets;
+LIBMVL_VEC_STATS stats;
+int nfields=sizeof(stats)/sizeof(double);
+
+if(length(idx0)!=1) {
+	error("find_directory_entry first argument must be a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0 || idx>=libraries_free) {
+	error("no such library");
+	return(R_NilValue);
+	}
+if(libraries[idx].ctx==NULL) {
+	error("no such library");
+	return(R_NilValue);
+	}
+ans=PROTECT(allocVector(REALSXP, xlength(offsets)*nfields));
+d_ans=REAL(ans);
+d_offsets=REAL(offsets);
+for(i=0;i<xlength(offsets);i++) {
+	doffset=d_offsets[i];
+	offset=*offset0;
+	if(mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length)) {		
+		for(j=0;j<nfields;j++)
+			d_ans[i*nfields+j]=NA_REAL;
+		continue;
+		}
+	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	mvl_compute_vec_stats(vec, &stats);
+	memcpy(&(d_ans[i*nfields]), &stats, sizeof(stats));
+	}
+
+UNPROTECT(1);
+return(ans);
+}
+
 
 SEXP read_types(SEXP idx0, SEXP offsets)
 {
@@ -667,7 +714,7 @@ for(i=0;i<xlength(offsets);i++) {
 	doffset=p_offsets[i];
 	offset=*offset0;
 	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
-		INTEGER(ans)[i]=NA_INTEGER;
+		p_ans[i]=NA_INTEGER;
 		continue;
 		}
 	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
@@ -4904,6 +4951,7 @@ static const R_CallMethodDef callMethods[] = {
   {"get_directory",  (DL_FUNC) &get_directory, 1},
   {"read_metadata",  (DL_FUNC) &read_metadata, 2},
   {"read_lengths",  (DL_FUNC) &read_lengths, 2},
+  {"compute_vector_stats",  (DL_FUNC) &compute_vector_stats, 2},
   {"read_types",  (DL_FUNC) &read_types, 2},
   {"get_vector_data_ptr",  (DL_FUNC) &get_vector_data_ptr, 2},
   {"read_vectors_raw",  (DL_FUNC) &read_vectors_raw, 2},

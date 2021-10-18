@@ -1004,6 +1004,8 @@ typedef struct {
 	double min; //!< minimum value of vector entries
 	double center; //!< a value in the "middle" of the vector
 	double scale;  //!< normalization scale
+	double average_repeat_length; //!< average length of stretch with identical elements
+	double nrepeat; //!< number of stretches with identical elements
 	} LIBMVL_VEC_STATS;
 
 void mvl_compute_vec_stats(const LIBMVL_VECTOR *vec, LIBMVL_VEC_STATS *stats);
