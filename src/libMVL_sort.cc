@@ -3,6 +3,8 @@
 #include <functional>
 #include "pdqsort.h"
 #include "pdqidxsort.h"
+
+#define MVL_STATIC_MEMBERS 1
 #include "libMVL.h"
 
 
@@ -203,7 +205,7 @@ switch(mvl_vector_type(vec)) {
 	case LIBMVL_VECTOR_UINT8:
 	case LIBMVL_VECTOR_CSTRING: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		unsigned char *b=mvl_vector_data(vec).b;
+		unsigned char *b=mvl_vector_data_uint8(vec);
 		unsigned char *d=(unsigned char*)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_asc(stop-start, indices+start, d);
@@ -211,7 +213,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_INT32: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		int *b=mvl_vector_data(vec).i;
+		int *b=mvl_vector_data_int32(vec);
 		int *d=(int *)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_asc(stop-start, indices+start, d);
@@ -219,7 +221,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_FLOAT: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		float *b=mvl_vector_data(vec).f;
+		float *b=mvl_vector_data_float(vec);
 		float *d=(float *)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_asc(stop-start, indices+start, d);
@@ -227,7 +229,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_INT64: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		long long int *b=mvl_vector_data(vec).i64;
+		long long int *b=mvl_vector_data_int64(vec);
 		long long int *d=(long long int*)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_asc(stop-start, indices+start, d);
@@ -235,7 +237,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_OFFSET64: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		LIBMVL_OFFSET64 *b=mvl_vector_data(vec).offset;
+		LIBMVL_OFFSET64 *b=mvl_vector_data_offset(vec);
 		LIBMVL_OFFSET64 *d=(LIBMVL_OFFSET64*)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_asc(stop-start, indices+start, d);
@@ -243,7 +245,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_DOUBLE: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		double *b=mvl_vector_data(vec).d;
+		double *b=mvl_vector_data_double(vec);
 		double *d=(double *)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_asc(stop-start, indices+start, d);
@@ -264,7 +266,7 @@ switch(mvl_vector_type(vec)) {
 	case LIBMVL_VECTOR_UINT8:
 	case LIBMVL_VECTOR_CSTRING: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		unsigned char *b=mvl_vector_data(vec).b;
+		unsigned char *b=mvl_vector_data_uint8(vec);
 		unsigned char *d=(unsigned char*)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_desc(stop-start, indices+start, d);
@@ -272,7 +274,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_INT32: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		int *b=mvl_vector_data(vec).i;
+		int *b=mvl_vector_data_int32(vec);
 		int *d=(int *)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_desc(stop-start, indices+start, d);
@@ -280,7 +282,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_FLOAT: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		float *b=mvl_vector_data(vec).f;
+		float *b=mvl_vector_data_float(vec);
 		float *d=(float *)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_desc(stop-start, indices+start, d);
@@ -288,7 +290,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_INT64: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		long long int *b=mvl_vector_data(vec).i64;
+		long long int *b=mvl_vector_data_int64(vec);
 		long long int *d=(long long int*)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_desc(stop-start, indices+start, d);
@@ -296,7 +298,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_OFFSET64: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		LIBMVL_OFFSET64 *b=mvl_vector_data(vec).offset;
+		LIBMVL_OFFSET64 *b=mvl_vector_data_offset(vec);
 		LIBMVL_OFFSET64 *d=(LIBMVL_OFFSET64*)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_desc(stop-start, indices+start, d);
@@ -304,7 +306,7 @@ switch(mvl_vector_type(vec)) {
 		}
 	case LIBMVL_VECTOR_DOUBLE: {
 		if(scratch.reserve((stop-start)*mvl_element_size(mvl_vector_type(vec)))<0)break;
-		double *b=mvl_vector_data(vec).d;
+		double *b=mvl_vector_data_double(vec);
 		double *d=(double *)scratch.data();
 		for(LIBMVL_OFFSET64 i=0;i<stop-start;i++)d[i]=b[indices[i+start]];
 		sort_indices_desc(stop-start, indices+start, d);
