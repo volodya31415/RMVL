@@ -3974,13 +3974,13 @@ if(Nbits!=length(data_list) || length(data_list)==0) {
 	return(R_NilValue);
 	}
 	
-if(Nbits*4!=mvl_vector_length(vec_stats)) {
+if(Nbits*sizeof(LIBMVL_VEC_STATS)!=mvl_vector_length(vec_stats)*sizeof(double)) {
 	mvl_free_named_list(L);
-	error("Not a spatial index (4)");
+	error("Not a spatial index (4) : malformed vector statistics");
 	return(R_NilValue);
 	}
 	
-vstats=(LIBMVL_VEC_STATS *)mvl_vector_data(vec_stats).f;
+vstats=(LIBMVL_VEC_STATS *)mvl_vector_data_double(vec_stats);
 
 first_mark=mvl_vector_data(vec_first_mark).i64;
 prev_mark=mvl_vector_data(vec_prev_mark).i64;
@@ -4201,9 +4201,9 @@ if(Nbits!=length(data_list) || length(data_list)==0) {
 	return(R_NilValue);
 	}
 	
-if(Nbits*4!=mvl_vector_length(vec_stats)) {
+if(Nbits*sizeof(LIBMVL_VEC_STATS)!=mvl_vector_length(vec_stats)*sizeof(double)) {
 	mvl_free_named_list(L);
-	error("Not a spatial index (4)");
+	error("Not a spatial index (4) : malformed vectors statistics");
 	return(R_NilValue);
 	}
 	
