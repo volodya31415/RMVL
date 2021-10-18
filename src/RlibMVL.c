@@ -9,6 +9,13 @@
 #endif
 #include <errno.h>
 #include "libMVL.h"
+
+/* This needs to be before including R headers because they redefine "error" as a macro */
+static inline int mvl_get_error(LIBMVL_CONTEXT *ctx)
+{
+return ctx->error;
+}
+
 #include <R.h>
 #include <Rinternals.h>
 //#include <Rext/Print.h>
@@ -2195,6 +2202,10 @@ if(libraries[idx].f==NULL) {
 	error("library not open for writing");
 	return(R_NilValue);
 	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	return(R_NilValue);
+	}
 
 if(length(type0)!=1) {
 	error("write_vector second argument must be a single integer");
@@ -2399,6 +2410,10 @@ if(libraries[idx].ctx==NULL) {
 	}
 if(libraries[idx].f==NULL) {
 	error("library not open for writing");
+	return(R_NilValue);
+	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 	
@@ -2700,6 +2715,10 @@ if(libraries[idx].ctx==NULL) {
 	}
 if(libraries[idx].f==NULL) {
 	error("library not open for writing");
+	return(R_NilValue);
+	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 		
@@ -3023,6 +3042,10 @@ if(libraries[idx].f==NULL) {
 	error("library not open for writing");
 	return(R_NilValue);
 	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	return(R_NilValue);
+	}
 
 if(TYPEOF(data_list)!=VECSXP) {
 	error("order_vectors first argument must be a list of data to sort");
@@ -3135,6 +3158,10 @@ if(libraries[idx].ctx==NULL) {
 	}
 if(libraries[idx].f==NULL) {
 	error("library not open for writing");
+	return(R_NilValue);
+	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
@@ -3301,6 +3328,10 @@ if(libraries[idx].ctx==NULL) {
 	}
 if(libraries[idx].f==NULL) {
 	error("library not open for writing");
+	return(R_NilValue);
+	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
@@ -3498,6 +3529,10 @@ if(libraries[idx].ctx==NULL) {
 	}
 if(libraries[idx].f==NULL) {
 	error("library not open for writing");
+	return(R_NilValue);
+	}
+if(mvl_get_error(libraries[idx].ctx)!=0) {
+	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
