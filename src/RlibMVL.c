@@ -221,6 +221,8 @@ if(mode==0) {
 	/* Read-only mapping; no need to use up a file descriptor */
 	if(p->modified) {
 		mvl_close(p->ctx);
+		if(mvl_get_error(p->ctx)!=0)
+			error("Error %d encountered when closing MVL file: %s", mvl_get_error(p->ctx), mvl_strerror(p->ctx));
 		}			
 	}
 	
@@ -317,6 +319,8 @@ if(p->data!=NULL) {
 	
 if(p->modified) {
 	mvl_close(p->ctx);
+	if(mvl_get_error(p->ctx)!=0)
+		error("Error %d encountered when closing MVL file: %s", mvl_get_error(p->ctx), mvl_strerror(p->ctx));
 	}
 	
 mvl_free_context(p->ctx);
@@ -2203,7 +2207,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
@@ -2413,7 +2417,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 	
@@ -2718,7 +2722,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 		
@@ -3043,7 +3047,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
@@ -3161,7 +3165,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
@@ -3331,7 +3335,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
@@ -3532,7 +3536,7 @@ if(libraries[idx].f==NULL) {
 	return(R_NilValue);
 	}
 if(mvl_get_error(libraries[idx].ctx)!=0) {
-	error("library has error status %d", mvl_get_error(libraries[idx].ctx));
+	error("library has error status %d: %s", mvl_get_error(libraries[idx].ctx), mvl_strerror(libraries[idx].ctx));
 	return(R_NilValue);
 	}
 
