@@ -564,6 +564,77 @@ mvl_group_lapply<-function(G, fn) {
 	return(L) 
 	}
 	
+	
+#' @export
+#'
+mvl_compute_repeats<-function(L) {
+	ans<-.Call(compute_repeats, L)
+	return(invisible(ans))
+	}
+	
+#' Compute and write extent index
+#'
+#' This function computes a hash-based index that allows to find indices of rows which hashes match query values.
+#' While it can be applied to arbitrary data, it is optimized for the common case when vectors contain stretches of repeated values
+#' describing row groups to be processed. This is particularly relevant for R because vectorized processing of row batches is the only practical way to scan very large tables using pure-R code. 
+#'
+#' \code{mvl_write_extent_index()} creates the index in memory and then writes it out. The memory usage is proportional to the number of 
+#' repeat stretches. Sorting tables improves performance, but is not a requirement.
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param L  list of vector like MVL_OBJECTs 
+#' @param name if specified add a named entry to MVL file directory
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
+#'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=(1:100) %% 10), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_extent_index(Mtmp, list(Mtmp$df1[,"y",ref=TRUE]), "df1_extent_index_y")
+#' Mtmp<-mvl_remap(Mtmp)
+#' }
+#' @export
+#'
+mvl_write_extent_index<-function(MVLHANDLE, L, name=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	offset<-.Call(write_extent_index, MVLHANDLE[["handle"]], L)
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+	return(invisible(offset))
+	}
+	
+#' Apply function to indices of rows with matching hashes
+#'
+#' This function is passed the index computed by \code{mvl_write_extent_index()} and a list of vectors, which rows are used to compute 64-bit hashes.
+#' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of with matching hashes.
+#'
+#' 64-bit hashes have very few collisions, nevertheless the user is advised to double check that the values actually match.
+#'
+#' @param extent_index  MVL_OBJECT computed by \code{mvl_write_extent_index()} 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @param fn a function of one argument - list of indices
+#' @return a list of results of function \code{fn}
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#'                                                                c(2, 3), "df1_sp_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)),
+#'                                            function(i, idx) { return(list(i, idx))})
+#' }
+#' @export
+#'
+mvl_extent_index_lapply<-function(extent_index, data_list, fn) {
+	L<-.Call(extent_index_lapply, extent_index, data_list, fn, new.env())
+	return(L)
+	}
+	
 #' Index copy vector
 #'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
