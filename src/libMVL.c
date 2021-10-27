@@ -2338,7 +2338,7 @@ el->size=new_size;
  */
 void mvl_find_repeats(LIBMVL_PARTITION *el, LIBMVL_OFFSET64 count, LIBMVL_VECTOR **vec, void **data)
 {
-LIBMVL_OFFSET64 extent_start, N;
+LIBMVL_OFFSET64 N;
 MVL_SORT_INFO info;
 MVL_SORT_UNIT a, b;
 
@@ -2520,7 +2520,7 @@ mvl_find_repeats(&(ei->partition), count, vec, data);
 ei->hash_map.hash_count=ei->partition.count-1;
 
 if(ei->hash_map.hash_size<ei->hash_map.hash_count || 
-	(ei->hash_map.flags  & (MVL_FLAG_OWN_HASH | MVL_FLAG_OWN_FIRST | MVL_FLAG_OWN_NEXT)!=(MVL_FLAG_OWN_HASH | MVL_FLAG_OWN_FIRST | MVL_FLAG_OWN_NEXT))) {
+	((ei->hash_map.flags  & (MVL_FLAG_OWN_HASH | MVL_FLAG_OWN_FIRST | MVL_FLAG_OWN_NEXT))!=(MVL_FLAG_OWN_HASH | MVL_FLAG_OWN_FIRST | MVL_FLAG_OWN_NEXT))) {
 	if(ei->hash_map.flags & MVL_FLAG_OWN_HASH)
 		free(ei->hash_map.hash);
 	if(ei->hash_map.flags & MVL_FLAG_OWN_FIRST)
@@ -2534,7 +2534,7 @@ if(ei->hash_map.hash_size<ei->hash_map.hash_count ||
 	ei->hash_map.first=do_malloc(ei->hash_map.hash_size, sizeof(*ei->hash_map.first));
 	ei->hash_map.next=do_malloc(ei->hash_map.hash_size, sizeof(*ei->hash_map.next));
 	}
-if(ei->hash_map.hash_map_size<ei->hash_map.hash_count | !(ei->hash_map.flags & MVL_FLAG_OWN_HASH_MAP)) {
+if(ei->hash_map.hash_map_size<ei->hash_map.hash_count || !(ei->hash_map.flags & MVL_FLAG_OWN_HASH_MAP)) {
 	if(ei->hash_map.flags & MVL_FLAG_OWN_HASH_MAP) {
 		free(ei->hash_map.hash_map);
 		}

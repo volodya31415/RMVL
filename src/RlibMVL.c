@@ -4410,7 +4410,6 @@ char *ps;
 int err;
 long long da;
 double dd;
-float df;
 int warn_once=1;
 
 if(i0>=i1)return 0;
@@ -5556,11 +5555,9 @@ SEXP data;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
-LIBMVL_OFFSET64 N, offset;
-double *doffset=(double *)&offset;
+LIBMVL_OFFSET64 N;
 double *dans;
 
-LIBMVL_NAMED_LIST *L;
 LIBMVL_PARTITION el;
 
 SEXP ans;
@@ -5825,7 +5822,7 @@ return(ans);
 
 SEXP extent_index_scan(SEXP extent_index0, SEXP fn, SEXP env)
 {
-LIBMVL_OFFSET64 index_offset, Nv, indices_free, *hash, k;
+LIBMVL_OFFSET64 index_offset, Nv, indices_free, k;
 int index_idx, err;
 SEXP ans, sa, R_fcall, tmp;
 double *pd;
