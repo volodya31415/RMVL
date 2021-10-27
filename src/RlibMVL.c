@@ -5756,6 +5756,74 @@ UNPROTECT(2);
 return(ans);
 }
 
+SEXP extent_index_scan(SEXP extent_index0, SEXP fn, SEXP env)
+{
+LIBMVL_OFFSET64 data_offset, index_offset, Nv, indices_free, *hash, k;
+int data_idx, index_idx, err;
+LIBMVL_VECTOR *vec;
+SEXP ans, sa, R_fcall, tmp;
+double *pd;
+char *flag;
+LIBMVL_EXTENT_INDEX ei;
+LIBMVL_EXTENT_LIST el;
+
+decode_mvl_object(extent_index0, &index_idx, &index_offset);
+
+mvl_init_extent_index(&ei);
+
+if(err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei)) {
+	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
+	return(R_NilValue);
+	}
+
+
+Nv=ei.hash_map.hash_count;
+
+	
+ans=PROTECT(allocVector(VECSXP, Nv));	
+
+R_fcall = PROTECT(lang3(fn, R_NilValue, R_NilValue));
+	
+mvl_init_extent_list(&el);
+
+for(LIBMVL_OFFSET64 i=0;i<Nv;i++) {
+	mvl_empty_extent_list(&el);
+	mvl_get_extents(&ei, ei.hash_map.hash[i], &el);
+	
+	indices_free=0;
+	
+	for(LIBMVL_OFFSET64 j=0;j<el.count;j++)indices_free+=el.stop[j]-el.start[j];
+	
+	if(indices_free<1)continue;
+	
+	sa=PROTECT(allocVector(REALSXP, indices_free));
+	pd=REAL(sa);
+	
+	k=0;
+	for(LIBMVL_OFFSET64 j=0;j<el.count;j++) {
+		for(LIBMVL_OFFSET64 m=el.start[j]; m<el.stop[j];m++,k++)
+			pd[k]=m+1;
+		}
+	
+
+	SETCADR(R_fcall, ScalarReal(i+1));
+	SETCADDR(R_fcall, sa);
+//	fprintf(stderr, "%lld %d %d %d (a)\n", i, MAYBE_REFERENCED(sa), -1, -1);
+	tmp=eval(R_fcall, env);
+//	if(MAYBE_REFERENCED(tmp))tmp=duplicate(tmp);
+//	fprintf(stderr, "%lld %d %d %d (b)\n", i, MAYBE_REFERENCED(sa), -1, MAYBE_REFERENCED(tmp));
+
+	SET_VECTOR_ELT(ans, i, tmp);
+	UNPROTECT(1);
+	}
+	
+mvl_free_extent_list_arrays(&el);
+mvl_free_extent_index_arrays(&ei);
+	
+UNPROTECT(2);
+return(ans);
+}
+
 
 static const R_CMethodDef cMethods[] = {
 //    {"foo", (DL_FUNC) &foo, 4, foo_t},
@@ -5804,6 +5872,7 @@ static const R_CallMethodDef callMethods[] = {
   {"write_extent_index",  (DL_FUNC) &write_extent_index, 2},
   {"compute_repeats",  (DL_FUNC) &compute_repeats, 1},
   {"extent_index_lapply",  (DL_FUNC) &extent_index_lapply, 4},
+  {"extent_index_scan",  (DL_FUNC) &extent_index_scan, 3},
    {NULL, NULL, 0}
 };
 

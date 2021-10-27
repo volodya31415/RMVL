@@ -2481,8 +2481,6 @@ if(ei->hash_map.hash_size>0) {
 	free(ei->hash_map.hash);
 	free(ei->hash_map.first);
 	free(ei->hash_map.next);
-	}
-if(ei->hash_map.hash_map_size>0) {
 	free(ei->hash_map.hash_map);
 	}
 ei->hash_map.hash_size=0;
@@ -2541,7 +2539,7 @@ L=mvl_create_named_list(5);
 
 mvl_add_list_entry(L, -1, "partition", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, ei->partition.count, ei->partition.offset, LIBMVL_NO_METADATA));
 mvl_add_list_entry(L, -1, "hash", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, ei->hash_map.hash_count, ei->hash_map.hash, LIBMVL_NO_METADATA));
-mvl_add_list_entry(L, -1, "first", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, ei->hash_map.hash_count, ei->hash_map.first, LIBMVL_NO_METADATA));
+mvl_add_list_entry(L, -1, "first", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, ei->hash_map.first_count, ei->hash_map.first, LIBMVL_NO_METADATA));
 mvl_add_list_entry(L, -1, "next", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, ei->hash_map.hash_count, ei->hash_map.next, LIBMVL_NO_METADATA));
 mvl_add_list_entry(L, -1, "hash_map", mvl_write_vector(ctx, LIBMVL_VECTOR_OFFSET64, ei->hash_map.hash_map_size, ei->hash_map.hash_map, LIBMVL_NO_METADATA));
 offset=mvl_write_named_list(ctx, L);
@@ -2560,10 +2558,12 @@ L=mvl_read_named_list(ctx, data, offset);
 mvl_free_extent_index_arrays(ei);
 ei->partition.count=0;
 ei->hash_map.hash_count=0;
+ei->hash_map.first_count=0;
 
 if(L==NULL) {
 	ei->partition.count=0;
 	ei->hash_map.hash_count=0;
+	ei->hash_map.first_count=0;
 	return(LIBMVL_ERR_INVALID_EXTENT_INDEX);
 	}
 	
@@ -2571,6 +2571,7 @@ vec=mvl_vector_from_offset(data, mvl_find_list_entry(L, -1, "partition"));
 if(vec==NULL) {
 	ei->partition.count=0;
 	ei->hash_map.hash_count=0;
+	ei->hash_map.first_count=0;
 	return(LIBMVL_ERR_INVALID_EXTENT_INDEX);
 	}
 
@@ -2582,6 +2583,7 @@ vec=mvl_vector_from_offset(data, mvl_find_list_entry(L, -1, "hash"));
 if(vec==NULL) {
 	ei->partition.count=0;
 	ei->hash_map.hash_count=0;
+	ei->hash_map.first_count=0;
 	return(LIBMVL_ERR_INVALID_EXTENT_INDEX);
 	}
 ei->hash_map.hash_size=0;
@@ -2589,17 +2591,20 @@ ei->hash_map.hash_count=mvl_vector_length(vec);
 ei->hash_map.hash=mvl_vector_data_offset(vec);
 
 vec=mvl_vector_from_offset(data, mvl_find_list_entry(L, -1, "first"));
-if(vec==NULL || mvl_vector_length(vec)!=ei->hash_map.hash_count) {
+if(vec==NULL) {
 	ei->partition.count=0;
 	ei->hash_map.hash_count=0;
+	ei->hash_map.first_count=0;
 	return(LIBMVL_ERR_INVALID_EXTENT_INDEX);
 	}
 ei->hash_map.first=mvl_vector_data_offset(vec);
+ei->hash_map.first_count=mvl_vector_length(vec);
 
 vec=mvl_vector_from_offset(data, mvl_find_list_entry(L, -1, "next"));
 if(vec==NULL || mvl_vector_length(vec)!=ei->hash_map.hash_count) {
 	ei->partition.count=0;
 	ei->hash_map.hash_count=0;
+	ei->hash_map.first_count=0;
 	return(LIBMVL_ERR_INVALID_EXTENT_INDEX);
 	}
 ei->hash_map.next=mvl_vector_data_offset(vec);
@@ -2608,6 +2613,7 @@ vec=mvl_vector_from_offset(data, mvl_find_list_entry(L, -1, "hash_map"));
 if(vec==NULL) {
 	ei->partition.count=0;
 	ei->hash_map.hash_count=0;
+	ei->hash_map.first_count=0;
 	return(LIBMVL_ERR_INVALID_EXTENT_INDEX);
 	}
 ei->hash_map.hash_map_size=mvl_vector_length(vec);

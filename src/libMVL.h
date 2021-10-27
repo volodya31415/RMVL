@@ -1104,6 +1104,7 @@ while(idx<count) {
 	}
 }
 
+
 /*! @brief Vector statistics.
  * 
  *  This structure can be allocated on stack.
