@@ -4398,14 +4398,20 @@ switch(TYPEOF(sexp)) {
 	}
 }
 
-int hash_vector_range(SEXP sexp, LIBMVL_OFFSET64 i0, LIBMVL_OFFSET64 i1, LIBMVL_OFFSET64 *out)
+/* Pass -1 to expected type to disable it */
+int hash_vector_range(SEXP sexp, LIBMVL_OFFSET64 i0, LIBMVL_OFFSET64 i1, int expected_type, LIBMVL_OFFSET64 *out)
 {
 int data_idx;
 LIBMVL_OFFSET64 data_offset;
 LIBMVL_VECTOR *vec;
 double *pd;
 int *pi;
+char *ps;
 int err;
+long long da;
+double dd;
+float df;
+int warn_once=1;
 
 if(i0>=i1)return 0;
 
@@ -4418,7 +4424,10 @@ switch(TYPEOF(sexp)) {
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			return -1;
 			}
-		if(err=mvl_hash_range(i0, i1, out, 1, &vec, (void **)&(libraries[data_idx].data), LIBMVL_ACCUMULATE_HASH)) {
+		if(0 && mvl_vector_type(vec)!=expected_type) {
+			error("Vector types do not match: expected %d got %d", mvl_vector_type(vec), expected_type);
+			}
+		if((err=mvl_hash_range(i0, i1, out, 1, &vec, (void **)&(libraries[data_idx].data), LIBMVL_ACCUMULATE_HASH))!=0) {
 			error("Error computing hashes (%d)", err);
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			return -1;
@@ -4431,8 +4440,33 @@ switch(TYPEOF(sexp)) {
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			i1=xlength(sexp);
 			}
-		for(LIBMVL_OFFSET64 i=i0;i<i1;i++)
-			out[i-i0]=mvl_accumulate_double_hash64(out[i-i0], &(pd[i]), 1);
+		switch(expected_type) {
+			case LIBMVL_VECTOR_INT32:
+			case LIBMVL_VECTOR_INT64:
+				for(LIBMVL_OFFSET64 i=i0;i<i1;i++) {
+					dd=floor(pd[i]);
+					if(dd!=pd[i] && warn_once) {
+						error("numeric() values are not integer when quering integer vector");
+						warn_once=0;
+						}
+					da=dd;
+					out[i-i0]=mvl_accumulate_int64_hash64(out[i-i0], &(da), 1);
+					}
+				break;
+			case LIBMVL_VECTOR_FLOAT:
+			case LIBMVL_VECTOR_DOUBLE:
+				for(LIBMVL_OFFSET64 i=i0;i<i1;i++)
+					out[i-i0]=mvl_accumulate_double_hash64(out[i-i0], &(pd[i]), 1);
+				break;
+			default:
+				if(expected_type>=0) {
+					error("using numeric() values to query MVL vector of type %d", expected_type);
+					warn_once=0;
+					}
+				for(LIBMVL_OFFSET64 i=i0;i<i1;i++)
+					out[i-i0]=mvl_accumulate_double_hash64(out[i-i0], &(pd[i]), 1);
+				break;
+			}
 		return 0;
 	case INTSXP:
 		pi=INTEGER(sexp);
@@ -4441,8 +4475,41 @@ switch(TYPEOF(sexp)) {
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			i1=xlength(sexp);
 			}
-		for(LIBMVL_OFFSET64 i=i0;i<i1;i++)
-			out[i-i0]=mvl_accumulate_int32_hash64(out[i-i0], &(pi[i]), 1);
+		switch(expected_type) {
+			case LIBMVL_VECTOR_INT32:
+			case LIBMVL_VECTOR_INT64:
+				for(LIBMVL_OFFSET64 i=i0;i<i1;i++)
+					out[i-i0]=mvl_accumulate_int32_hash64(out[i-i0], &(pi[i]), 1);
+				break;
+			case LIBMVL_VECTOR_FLOAT:
+			case LIBMVL_VECTOR_DOUBLE:
+				for(LIBMVL_OFFSET64 i=i0;i<i1;i++) {
+					dd=pi[i];
+					out[i-i0]=mvl_accumulate_double_hash64(out[i-i0], &(dd), 1);
+					}
+				break;
+			default:
+				if(expected_type>=0) {
+					error("using numeric() values to query MVL vector of type %d", expected_type);
+					warn_once=0;
+					}
+				for(LIBMVL_OFFSET64 i=i0;i<i1;i++)
+					out[i-i0]=mvl_accumulate_int32_hash64(out[i-i0], &(pi[i]), 1);
+				break;
+			}
+		return 0;
+	case STRSXP:
+		if(i1>xlength(sexp)) {
+			error("Vector lengths do not match");
+			memset(out, 0, (i1-i0)*sizeof(*out));
+			i1=xlength(sexp);
+			}
+		/* TODO: NA_STRING in R is just "NA" we might, or might not want to alter the code below */
+		for(LIBMVL_OFFSET64 i=i0;i<i1;i++) {
+			ps=CHAR(STRING_ELT(sexp, i));
+			out[i-i0]=mvl_accumulate_hash64(out[i-i0], ps, strlen(ps));
+			}
+		
 		return 0;
 	default:
 		error("Cannot handle R vector of type %d", TYPEOF(sexp));
@@ -5561,9 +5628,7 @@ void **vec_data;
 LIBMVL_VECTOR **vectors;
 LIBMVL_OFFSET64 N, offset;
 double *doffset=(double *)&offset;
-double *dans;
 
-LIBMVL_NAMED_LIST *L;
 LIBMVL_EXTENT_INDEX ei;
 
 SEXP ans, class;
@@ -5661,23 +5726,25 @@ if(TYPEOF(data_list)!=VECSXP) {
 	return(R_NilValue);
 	}
 	
-if(length(data_list)<1) {
-	return(R_NilValue);
-	}
-
 decode_mvl_object(extent_index0, &index_idx, &index_offset);
 
 mvl_init_extent_index(&ei);
 
-if(err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei)) {
+if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei))!=0) {
 	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
 	return(R_NilValue);
 	}
 
+if(xlength(data_list)!=ei.hash_map.vec_count) {
+	error("Number of vectors (columns) does not match - original index used %d vectors", ei.hash_map.vec_count);
+	mvl_free_extent_index_arrays(&ei);
+	return(R_NilValue);
+	}
 	
 switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 	case REALSXP:
 	case INTSXP:
+	case STRSXP:
 		Nv=xlength(VECTOR_ELT(data_list, 0));
 		break;
 	case VECSXP:
@@ -5692,7 +5759,7 @@ switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 		if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64)Nv--;
 		break;
 	default:
-		mvl_free_extent_list_arrays(&el);
+		mvl_free_extent_index_arrays(&ei);
 		error("Cannot handle R vector of type %d", TYPEOF(VECTOR_ELT(data_list, 0)));
 		return(R_NilValue);
 		break;
@@ -5704,7 +5771,7 @@ hash=calloc(Nv, sizeof(*hash));
 for(LIBMVL_OFFSET64 i=0;i<Nv;i++)hash[i]=MVL_SEED_HASH_VALUE;
 
 for(LIBMVL_OFFSET64 i=0;i<xlength(data_list);i++) {
-	if(hash_vector_range(VECTOR_ELT(data_list, i), 0, Nv, hash)) {
+	if(hash_vector_range(VECTOR_ELT(data_list, i), 0, Nv, ei.hash_map.vec_types[i], hash)) {
 		return(R_NilValue);
 		}
 	}
@@ -5758,12 +5825,10 @@ return(ans);
 
 SEXP extent_index_scan(SEXP extent_index0, SEXP fn, SEXP env)
 {
-LIBMVL_OFFSET64 data_offset, index_offset, Nv, indices_free, *hash, k;
-int data_idx, index_idx, err;
-LIBMVL_VECTOR *vec;
+LIBMVL_OFFSET64 index_offset, Nv, indices_free, *hash, k;
+int index_idx, err;
 SEXP ans, sa, R_fcall, tmp;
 double *pd;
-char *flag;
 LIBMVL_EXTENT_INDEX ei;
 LIBMVL_EXTENT_LIST el;
 
@@ -5771,7 +5836,7 @@ decode_mvl_object(extent_index0, &index_idx, &index_offset);
 
 mvl_init_extent_index(&ei);
 
-if(err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei)) {
+if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei))!=0) {
 	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
 	return(R_NilValue);
 	}

@@ -623,7 +623,7 @@ mvl_write_extent_index<-function(MVLHANDLE, L, name=NULL) {
 #'
 #' 64-bit hashes have very few collisions, nevertheless the user is advised to double check that the values actually match.
 #' 
-#' The hash computation is type dependent, so \code{1} stored as an integer will produce a different hash than when stored as floating point.
+#' The hash computation is type dependent, so \code{1} stored as an integer will produce a different hash than when stored as floating point. This function accounts for this by internally converting to types the index was generated with.
 #'
 #' @param extent_index  MVL_OBJECT computed by \code{mvl_write_extent_index()} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. If missing, scan the entire table one hash at a time.

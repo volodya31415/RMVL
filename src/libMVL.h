@@ -981,6 +981,7 @@ int mvl_hash_range(LIBMVL_OFFSET64 i0, LIBMVL_OFFSET64 i1, LIBMVL_OFFSET64 *hash
 #define MVL_FLAG_OWN_HASH_MAP	(1<<1)
 #define MVL_FLAG_OWN_FIRST	(1<<2)
 #define MVL_FLAG_OWN_NEXT	(1<<3)
+#define MVL_FLAG_OWN_VEC_TYPES	(1<<4)
 
 /*! @brief This structure is used for constructing associative maps and also for describing index groupings
  * 
@@ -997,6 +998,8 @@ typedef struct {
 	LIBMVL_OFFSET64 *hash_map; //!<  This is an associative table mapping hash & (hash_map_size-1) into indices in the "first" array
 	LIBMVL_OFFSET64 *first;  //!< array of indices in each group
 	LIBMVL_OFFSET64 *next; //!< array of next indices in each group. ~0LLU indicates end of group
+	LIBMVL_OFFSET64 vec_count;  //!< Number of vectors used to produce hashes
+	int *vec_types; //!< Types of vectors used to produce hashes
 	} HASH_MAP;
 
 /* Compute suggested hash map size */
