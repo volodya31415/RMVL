@@ -931,6 +931,21 @@ for(i=0;i<count;i++) {
 return(x);
 }
 
+/*! @brief Flags passed to mvl_hash_indices() and mvl_hash_range()
+ * 
+ *  Use LIBMVL_COMPLETE_HASH when computation is done in a single call, or spread out the computation over multiple calls.
+ *  Initialization and finalization can also be done outside of mvl_hash_*() functions.
+ * 
+*   @def LIBMVL_ACCUMULATE_HASH
+*     No initialization or finalization, just accumulate hash value
+*   @def LIBMVL_INIT_HASH	
+*     Initialize hash value, then accumulate
+*   @def LIBMVL_FINALIZE_HASH	
+*     Accumulate hash value and then finalize
+*   @def LIBMVL_COMPLETE_HASH 
+*    Initialize, accumulate, finalize.
+*/
+
 
 #define LIBMVL_ACCUMULATE_HASH	0
 #define LIBMVL_INIT_HASH	1
@@ -1055,7 +1070,7 @@ void mvl_init_extent_list(LIBMVL_EXTENT_LIST *el);
 void mvl_free_extent_list_arrays(LIBMVL_EXTENT_LIST *el);
 void mvl_extend_extent_list(LIBMVL_EXTENT_LIST *el, LIBMVL_OFFSET64 nelem);
 
-/*! @brief And index into a table-like set of vectors with equal number of elements
+/*! @brief An index into a table-like set of vectors with equal number of elements
  * 
  *  While it would work for any such vector set the structure has been optimized for the case of rows with repeated values,
  *  such as occur with sorted tables.
