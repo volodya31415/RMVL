@@ -5555,7 +5555,6 @@ SEXP data;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
-LIBMVL_OFFSET64 N;
 double *dans;
 
 LIBMVL_PARTITION el;
@@ -5596,8 +5595,6 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 	vec_data[k]=libraries[data_idx].data;
 	}
 
-N=mvl_vector_length(vectors[0]);
-
 memset(&el, 0, sizeof(el));
 mvl_find_repeats(&el, xlength(data_list), vectors, vec_data);
 
@@ -5623,7 +5620,7 @@ SEXP data;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
-LIBMVL_OFFSET64 N, offset;
+LIBMVL_OFFSET64 offset;
 double *doffset=(double *)&offset;
 
 LIBMVL_EXTENT_INDEX ei;
@@ -5685,8 +5682,6 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		}
 	vec_data[k]=libraries[data_idx].data;
 	}
-
-N=mvl_vector_length(vectors[0]);
 
 mvl_init_extent_index(&ei);
 mvl_compute_extent_index(&ei, xlength(data_list), vectors, vec_data);
