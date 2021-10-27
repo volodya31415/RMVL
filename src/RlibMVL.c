@@ -2853,7 +2853,7 @@ switch(type) {
 				for(i=0;i<xlength(data);i++)
 					ddata[i]=pi[i];
 				mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, xlength(data), ddata);
-				free(fdata);
+				free(ddata);
 				break;
 				}
 			default:
@@ -4418,7 +4418,7 @@ switch(TYPEOF(sexp)) {
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			return -1;
 			}
-		if(err=mvl_hash_range(i0, i1, out, 1, &vec, &(libraries[data_idx].data), LIBMVL_ACCUMULATE_HASH)) {
+		if(err=mvl_hash_range(i0, i1, out, 1, &vec, (void **)&(libraries[data_idx].data), LIBMVL_ACCUMULATE_HASH)) {
 			error("Error computing hashes (%d)", err);
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			return -1;
@@ -5483,28 +5483,24 @@ return(ans);
 
 SEXP compute_repeats(SEXP data_list)
 {
-int data_idx, first_count;
+int data_idx;
 LIBMVL_OFFSET64 data_offset;
 SEXP data;
 
-int err;
-
 void **vec_data;
 LIBMVL_VECTOR **vectors;
-LIBMVL_OFFSET64 *v_idx, *hash, *count;
 LIBMVL_OFFSET64 N, offset;
 double *doffset=(double *)&offset;
-long long *first, *prev;
 double *dans;
 
 LIBMVL_NAMED_LIST *L;
 LIBMVL_PARTITION el;
 
-SEXP ans, class;
+SEXP ans;
 	
 
 if(TYPEOF(data_list)!=VECSXP) {
-	error("compute_extent_index first argument must be a list of data to sort");
+	error("compute_repeats first argument must be a list of data to sort");
 	return(R_NilValue);
 	}
 
@@ -5557,18 +5553,14 @@ return(ans);
 
 SEXP write_extent_index(SEXP idx0, SEXP data_list)
 {
-int idx, data_idx, first_count;
+int idx, data_idx;
 LIBMVL_OFFSET64 data_offset;
 SEXP data;
 
-int err;
-
 void **vec_data;
 LIBMVL_VECTOR **vectors;
-LIBMVL_OFFSET64 *v_idx, *hash, *count;
 LIBMVL_OFFSET64 N, offset;
 double *doffset=(double *)&offset;
-long long *first, *prev;
 double *dans;
 
 LIBMVL_NAMED_LIST *L;
@@ -5656,16 +5648,11 @@ return(ans);
 
 SEXP extent_index_lapply(SEXP extent_index0, SEXP data_list, SEXP fn, SEXP env)
 {
-LIBMVL_OFFSET64 data_offset, index_offset, *query_mark, Nv, N2, indices_size, indices_free, *hash, k;
+LIBMVL_OFFSET64 data_offset, index_offset, Nv, indices_free, *hash, k;
 int data_idx, index_idx, err;
 LIBMVL_VECTOR *vec;
 SEXP ans, sa, R_fcall, tmp;
-double *values, *pd;
-LIBMVL_NAMED_LIST *L;
-int *bits, Nbits;
-long long *first, *first_mark, *prev_mark, *mark, *prev, max_count, ball_size;
-LIBMVL_VEC_STATS *vstats;
-char *ball;
+double *pd;
 LIBMVL_EXTENT_INDEX ei;
 LIBMVL_EXTENT_LIST el;
 
@@ -5697,7 +5684,7 @@ switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 		decode_mvl_object(VECTOR_ELT(data_list, 0), &data_idx, &data_offset);
 		vec=get_mvl_vector(data_idx, data_offset);
 		if(vec==NULL) {
-			mvl_free_named_list(L);
+			mvl_free_extent_list_arrays(&el);
 			error("Not an MVL object");
 			return(R_NilValue);
 			}
@@ -5705,7 +5692,7 @@ switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 		if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64)Nv--;
 		break;
 	default:
-		mvl_free_named_list(L);
+		mvl_free_extent_list_arrays(&el);
 		error("Cannot handle R vector of type %d", TYPEOF(VECTOR_ELT(data_list, 0)));
 		return(R_NilValue);
 		break;
