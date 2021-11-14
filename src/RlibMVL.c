@@ -427,20 +427,20 @@ switch(TYPEOF(indices)) {
 		
 		switch(mvl_vector_type(vec)) {
 			case LIBMVL_VECTOR_OFFSET64:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i64[m]-1;
-//				memcpy(v_idx, mvl_vector_data(vec).offset, N*sizeof(*v_idx));
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_int64(vec)[m]-1;
+//				memcpy(v_idx, mvl_vector_data_offset(vec), N*sizeof(*v_idx));
 				break;
 			case LIBMVL_VECTOR_INT32:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i[m]-1;
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_int32(vec)[m]-1;
 				break;
 			case LIBMVL_VECTOR_INT64:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i64[m]-1;
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_int64(vec)[m]-1;
 				break;
 			case LIBMVL_VECTOR_DOUBLE:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).d[m]-1;
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_double(vec)[m]-1;
 				break;
 			case LIBMVL_VECTOR_FLOAT:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).f[m]-1;
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_float(vec)[m]-1;
 				break;
 			default:
 				error("Cannot interpret MVL object as indices");
@@ -788,23 +788,23 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, mvl_vector_length(vec)*field_size));
 			pc=RAW(v);
 			for(j=0;j<mvl_vector_length(vec)*field_size;j++)
-				pc[j]=mvl_vector_data(vec).b[j];
+				pc[j]=mvl_vector_data_uint8(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
 			pi=INTEGER(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pi[j]=mvl_vector_data(vec).i[j];
+				pi[j]=mvl_vector_data_int32(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -812,7 +812,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pd[j]=mvl_vector_data(vec).d[j];
+				pd[j]=mvl_vector_data_double(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -820,7 +820,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++) {
-				offset=mvl_vector_data(vec).offset[j];
+				offset=mvl_vector_data_offset(vec)[j];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -911,33 +911,33 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				pc[j]=mvl_vector_data(vec).b[pidx[j]];
+				pc[j]=mvl_vector_data_uint8(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
 			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				pi[j]=mvl_vector_data(vec).i[pidx[j]];
+				pi[j]=mvl_vector_data_int32(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_INT64:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(RAW(v)[j]), &(mvl_vector_data(vec).i64[pidx[j]]), field_size);
+				memcpy(&(RAW(v)[j]), &(mvl_vector_data_int64(vec)[pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
@@ -945,7 +945,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(pc[j]), &(mvl_vector_data(vec).i64[pidx[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data_int64(vec)[pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
@@ -953,7 +953,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).d[pidx[j]];
+				pd[j]=mvl_vector_data_double(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -961,7 +961,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[pidx[j]];
+				offset=mvl_vector_data_offset(vec)[pidx[j]];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -1052,26 +1052,26 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				pc[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)pidx[j]];
+				pc[j]=mvl_vector_data_uint8(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
 			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				pi[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)pidx[j]];
+				pi[j]=mvl_vector_data_int32(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1079,7 +1079,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(pc[j]), &(mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)pidx[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data_int64(vec)[(LIBMVL_OFFSET64)pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
@@ -1087,7 +1087,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
-				memcpy(&(pc[j]), &(mvl_vector_data(vec).f[(LIBMVL_OFFSET64)pidx[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data_float(vec)[(LIBMVL_OFFSET64)pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
@@ -1095,7 +1095,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)pidx[j]];
+				pd[j]=mvl_vector_data_double(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1103,7 +1103,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)pidx[j]];
+				offset=mvl_vector_data_offset(vec)[(LIBMVL_OFFSET64)pidx[j]];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -1200,10 +1200,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, N));
 			pc=RAW(v);
 			for(j=0;j<N;j++)
-				pc[j]=mvl_vector_data(vec).b[v_idx[j]];
+				pc[j]=mvl_vector_data_uint8(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
@@ -1211,16 +1211,16 @@ for(i=0;i<xlength(offsets);i++) {
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
 			pi=INTEGER(v);
 			for(j=0;j<N;j++)
-				pi[j]=mvl_vector_data(vec).i[v_idx[j]];
+				pi[j]=mvl_vector_data_int32(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1228,7 +1228,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, N*field_size));
 			pc=RAW(v);
 			for(j=0;j<N*field_size;j+=field_size)
-				memcpy(&(pc[j]), &(mvl_vector_data(vec).i64[v_idx[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data_int64(vec)[v_idx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
@@ -1236,7 +1236,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, N*field_size));
 			pc=RAW(v);
 			for(j=0;j<N*field_size;j+=field_size)
-				memcpy(&(pc[j]), &(mvl_vector_data(vec).f[v_idx[j]]), field_size);
+				memcpy(&(pc[j]), &(mvl_vector_data_float(vec)[v_idx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);			
 			break;
@@ -1244,7 +1244,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			for(j=0;j<N;j++)
-				pd[j]=mvl_vector_data(vec).d[v_idx[j]];
+				pd[j]=mvl_vector_data_double(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1252,7 +1252,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			for(j=0;j<N;j++) {
-				offset=mvl_vector_data(vec).offset[v_idx[j]];
+				offset=mvl_vector_data_offset(vec)[v_idx[j]];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -1371,24 +1371,24 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, mvl_vector_length(vec)));
 			pc=RAW(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pc[j]=mvl_vector_data(vec).b[j];
+				pc[j]=mvl_vector_data_uint8(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
 			pi=INTEGER(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pi[j]=mvl_vector_data(vec).i[j];
+				pi[j]=mvl_vector_data_int32(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1397,7 +1397,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pd[j]=mvl_vector_data(vec).i64[j];
+				pd[j]=mvl_vector_data_int64(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1406,7 +1406,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pd[j]=mvl_vector_data(vec).f[j];
+				pd[j]=mvl_vector_data_float(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1414,7 +1414,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++)
-				pd[j]=mvl_vector_data(vec).d[j];
+				pd[j]=mvl_vector_data_double(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1422,7 +1422,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, mvl_vector_length(vec)));
 			pd=REAL(v);
 			for(j=0;j<mvl_vector_length(vec);j++) {
-				offset=mvl_vector_data(vec).offset[j];
+				offset=mvl_vector_data_offset(vec)[j];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -1505,26 +1505,26 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				pc[j]=mvl_vector_data(vec).b[pidx[j]];
+				pc[j]=mvl_vector_data_uint8(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
 			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				pi[j]=mvl_vector_data(vec).i[pidx[j]];
+				pi[j]=mvl_vector_data_int32(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1533,7 +1533,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).i64[pidx[j]];
+				pd[j]=mvl_vector_data_int64(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1542,7 +1542,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).f[pidx[j]];
+				pd[j]=mvl_vector_data_float(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1550,7 +1550,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).d[pidx[j]];
+				pd[j]=mvl_vector_data_double(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1558,7 +1558,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[pidx[j]];
+				offset=mvl_vector_data_offset(vec)[pidx[j]];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -1643,26 +1643,26 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)));
 			pc=RAW(v);
 			for(j=0;j<xlength(indicies);j++)
-				pc[j]=mvl_vector_data(vec).b[(LIBMVL_OFFSET64)pidx[j]];
+				pc[j]=mvl_vector_data_uint8(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
 			pi=INTEGER(v);
 			for(j=0;j<xlength(indicies);j++)
-				pi[j]=mvl_vector_data(vec).i[(LIBMVL_OFFSET64)pidx[j]];
+				pi[j]=mvl_vector_data_int32(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1671,7 +1671,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).i64[(LIBMVL_OFFSET64)pidx[j]];
+				pd[j]=mvl_vector_data_int64(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1680,7 +1680,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).f[(LIBMVL_OFFSET64)pidx[j]];
+				pd[j]=mvl_vector_data_float(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1688,7 +1688,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++)
-				pd[j]=mvl_vector_data(vec).d[(LIBMVL_OFFSET64)pidx[j]];
+				pd[j]=mvl_vector_data_double(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1696,7 +1696,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, xlength(indicies)));
 			pd=REAL(v);
 			for(j=0;j<xlength(indicies);j++) {
-				offset=mvl_vector_data(vec).offset[(LIBMVL_OFFSET64)pidx[j]];
+				offset=mvl_vector_data_offset(vec)[(LIBMVL_OFFSET64)pidx[j]];
 				pd[j]=*doffset2;
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
@@ -1786,10 +1786,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(RAWSXP, N));
 			pc=RAW(v);
 			for(j=0;j<N;j++)
-				pc[j]=mvl_vector_data(vec).b[v_idx[j]];
+				pc[j]=mvl_vector_data_uint8(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
@@ -1797,16 +1797,16 @@ for(i=0;i<xlength(offsets);i++) {
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
 			pi=INTEGER(v);
 			for(j=0;j<N;j++)
-				pi[j]=mvl_vector_data(vec).i[v_idx[j]];
+				pi[j]=mvl_vector_data_int32(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1815,7 +1815,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			for(j=0;j<N;j++)
-				pd[j]=mvl_vector_data(vec).i64[v_idx[j]];
+				pd[j]=mvl_vector_data_int64(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1824,7 +1824,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			for(j=0;j<N;j++)
-				pd[j]=mvl_vector_data(vec).f[v_idx[j]];
+				pd[j]=mvl_vector_data_float(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1832,7 +1832,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			for(j=0;j<N;j++)
-				pd[j]=mvl_vector_data(vec).d[v_idx[j]];
+				pd[j]=mvl_vector_data_double(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -1840,7 +1840,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			poffs=(LIBMVL_OFFSET64 *)REAL(v);
 			for(j=0;j<N;j++) {
-				poffs[j]=mvl_vector_data(vec).offset[v_idx[j]];
+				poffs[j]=mvl_vector_data_offset(vec)[v_idx[j]];
 				}
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
@@ -1977,7 +1977,7 @@ for(i=0;i<xlength(offsets);i++) {
 			switch(mvl_vector_type(vec_idx)) { \
 				case LIBMVL_VECTOR_OFFSET64: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).i64[j]-1; \
+						LIBMVL_OFFSET64 j0=mvl_vector_data_int64(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
 							} \
@@ -1985,7 +1985,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_INT32: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).i[j]-1; \
+						LIBMVL_OFFSET64 j0=mvl_vector_data_int32(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
 							} \
@@ -1993,7 +1993,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_INT64: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).i64[j]-1; \
+						LIBMVL_OFFSET64 j0=mvl_vector_data_int64(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
 							} \
@@ -2001,7 +2001,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_DOUBLE: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).d[j]-1; \
+						LIBMVL_OFFSET64 j0=mvl_vector_data_double(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
 							} \
@@ -2009,7 +2009,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_FLOAT: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data(vec_idx).f[j]-1; \
+						LIBMVL_OFFSET64 j0=mvl_vector_data_float(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
 							} \
@@ -2068,25 +2068,25 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, N));
 			pc=RAW(v);
-			INDEX_LOOP(pc[j]=mvl_vector_data(vec).b[j0]);
+			INDEX_LOOP(pc[j]=mvl_vector_data_uint8(vec)[j0]);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data(vec).b, mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data(v).b, mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
 			pi=INTEGER(v);
-			INDEX_LOOP(pi[j]=mvl_vector_data(vec).i[j0]);
+			INDEX_LOOP(pi[j]=mvl_vector_data_int32(vec)[j0]);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -2094,7 +2094,7 @@ for(i=0;i<xlength(offsets);i++) {
 			warning("Converted 64-bit integers to doubles");
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
-			INDEX_LOOP(pd[j]=mvl_vector_data(vec).i64[j0]);
+			INDEX_LOOP(pd[j]=mvl_vector_data_int64(vec)[j0]);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -2102,14 +2102,14 @@ for(i=0;i<xlength(offsets);i++) {
 			//warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
-			INDEX_LOOP(pd[j]=mvl_vector_data(vec).f[j0]);
+			INDEX_LOOP(pd[j]=mvl_vector_data_float(vec)[j0]);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_DOUBLE:
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
-			pd2=mvl_vector_data(vec).d;
+			pd2=mvl_vector_data_double(vec);
 			INDEX_LOOP(pd[j]=pd2[j0]);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -2117,7 +2117,7 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, N));
 			poffs=(LIBMVL_OFFSET64 *)REAL(v);
-			INDEX_LOOP(poffs[j]=mvl_vector_data(vec).offset[j0]);
+			INDEX_LOOP(poffs[j]=mvl_vector_data_offset(vec)[j0]);
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
 			classgets(v, class);
@@ -3011,7 +3011,7 @@ for(k=0;k<xlength(data_list);k++) {
 					}
 				//Rprintf("STRVEC length %ld\n", mvl_vector_length(vec));
 				total_length+=mvl_vector_length(vec)-1;
-				char_total_length+=mvl_vector_data(vec).offset[mvl_vector_length(vec)-1]-mvl_vector_data(vec).offset[0];
+				char_total_length+=mvl_vector_data_offset(vec)[mvl_vector_length(vec)-1]-mvl_vector_data_offset(vec)[0];
 				break;
 			default:
 				error("Internal conversion between types of MVL objects not supported yet");
@@ -3044,7 +3044,7 @@ for(k=0;k<xlength(data_list);k++) {
 		vec=get_mvl_vector(data_idx, data_offset);
 		
 		if(mvl_vector_type(vec)==type) {
-			mvl_rewrite_vector(libraries[idx].ctx, type, offset, vec_idx, mvl_vector_length(vec), (mvl_vector_data(vec).b));
+			mvl_rewrite_vector(libraries[idx].ctx, type, offset, vec_idx, mvl_vector_length(vec), (mvl_vector_data_uint8(vec)));
 			vec_idx+=mvl_vector_length(vec);
 			continue;
 			}
@@ -3059,12 +3059,12 @@ for(k=0;k<xlength(data_list);k++) {
 			case LIBMVL_VECTOR_DOUBLE:
 				break;
 			case 10000:
-				pc=sizeof(LIBMVL_VECTOR_HEADER)+(unsigned char *)get_mvl_vector(data_idx, mvl_vector_data(vec).offset[0]-sizeof(LIBMVL_VECTOR_HEADER));
+				pc=sizeof(LIBMVL_VECTOR_HEADER)+(unsigned char *)get_mvl_vector(data_idx, mvl_vector_data_offset(vec)[0]-sizeof(LIBMVL_VECTOR_HEADER));
 				if(pc==NULL) {
 					error("Invalid packed list");
 					return(R_NilValue);
 					}
-				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, mvl_vector_data(vec).offset[mvl_vector_length(vec)-1]-mvl_vector_data(vec).offset[0], pc);
+				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, mvl_vector_data_offset(vec)[mvl_vector_length(vec)-1]-mvl_vector_data_offset(vec)[0], pc);
 				//Rprintf("s# %ld %ld\n", vec_idx, char_idx);
 
 				#define REWRITE_BUF_SIZE (1024*1024)
@@ -3077,16 +3077,16 @@ for(k=0;k<xlength(data_list);k++) {
 				
 				for(j=1;j<mvl_vector_length(vec);j+=REWRITE_BUF_SIZE) {
 					for(i=0;i+j<mvl_vector_length(vec) && i<REWRITE_BUF_SIZE;i++)
-						strvec[i]=char_offset+char_idx+(mvl_vector_data(vec).offset[j+i]-mvl_vector_data(vec).offset[0]);
+						strvec[i]=char_offset+char_idx+(mvl_vector_data_offset(vec)[j+i]-mvl_vector_data_offset(vec)[0]);
 					i=j+REWRITE_BUF_SIZE>=mvl_vector_length(vec) ? mvl_vector_length(vec)-j : REWRITE_BUF_SIZE;
 					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, offset, vec_idx, i, strvec);
 					vec_idx+=i;
 					}
 					
 				
-				/* TODO: all offsets need to shift by char_idx-mvl_vector_data(vec).offset[0] */
+				/* TODO: all offsets need to shift by char_idx-mvl_vector_data_offset(vec)[0] */
 				
-				char_idx+=mvl_vector_data(vec).offset[mvl_vector_length(vec)-1]-mvl_vector_data(vec).offset[0];
+				char_idx+=mvl_vector_data_offset(vec)[mvl_vector_length(vec)-1]-mvl_vector_data_offset(vec)[0];
 				//Rprintf("s#2 %ld %ld\n", vec_idx, char_idx);
 				
 				free(strvec);
@@ -3384,19 +3384,19 @@ switch(TYPEOF(indices)) {
 		
 		switch(mvl_vector_type(vec)) {
 			case LIBMVL_VECTOR_OFFSET64:
-				memcpy(v_idx, mvl_vector_data(vec).offset, N*sizeof(*v_idx));
+				memcpy(v_idx, mvl_vector_data_offset(vec), N*sizeof(*v_idx));
 				break;
 			case LIBMVL_VECTOR_INT32:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i[m];
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_int32(vec)[m];
 				break;
 			case LIBMVL_VECTOR_INT64:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).i64[m];
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_int64(vec)[m];
 				break;
 			case LIBMVL_VECTOR_DOUBLE:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).d[m];
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_double(vec)[m];
 				break;
 			case LIBMVL_VECTOR_FLOAT:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data(vec).f[m];
+				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_float(vec)[m];
 				break;
 			default:
 				error("Cannot interpret MVL object as indices");
@@ -4574,7 +4574,7 @@ if(mvl_vector_type(vec_bits)!=LIBMVL_VECTOR_INT32
 	
 N2=mvl_vector_length(vec_first_mark);
 	
-bits=mvl_vector_data(vec_bits).i;
+bits=mvl_vector_data_int32(vec_bits);
 Nbits=mvl_vector_length(vec_bits);
 
 if(Nbits!=length(data_list) || length(data_list)==0) {
@@ -4591,12 +4591,12 @@ if(Nbits*sizeof(LIBMVL_VEC_STATS)!=mvl_vector_length(vec_stats)*sizeof(double)) 
 	
 vstats=(LIBMVL_VEC_STATS *)mvl_vector_data_double(vec_stats);
 
-first_mark=mvl_vector_data(vec_first_mark).i64;
-prev_mark=mvl_vector_data(vec_prev_mark).i64;
-mark=mvl_vector_data(vec_mark).i64;
-prev=mvl_vector_data(vec_prev).i64;
-first=mvl_vector_data(vec_first).i64;
-max_count=mvl_vector_data(vec_max_count).i64[0];
+first_mark=mvl_vector_data_int64(vec_first_mark);
+prev_mark=mvl_vector_data_int64(vec_prev_mark);
+mark=mvl_vector_data_int64(vec_mark);
+prev=mvl_vector_data_int64(vec_prev);
+first=mvl_vector_data_int64(vec_first);
+max_count=mvl_vector_data_int64(vec_max_count)[0];
 
 
 switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
@@ -4801,7 +4801,7 @@ if(mvl_vector_type(vec_bits)!=LIBMVL_VECTOR_INT32
 	
 N2=mvl_vector_length(vec_first_mark);
 	
-bits=mvl_vector_data(vec_bits).i;
+bits=mvl_vector_data_int32(vec_bits);
 Nbits=mvl_vector_length(vec_bits);
 
 if(Nbits!=length(data_list) || length(data_list)==0) {
@@ -4816,14 +4816,14 @@ if(Nbits*sizeof(LIBMVL_VEC_STATS)!=mvl_vector_length(vec_stats)*sizeof(double)) 
 	return(R_NilValue);
 	}
 	
-vstats=(LIBMVL_VEC_STATS *)mvl_vector_data(vec_stats).f;
+vstats=(LIBMVL_VEC_STATS *)mvl_vector_data_float(vec_stats);
 
-first_mark=mvl_vector_data(vec_first_mark).i64;
-prev_mark=mvl_vector_data(vec_prev_mark).i64;
-mark=mvl_vector_data(vec_mark).i64;
-prev=mvl_vector_data(vec_prev).i64;
-first=mvl_vector_data(vec_first).i64;
-max_count=mvl_vector_data(vec_max_count).i64[0];
+first_mark=mvl_vector_data_int64(vec_first_mark);
+prev_mark=mvl_vector_data_int64(vec_prev_mark);
+mark=mvl_vector_data_int64(vec_mark);
+prev=mvl_vector_data_int64(vec_prev);
+first=mvl_vector_data_int64(vec_first);
+max_count=mvl_vector_data_int64(vec_max_count)[0];
 
 
 switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
@@ -5010,7 +5010,7 @@ if(get_indices(indices, vec, &N, &v_idx)) {
 count=0;
 switch(mvl_vector_type(vec)) {
 	case LIBMVL_VECTOR_INT64: {
-		long long *pi=mvl_vector_data(vec).i64;
+		long long *pi=mvl_vector_data_int64(vec);
 		for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 			k=v_idx[i];
 			while(k>=0 && k<Nv) {
@@ -5021,7 +5021,7 @@ switch(mvl_vector_type(vec)) {
 		break;
 		}
 	case LIBMVL_VECTOR_INT32: {
-		int *pi=mvl_vector_data(vec).i;
+		int *pi=mvl_vector_data_int32(vec);
 		for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 			k=v_idx[i];
 			while(k>=0 && k<Nv) {
@@ -5032,7 +5032,7 @@ switch(mvl_vector_type(vec)) {
 		break;
 		}
 	case LIBMVL_VECTOR_DOUBLE: {
-		double *pi=mvl_vector_data(vec).d;
+		double *pi=mvl_vector_data_double(vec);
 		for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 			k=v_idx[i];
 			while(k>=0 && k<Nv) {
@@ -5054,7 +5054,7 @@ apd=REAL(ans);
 count=0;
 switch(mvl_vector_type(vec)) {
 	case LIBMVL_VECTOR_INT64: {
-		long long *pi=mvl_vector_data(vec).i64;
+		long long *pi=mvl_vector_data_int64(vec);
 		for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 			k=v_idx[i];
 			while(k>=0 && k<Nv) {
@@ -5066,7 +5066,7 @@ switch(mvl_vector_type(vec)) {
 		break;
 		}
 	case LIBMVL_VECTOR_INT32: {
-		int *pi=mvl_vector_data(vec).i;
+		int *pi=mvl_vector_data_int32(vec);
 		for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 			k=v_idx[i];
 			while(k>=0 && k<Nv) {
@@ -5078,7 +5078,7 @@ switch(mvl_vector_type(vec)) {
 		break;
 		}
 	case LIBMVL_VECTOR_DOUBLE: {
-		double *pi=mvl_vector_data(vec).d;
+		double *pi=mvl_vector_data_double(vec);
 		for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 			k=v_idx[i];
 			while(k>=0 && k<Nv) {
