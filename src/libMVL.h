@@ -122,21 +122,24 @@ typedef struct {
 	} LIBMVL_VECTOR_HEADER;
 	
 #ifndef MVL_STATIC_MEMBERS
-#ifdef __SANITIZE_ADDRESS__
-#define MVL_STATIC_MEMBERS 0
-#warning "Address sanitizer active, using C11 definition of LIBMVL_VECTOR"
-#else
-#ifdef __clang__
-#if __has_feature(address_sanitizer)
-#define MVL_STATIC_MEMBERS 0
-#warning "Address sanitizer active, using C11 definition of LIBMVL_VECTOR"
-#else
+	
+// #ifdef __SANITIZE_ADDRESS__
+// #define MVL_STATIC_MEMBERS 0
+// #warning "Address sanitizer active, using C11 definition of LIBMVL_VECTOR"
+// #else
+// #ifdef __clang__
+// #if __has_feature(address_sanitizer)
+// #define MVL_STATIC_MEMBERS 0
+// #warning "Address sanitizer active, using C11 definition of LIBMVL_VECTOR"
+// #else
+// #define MVL_STATIC_MEMBERS 1
+// #endif
+// #else
+// #define MVL_STATIC_MEMBERS 1
+// #endif
+// #endif	
+
 #define MVL_STATIC_MEMBERS 1
-#endif
-#else
-#define MVL_STATIC_MEMBERS 1
-#endif
-#endif	
 #endif
 	
 #if MVL_STATIC_MEMBERS
