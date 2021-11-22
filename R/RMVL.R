@@ -566,8 +566,8 @@ mvl_group_lapply<-function(G, fn) {
 	
 #' Find stretches of repeated rows among vectors 
 #'
-#' This function is passed a list of vector line MVL_OBJECTs which are considered as columns in a table.
-#' It returns a vector V starting with 1 and ending with number of rows plus 1, so the stretches can be found as V[i]:V[i+1]
+#' This function is passed a list of vector like MVL_OBJECTs which are considered as columns in a table.
+#' It returns a vector V starting with 1 and ending with number of rows plus 1, so that stretches of repeated rows can be found as V[i]:V[i+1]
 #'
 #' @param L  list of vector like MVL_OBJECTs 
 #' @return partition describing repeated rows

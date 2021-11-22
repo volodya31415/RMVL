@@ -5720,6 +5720,11 @@ if(TYPEOF(data_list)!=VECSXP) {
 	
 decode_mvl_object(extent_index0, &index_idx, &index_offset);
 
+if(index_idx<0) {
+	error("extent index is not an MVL OBJECT");
+	return(R_NilValue);
+	}
+
 mvl_init_extent_index(&ei);
 
 if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei))!=0) {
