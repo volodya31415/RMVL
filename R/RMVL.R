@@ -409,11 +409,31 @@ mvl_get_groups<-function(prev, first_indices) {
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#' mvl_write_spatial_index1(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
 #'                                                              c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
 #' print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
 #' }
+#' @export
+#'
+mvl_write_spatial_index1<-function(MVLHANDLE, L, bits, name=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	if(length(bits)==1)bits<-rep(bits, length(L))
+	offset<-.Call(write_spatial_groups, MVLHANDLE[["handle"]], L, as.integer(bits))
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
+	return(invisible(offset))
+	}
+
+#' Write spatial group information for each row
+#'
+#' Please use mvl_write_spatial_index1() instead.
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param L  list of vector like MVL_OBJECTs 
+#' @param bits a vector of bit values to use for each member of L
+#' @param name if specified add a named entry to MVL file directory
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 #' @export
 #'
 mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
@@ -423,23 +443,23 @@ mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
 	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
 	return(invisible(offset))
 	}
-
+	
 #' Retrieve indices of nearby rows.
 #'
-#' This function is passed the index computed by \code{mvl_write_spatial_groups} and a list of vectors, which rows are interpreted as points.
+#' This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
 #' For each row, the function returns a list of indices describing rows that are close to it.
 #'
-#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_groups} 
+#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
 #' @return a list of vectors of indices
-#' @seealso \code{\link{mvl_write_spatial_groups}}
+#' @seealso \code{\link{mvl_write_spatial_index1}}
 #'  
 #' @examples
 #' \dontrun{
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#' mvl_write_spatial_index1(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
 #'                                                               c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
 #' print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
@@ -453,10 +473,10 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 	
 #' Apply function to indices of nearby rows
 #'
-#' This function is passed the index computed by \code{mvl_write_spatial_groups} and a list of vectors, which rows are interpreted as points.
+#' This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
 #' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
 #'
-#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_groups} 
+#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
 #' @param fn a function of one argument - list of indices
 #' @return a list of results of function \code{fn}
@@ -467,7 +487,7 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 #' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 #' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#' mvl_write_spatial_index1(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
 #'                                                                c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
 #' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)),
@@ -1103,6 +1123,9 @@ make_mvl_object<-function(MVLHANDLE, offset) {
 	if(any(object_class %in% c("array", "matrix"))) {
 		L[["bracket_dispatch"]]<-2
 		} else
+	if(any(object_class=="MVL_INDEX")) {
+		L[["bracket_dispatch"]]<-3
+		} else 
 	if(is.null(object_class) || any(object_class=="list")) {
 		L[["bracket_dispatch"]]<-3
 		} else
@@ -1121,7 +1144,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 	metadata<-mvl_read_metadata(MVLHANDLE, metadata_offset)
 	cl<-metadata[["class"]]
 	
-	if(any(metadata[["MVL_LAYOUT"]]=="R") && !recurse && !is.null(cl) && any(cl=="data.frame")) {
+	if(any(metadata[["MVL_LAYOUT"]]=="R") && !recurse && !is.null(cl) && any(cl %in% c("data.frame", "MVL_INDEX"))) {
 		return(make_mvl_object(MVLHANDLE, offset))
 		}
 	
@@ -1322,6 +1345,9 @@ print.MVL_OBJECT<-function(x, ..., small_length=10) {
 			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm, collapse="\", \""), "\")] )\n", sep="")
 			else
 			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm[1:small_length], collapse="\", \""), "\", ...)] )\n", sep="")
+		} else
+	if(any(object_class=="MVL_INDEX")) {
+		print.MVL_INDEX(x, ...)
 		} else {
 		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, ")\n", sep="")
 		}
@@ -1543,6 +1569,68 @@ names.MVL_OBJECT<-function(x) {
 		stop("Cannot process ", obj)
 		}
 	stop("Cannot process ", obj)
+	}
+	
+# #' Print summary information of MVL_INDEX
+# #' 
+# #' @param obj MVL_INDEX object
+# #' @param \ldots not used.
+# #' @return invisible(obj)
+# #'
+# #' @export
+print.MVL_INDEX<-function(obj, ...) {
+	index_type<-obj["index_type"]
+	if(index_type==1) {
+		vec_types<-obj["vec_types"][]
+		cat("MVL_INDEX(extent index using ", length(vec_types), " column",ifelse(length(vec_types)>1, "s", ""),": ", paste(mvl_type_name(vec_types), collapse=","), ")\n", sep="")
+		return(invisible(obj))
+		}
+	if(index_type==2) {
+		vec_bits<-obj["bits"][]
+		cat("MVL_INDEX(spatial_index1 using ", length(vec_bits), " column",ifelse(length(vec_bits)>1, "s", ""),")\n", sep="")
+		return(invisible(obj))
+		}
+	}
+	
+#' Apply function to indices of nearby rows
+#'
+#' This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
+#' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
+#'
+#' @param index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @param fn a function of one argument - list of indices
+#' @return a list of results of function \code{fn}
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_write_spatial_index1(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+#'                                                                c(2, 3), "df1_sp_groups")
+#' Mtmp<-mvl_remap(Mtmp)
+#' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)),
+#'                                            function(i, idx) { return(list(i, idx))})
+#' }
+#' @export
+#'
+mvl_index_lapply<-function(index, data_list, fn) {
+	index_type<-index["index_type"][]
+	if(index_type==1) {
+		if(missing(data_list))
+			L<-.Call(extent_index_scan, index, fn, new.env())
+			else
+			L<-.Call(extent_index_lapply, index, data_list, fn, new.env())
+		return(L)
+		}
+	if(index_type==2) {
+		if(missing(data_list))stop("Spatial index1 does not support full index scan")
+		L<-.Call(neighbors_lapply, index, data_list, fn, new.env())
+		return(L)
+		}
+	stop("Unrecognized index of type ", index_type)
 	}
 	
 .onUnload <- function (libpath) {

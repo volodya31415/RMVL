@@ -4272,6 +4272,7 @@ for(LIBMVL_OFFSET64 k=0;k<N;k+=N_BLOCK) {
 // 	}
 	
 L=mvl_create_named_list(2);
+mvl_add_list_entry(L, -1, "index_type", MVL_WVEC(libraries[idx].ctx, LIBMVL_VECTOR_INT32, MVL_SPATIAL_INDEX1));
 mvl_add_list_entry(L, -1, "first", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, first, LIBMVL_NO_METADATA));
 mvl_add_list_entry(L, -1, "count", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, count, LIBMVL_NO_METADATA));
 mvl_add_list_entry(L, -1, "mark", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, first_hash, LIBMVL_NO_METADATA));
@@ -4307,7 +4308,7 @@ if(N2>first_idx_size) {
 mvl_add_list_entry(L, -1, "first_mark", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, N2, first, LIBMVL_NO_METADATA));
 mvl_add_list_entry(L, -1, "prev_mark", mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_INT64, first_idx_free, first_idx_prev, LIBMVL_NO_METADATA));
 
-offset=mvl_write_named_list(libraries[idx].ctx, L);
+offset=mvl_write_named_list2(libraries[idx].ctx, L, "MVL_INDEX");
 mvl_free_named_list(L);
 
 free(vec_data);
