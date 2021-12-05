@@ -60,8 +60,9 @@ mvl_open<-function(filename, append=FALSE, create=FALSE) {
 	
 #' Enlarge memory map to include recently loaded data.
 #'
-#' This function operates on MVL files opened for writing. The mapping is enlarged to include recently written data, so it can be used in subsequent calls.
-#' The MVL file directory is updated to include recently added entries.  Old handles can still be used, but will not include updated directory information.
+#' This function operates on MVL files opened for writing. When writing new data to the MVL file that data is appended at the end and past the end of previously mapped data. 
+#' Calling \code{mvl_remap()} updates the memory mapping to include all the data written before mvl_remap() was called.
+#' The MVL file directory is also updated to include recently added entries.  Old handles can still be used, but will not include updated directory information.
 #' MVL_OBJECT's previously obtained from this handle continue to be valid.
 #'
 #'
@@ -122,11 +123,11 @@ mvl_get_vectors<-function(MVLHANDLE, offsets, raw=FALSE) {
 		else
 		return(.Call(read_vectors, MVLHANDLE[["handle"]], offsets))
 	}
-#' Return length of R vector as a numeric value
+#' Return length of MVL or R vector as a numeric value
 #' 
-#' Internally this calls R function xlength() rather than length(). This allows to obtain length of larger vectors
+#' Internally this calls R function xlength() rather than length(). This allows to obtain length of larger vectors. For MVL vectors this returns the length of the vector.
 #' @param x  any R object
-#' @return length of object in numeric format
+#' @return length of object as as numeric value
 #' @export
 #'
 mvl_xlength<-function(x) {
@@ -189,7 +190,7 @@ mvl_fused_write_vector<-function(MVLHANDLE, L, metadata.offset=NULL) {
 #' Piecewise output of very long numeric and integer vectors
 #'
 #' While \code{mvl_fused_write_objects} can be used to create very large vectors and data frames of arbitrary type, it requires
-#' piecewise data to be written first into an MVL file. These two functions provide a way to create very long vectors in one pass.
+#' piecewise data to be written first into an MVL file. Functions \code{mvl_start_write_vector()} and \code{mvl_rewrite_vector()} provide a way to create very long vectors in one pass.
 #' Only numeric and integer vectors are supported.
 #'
 #' One convenient use is to compute \code{f(x,y,z,...)} with very long vector arguments by iterating over indices. The iteration can be done using fixed blocks of indices, or by using groups of indices computed with other MVL functions. 
@@ -447,12 +448,12 @@ mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
 #' Retrieve indices of nearby rows.
 #'
 #' This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
-#' For each row, the function returns a list of indices describing rows that are close to it.
+#' For each row, the function returns a vector of indices describing rows that are close to it.
 #'
 #' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
 #' @return a list of vectors of indices
-#' @seealso \code{\link{mvl_write_spatial_index1}}
+#' @seealso \code{\link{mvl_write_spatial_index1}}, \code{\link{mvl_index_lapply}}
 #'  
 #' @examples
 #' \dontrun{
@@ -472,6 +473,8 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 	
 	
 #' Apply function to indices of nearby rows
+#'
+#' Please use generic function \code{mvl_index_lapply()} instead.
 #'
 #' This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
 #' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
@@ -503,8 +506,8 @@ mvl_neighbors_lapply<-function(spatial_index, data_list, fn) {
 #' Find matching rows
 #'
 #' This function is passed two lists of MVL vectors which are interpreted in data.frame fashion. 
-#' The indices of pairwise matches are returned in order of the first argument ("index1" and "index2"). 
-#' In addition we return indices describing stretches with "index1" value constant ( stretch_index[i] to stretch_index[i+1]-1)
+#' The indices of pairwise matches are returned in order of the arguments ("index1" and "index2"). 
+#' In addition we return indices describing stretches with "index1" value constant ( stretch_index1[i] to stretch_index1[i+1]-1)
 #'
 #' @param L1  list of vector like MVL_OBJECTs 
 #' @param indices1  list of indices into objects to sort. If absent or NULL it is assumed to be from 1 to the length of the object.
@@ -540,7 +543,7 @@ mvl_find_matches<-function(L1, L2, indices1=NULL, indices2=NULL) {
 #' @param L  list of vector like MVL_OBJECTs 
 #' @param indices  list of indices into objects to group. If absent or NULL it is assumed to be from 1 to the length of the object.
 #' @return A list of groups and group stretches
-#' @seealso \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
+#' @seealso \code{\link{mvl_group_lapply}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 #'  
 #' @examples
 #' \dontrun{
@@ -561,7 +564,7 @@ mvl_group<-function(L, indices=NULL) {
 
 #' Apply function to index stretches
 #'
-#' Iteratively call function \code{fn} over index stretches previously computed with \code{mvl_group}
+#' Iteratively call function \code{fn(idx)} over index stretches previously computed with \code{mvl_group}
 #'
 #' @param G a list of groups and group stretches produced by \code{mvl_group}
 #' @param fn a function of one argument - list of indices
@@ -612,7 +615,7 @@ mvl_compute_repeats<-function(L) {
 #' @param L  list of vector like MVL_OBJECTs 
 #' @param name if specified add a named entry to MVL file directory
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
-#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_index_lapply}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 #'  
 #' @examples
 #' \dontrun{
@@ -621,10 +624,10 @@ mvl_compute_repeats<-function(L) {
 #' Mtmp<-mvl_remap(Mtmp)
 #' mvl_write_extent_index(Mtmp, list(Mtmp$df1[,"y",ref=TRUE]), "df1_extent_index_y")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_extent_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], list(c(2, 3)),
+#' mvl_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], list(c(2, 3)),
 #'                                            function(i, idx) { return(list(i, idx))})
 #' # Example of full scan
-#' mvl_extent_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], ,
+#' mvl_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], ,
 #'                                            function(i, idx) { return(list(i, idx))})
 #' }
 #' @export
@@ -638,6 +641,8 @@ mvl_write_extent_index<-function(MVLHANDLE, L, name=NULL) {
 	
 #' Apply function to indices of rows with matching hashes
 #'
+#' Please use generic function \code{mvl_index_lapply()} instead.
+#'
 #' This function is passed the index computed by \code{mvl_write_extent_index()} and a list of vectors, which rows are used to compute 64-bit hashes.
 #' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of with matching hashes.
 #'
@@ -649,7 +654,7 @@ mvl_write_extent_index<-function(MVLHANDLE, L, name=NULL) {
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. If missing, scan the entire table one hash at a time.
 #' @param fn a function of one argument - list of indices
 #' @return a list of results of function \code{fn}
-#' @seealso \code{\link{mvl_group}}
+#' @seealso \code{\link{mvl_index_lapply}}, \code{\link{mvl_group}}
 #'  
 #' @examples
 #' \dontrun{
@@ -676,9 +681,14 @@ mvl_extent_index_lapply<-function(extent_index, data_list, fn) {
 	
 #' Index copy vector
 #'
+#' This function creates new MVL vectors and data frames by copying only rows or values specified by given indices. 
+#' The vector indices can be an R integer or numeric vector, a logical vector of the size matching to the object being copied, 
+#' or a suitable vector stored in MVL file.
+#' 
+#'
 #' @param MVLHANDLE a handle to MVL file produced by mvl_open()
-#' @param x a suitable R object (vector, array, list, data.frame) or a vector-like MVL_OBJECT
-#' @param indices  list of indices into x
+#' @param x a vector-like MVL_OBJECT or a data.frame stored in MVL file
+#' @param indices  a vector of indices into x
 #' @param name if specified add a named entry to MVL file directory
 #' @param only.columns if x is MVL_OBJECT with class data.frame copy only columns specified in this character or integer vector
 #' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
@@ -902,7 +912,7 @@ mvl_class<-function(x) {
 
 #' Check inheritance of R or MVL objects
 #'
-#' This functions works just like the usual R \code{inherits()}, except that it takes MVL_OBJECT class into account.
+#' This function works just like the usual R \code{inherits()}, except that for MVL_OBJECTS it used the class value stored in the MVL file.
 #' For non-MVL objects the function simply calls the usual R \code{inherit()}, so it can be used instead of \code{inherit()} for code that operates on both usual R objects and MVL objects.
 #'
 #' @param x  any object
@@ -966,7 +976,7 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	stop("Could not write object with class ", class(x))
 	}
 	
-#' Write concatenated R objects and write result into MVL file. 
+#' Concatenate objects and write result into MVL file. 
 #'
 #' This function can concatenate a mixture of R and MVL objects. For vectors it is the equivalent of \code{c()}. For array and matrices it works as \code{cbind()}
 #' For data frames it works as \code{rbind}, but row names are always dropped.
@@ -1079,8 +1089,8 @@ mvl_read_metadata<-function(MVLHANDLE, metadata_offset) {
 #' This function is given either an MVL handle and an offset in MVL file to examine, or just a single parameter of class MVL_OBJECT that contains
 #'  both handle and offset
 #'
-#' The function returns list of object parameters including total number of elements, element type (as used by libMVL) and a pointer to the underlying data
-#' The pointer is passed via a cast to double and can be used with custom C code, for example by using package inline.
+#' This function returns a list of object parameters describing total number of elements, element type (as used by libMVL) and a pointer to the underlying data.
+#' The pointer is passed via a cast to double to preserve its 64-bit value and can be used with custom C code, for example by using package inline.
 #'
 #' @param MVLHANDLE either a handle provided by mvl_open() or an MVL object such as produced by indexing operators
 #' @param offset offset to the object which properties are to be retrieved
@@ -1594,11 +1604,15 @@ print.MVL_INDEX<-function(obj, ...) {
 	
 #' Apply function to indices of nearby rows
 #'
-#' This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
-#' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
+#' This function is passed the index computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} and a list of vectors, which are interpreted in a data frame fashion, or an R data.frame.
+#' For each row we retrieve that set of indices that matches it and call function fn(i, idx) with index i of row being processed and vector idx listing matched indices.
+#'
+#' The notion of "matched index" is specific to type of index being used:
+#'	* for an index created with \code{mvl_write_spatial_index1} we return the indices of nearby rows. The user should apply an additional cut to narrow down to actual indices needed.
+#'	* for an index created with \code{mvl_write_extent_index} we return the indices of rows with identical hashes. Even though 64-bit hashes produce very few collisions, it is recommended to apply additional cut to ensure that only the exactly matching rows are returned.
 #'
 #' @param index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} 
-#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors, or a data.fame.
 #' @param fn a function of one argument - list of indices
 #' @return a list of results of function \code{fn}
 #' @seealso \code{\link{mvl_group}}
