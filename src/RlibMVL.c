@@ -2282,6 +2282,19 @@ switch(type) {
 			case RAWSXP:
 				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), RAW(data), *moffset);
 				break;
+			case LGLSXP:
+				bdata=calloc(xlength(data), 1);
+				if(bdata==NULL) {
+					error("Out of memory");
+					return(R_NilValue);
+					}
+				int *ld=LOGICAL(data);
+				for(i=0;i<xlength(data);i++) {
+					bdata[i]=ld[i]==NA_LOGICAL ? 255 : ld[i];
+					}
+				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, xlength(data), bdata, *moffset);
+				free(bdata);
+				break;
 			case INTSXP:
 				bdata=calloc(xlength(data), 1);
 				if(bdata==NULL) {

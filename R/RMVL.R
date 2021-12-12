@@ -51,7 +51,7 @@ MVL_SMALL_LENGTH<-1024
 #' @export
 #'
 mvl_open<-function(filename, append=FALSE, create=FALSE) {
-	MVLHANDLE<-list(handle=.Call(mmap_library, as.character(filename), as.integer(ifelse(append, 1, 0)+ifelse(create, 2, 0))))
+	MVLHANDLE<-list(handle=.Call(mmap_library, path.expand(as.character(filename)), as.integer(ifelse(append, 1, 0)+ifelse(create, 2, 0))))
 	class(MVLHANDLE)<-"MVL"
 	MVLHANDLE[["directory"]]<-mvl_get_directory(MVLHANDLE)
 	return(MVLHANDLE)
@@ -150,8 +150,8 @@ mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 				else 
 				stop("Malformed MVL_OBJECT")
 			} else {
-			type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, -1)
-			if(type<0 && inherits(x, c("array", "matrix")))type<-switch(typeof(x), double=5, integer=2, -1)
+			type<-switch(class(x), raw=1, numeric=5, integer=2, MVL_OFFSET=100, character=10000, logical=1, -1)
+			if(type<0 && inherits(x, c("array", "matrix", "Date")))type<-switch(typeof(x), double=5, integer=2, character=10000, logical=1, -1)
 			}
 		}
 	if(type>0) {
@@ -957,7 +957,7 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	#cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x, drop.rownames=drop.rownames)
 	# For now we only support vector-like MVL_OBJECTs.
-	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix", "MVL_OBJECT"))) {
+	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix", "logical", "MVL_OBJECT", "Date"))) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
@@ -1126,10 +1126,20 @@ make_mvl_object<-function(MVLHANDLE, offset) {
 	
 	L[["metadata"]]<-mvl_read_metadata(MVLHANDLE, L[["metadata_offset"]])
 	
+	L[["values_fixup"]]<-0
+	
 	object_class<-L[["metadata"]][["class"]]
 	if(any(object_class=="data.frame")) {
 		L[["bracket_dispatch"]]<-1
 		} else 
+	if(any(object_class=="logical")) {
+		L[["values_fixup"]]<-1
+		if(any(object_class %in% c("array", "matrix"))) {
+			L[["bracket_dispatch"]]<-2
+			} else {
+			L[["bracket_dispatch"]]<-3
+			}
+		} else
 	if(any(object_class %in% c("array", "matrix"))) {
 		L[["bracket_dispatch"]]<-2
 		} else
@@ -1188,6 +1198,11 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 				if(cl=="factor")vec<-as.factor(vec)
 				}
 			if(!any(cl %in% c("data.frame")) && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
+			if(any(cl=="logical")) {
+				F<-vec==255
+				vec<-as.logical(vec)
+				vec[F]<-NA
+				}
 			#if(cl=="data.frame" && any(unlist(lapply(vec, class))=="MVL_OBJECT"))cl<-"MVL_OBJECT"
 			class(vec)<-cl
 			}
@@ -1517,6 +1532,12 @@ names.MVL_OBJECT<-function(x) {
 			vec<-.Call(read_vectors_idx_real, obj[["handle"]], obj[["offset"]], idx)[[1]]
 #			vec<-.Call(read_vectors_idx_real, obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		
+		if(obj[["values_fixup"]]==1) {
+			F<-vec==255
+			vec<-as.logical(vec)
+			vec[F]<-NA
+			}
+		
 		if(is.null(drop) || drop==TRUE) {
 			d<-d[d!=1]
 			if(length(d)>0)dim(vec)<-d
@@ -1545,6 +1566,12 @@ names.MVL_OBJECT<-function(x) {
 					vec<-.Call(read_vectors_idx3, obj[["handle"]], obj[["offset"]], i)[[1]]
 	#				vec<-.Call(read_vectors_idx, obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
 	#			vec<-.Call(read_vectors, obj[["handle"]], obj[["offset"]])[[1]][i]
+	
+				if(obj[["values_fixup"]]==1) {
+					F<-vec==255
+					vec<-as.logical(vec)
+					vec[F]<-NA
+					}
 
 				if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
 					if(ref) {

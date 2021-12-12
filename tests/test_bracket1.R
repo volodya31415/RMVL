@@ -2,7 +2,7 @@ require("RMVL")
  
 M3<-mvl_open("test2.mvl", append=TRUE, create=TRUE)
 L<-list()
-df<-data.frame(x=1:1e5, y=rnorm(1e5), s=rep(c("a", "b"), 5e4))
+df<-data.frame(x=1:1e5, y=rnorm(1e5), s=rep(c("a", "b"), 5e4), b=rnorm(1e5)<0.5)
 L[["x"]]<-mvl_write_object(M3, df)
 L[["description"]]<-"Example of large data frame"
 mvl_write_object(M3, L, "test_object")

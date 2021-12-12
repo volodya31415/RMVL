@@ -20,7 +20,7 @@ Loading required package: RMVL
 >  
 > M3<-mvl_open("test2.mvl", append=TRUE, create=TRUE)
 > L<-list()
-> df<-data.frame(x=1:1e5, y=rnorm(1e5), s=rep(c("a", "b"), 5e4))
+> df<-data.frame(x=1:1e5, y=rnorm(1e5), s=rep(c("a", "b"), 5e4), b=rnorm(1e5)<0.5)
 > L[["x"]]<-mvl_write_object(M3, df)
 > L[["description"]]<-"Example of large data frame"
 > mvl_write_object(M3, L, "test_object")
@@ -59,7 +59,7 @@ Loading required package: RMVL
 > 
 > print(mvl_object_stats(L2[["x"]])[c("length", "type")])
 $length
-[1] 3
+[1] 4
 
 $type
 [1] 100
@@ -72,4 +72,4 @@ $type
 > 
 > proc.time()
    user  system elapsed 
-  0.389   0.025   0.406 
+  0.600   0.047   0.632 
