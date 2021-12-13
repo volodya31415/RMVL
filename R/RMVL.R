@@ -1069,6 +1069,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 	}
 	
 mvl_flatten_string<-function(v) {
+	if(is.character(v))return(v)
 	return(unlist(lapply(v, function(x){return(x[[1]])})))
 	}
 
