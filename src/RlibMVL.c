@@ -523,11 +523,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL){
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(tag)));
@@ -561,11 +561,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL){
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 dir=libraries[idx].ctx->directory;
@@ -602,11 +602,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(offsets)));
@@ -653,11 +653,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(offsets)*nfields));
@@ -700,11 +700,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(INTSXP, xlength(offsets)));
@@ -748,11 +748,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
@@ -872,11 +872,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
@@ -1013,11 +1013,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
@@ -1154,11 +1154,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 	
@@ -1302,11 +1302,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(offsets)));
@@ -1350,11 +1350,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
@@ -1472,11 +1472,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
@@ -1610,11 +1610,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
@@ -1748,11 +1748,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 
@@ -1893,11 +1893,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 	
@@ -2161,11 +2161,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(offsets)));
@@ -2203,11 +2203,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(xlength(tags)!=xlength(offsets)) {
@@ -2247,11 +2247,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -2466,11 +2466,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -2952,11 +2952,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -3257,11 +3257,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -3582,11 +3582,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -3700,11 +3700,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -3872,11 +3872,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -4073,11 +4073,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
@@ -5647,11 +5647,11 @@ if(length(idx0)!=1) {
 	}
 idx=INTEGER(idx0)[0];
 if(idx<0 || idx>=libraries_free) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].ctx==NULL) {
-	error("no such library");
+	error("invalid MVL handle");
 	return(R_NilValue);
 	}
 if(libraries[idx].f==NULL) {
