@@ -336,14 +336,18 @@ SEXP VECTOR_ELT_STR(SEXP list, const char *s)
 {
 SEXP elt=R_NilValue;
 SEXP names=getAttrib(list, R_NamesSymbol);
+SEXP sch;
 
 if(xlength(names)<xlength(list))return(R_NilValue);
 
-for (long i=0; i<xlength(list); i++)
-	if(!strcmp(CHAR(STRING_ELT(names, i)), s)) {
+for (long i=0; i<xlength(list); i++) {
+	sch=STRING_ELT(names, i);
+	if(sch==NA_STRING)continue;
+	if(!strcmp(CHAR(sch), s)) {
 		elt = VECTOR_ELT(list, i);
 		break;
 		}
+	}
 return elt;
 }
 
@@ -512,7 +516,7 @@ return(0);
 SEXP find_directory_entries(SEXP idx0, SEXP tag)
 {
 int idx;
-SEXP ans, class;
+SEXP ans, class, sch;
 const char *tag0;
 long i;
 LIBMVL_OFFSET64 offset;
@@ -532,9 +536,15 @@ if(libraries[idx].ctx==NULL){
 	}
 ans=PROTECT(allocVector(REALSXP, xlength(tag)));
 for(i=0;i<xlength(tag);i++) {
-	tag0=CHAR(STRING_ELT(tag, i));
-	offset=mvl_find_directory_entry(libraries[idx].ctx, tag0);
-	REAL(ans)[i]=*doffset;
+	sch=STRING_ELT(tag, i);
+	if(sch==NA_STRING) {
+		offset=0;
+		REAL(ans)[i]=*doffset;
+		} else {
+		tag0=CHAR(sch);
+		offset=mvl_find_directory_entry(libraries[idx].ctx, tag0);
+		REAL(ans)[i]=*doffset;
+		}
 	}
 
 class=PROTECT(allocVector(STRSXP, 1));
@@ -795,7 +805,10 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_CSTRING:
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			if(mvl_string_is_na(mvl_vector_data_uint8(vec), mvl_vector_length(vec)))
+				SET_STRING_ELT(v, 0, NA_STRING);
+				else
+				SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
@@ -833,7 +846,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, mvl_vector_length(vec)-1));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<mvl_vector_length(vec)-1;j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, j))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -974,7 +990,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, pidx[j]))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1116,7 +1135,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1265,7 +1287,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, N));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<N;j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, v_idx[j]))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1435,7 +1460,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, mvl_vector_length(vec)-1));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<mvl_vector_length(vec)-1;j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, j))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1571,7 +1599,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, pidx[j]))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1709,7 +1740,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, xlength(indicies)));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<xlength(indicies);j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1852,7 +1886,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, N));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<N;j++) {
-				SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
+				if(mvl_packed_list_is_na(vec, libraries[idx].data, v_idx[j]))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1970,7 +2007,7 @@ for(i=0;i<xlength(offsets);i++) {
 			break; 
 		}
 		
-#define INDEX_LOOP(line) \
+#define INDEX_LOOP(line, line_default) \
 	{ \
 	switch(TYPEOF(indicies)) { \
 		case VECSXP: { \
@@ -1980,6 +2017,8 @@ for(i=0;i<xlength(offsets);i++) {
 						LIBMVL_OFFSET64 j0=mvl_vector_data_int64(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
+							} else { \
+							line_default ;\
 							} \
 						} \
 					break; \
@@ -1988,6 +2027,8 @@ for(i=0;i<xlength(offsets);i++) {
 						LIBMVL_OFFSET64 j0=mvl_vector_data_int32(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
+							} else { \
+							line_default ;\
 							} \
 						} \
 					break; \
@@ -1996,6 +2037,8 @@ for(i=0;i<xlength(offsets);i++) {
 						LIBMVL_OFFSET64 j0=mvl_vector_data_int64(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
+							} else { \
+							line_default ;\
 							} \
 						} \
 					break; \
@@ -2004,6 +2047,8 @@ for(i=0;i<xlength(offsets);i++) {
 						LIBMVL_OFFSET64 j0=mvl_vector_data_double(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
+							} else { \
+							line_default ;\
 							} \
 						} \
 					break; \
@@ -2012,6 +2057,8 @@ for(i=0;i<xlength(offsets);i++) {
 						LIBMVL_OFFSET64 j0=mvl_vector_data_float(vec_idx)[j]-1; \
 						if(j0<N0) { \
 							line ;\
+							} else { \
+							line_default ;\
 							} \
 						} \
 					break; \
@@ -2026,6 +2073,8 @@ for(i=0;i<xlength(offsets);i++) {
 				LIBMVL_OFFSET64 j0=pidx[j]-1; \
 				if(j0<N0) { \
 					line ;\
+					} else { \
+					line_default ;\
 					} \
 				} \
 			break; \
@@ -2036,6 +2085,8 @@ for(i=0;i<xlength(offsets);i++) {
 				LIBMVL_OFFSET64 j0=pidx[j]-1; \
 				if(j0<N0) { \
 					line ;\
+					} else { \
+					line_default ;\
 					} \
 				} \
 			break; \
@@ -2046,6 +2097,8 @@ for(i=0;i<xlength(offsets);i++) {
 				if(pi[j0]) { \
 					line; \
 					j++; \
+					} else { \
+					line_default ;\
 					} \
 			break; \
 			} \
@@ -2068,7 +2121,7 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, N));
 			pc=RAW(v);
-			INDEX_LOOP(pc[j]=mvl_vector_data_uint8(vec)[j0]);
+			INDEX_LOOP(pc[j]=mvl_vector_data_uint8(vec)[j0], pc[j]=0);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
@@ -2086,7 +2139,7 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
 			pi=INTEGER(v);
-			INDEX_LOOP(pi[j]=mvl_vector_data_int32(vec)[j0]);
+			INDEX_LOOP(pi[j]=mvl_vector_data_int32(vec)[j0], pi[j]=NA_INTEGER);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -2094,7 +2147,7 @@ for(i=0;i<xlength(offsets);i++) {
 			warning("Converted 64-bit integers to doubles");
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
-			INDEX_LOOP(pd[j]=mvl_vector_data_int64(vec)[j0]);
+			INDEX_LOOP(pd[j]=mvl_vector_data_int64(vec)[j0], pd[j]=NA_REAL);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -2102,7 +2155,7 @@ for(i=0;i<xlength(offsets);i++) {
 			//warning("Converted 32-bit floats to doubles");
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
-			INDEX_LOOP(pd[j]=mvl_vector_data_float(vec)[j0]);
+			INDEX_LOOP(pd[j]=mvl_vector_data_float(vec)[j0], pd[j]=NA_REAL);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -2110,14 +2163,14 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(REALSXP, N));
 			pd=REAL(v);
 			pd2=mvl_vector_data_double(vec);
-			INDEX_LOOP(pd[j]=pd2[j0]);
+			INDEX_LOOP(pd[j]=pd2[j0], pd[j]=NA_REAL);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_OFFSET64:
 			v=PROTECT(allocVector(REALSXP, N));
 			poffs=(LIBMVL_OFFSET64 *)REAL(v);
-			INDEX_LOOP(poffs[j]=mvl_vector_data_offset(vec)[j0]);
+			INDEX_LOOP(poffs[j]=mvl_vector_data_offset(vec)[j0], poffs[j]=0);
 			class=PROTECT(allocVector(STRSXP, 1));
 			SET_STRING_ELT(class, 0, mkChar("MVL_OFFSET"));
 			classgets(v, class);
@@ -2127,7 +2180,13 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_PACKED_LIST64:
 			v=PROTECT(allocVector(STRSXP, N));
 			/* TODO: check that vector length is within R limits */
-			INDEX_LOOP(SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j0), mvl_packed_list_get_entry_bytelength(vec, j0))));
+			INDEX_LOOP( {
+				void *data=libraries[idx].data;
+				if(mvl_packed_list_is_na(vec, data, j0))
+					SET_STRING_ELT(v, j, NA_STRING);
+					else
+					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, data, j0), mvl_packed_list_get_entry_bytelength(vec, j0)));
+				}, SET_STRING_ELT(v, j, NA_STRING));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
 			break;
@@ -2196,6 +2255,7 @@ SEXP add_directory_entries(SEXP idx0, SEXP tags, SEXP offsets)
 long i;
 int idx;
 double doffset;
+SEXP sch;
 LIBMVL_OFFSET64 *offset=(LIBMVL_OFFSET64 *)&doffset;
 if(length(idx0)!=1) {
 	error("add_directory_entries first argument must be a single integer");
@@ -2216,7 +2276,11 @@ if(xlength(tags)!=xlength(offsets)) {
 	}
 for(i=0;i<xlength(tags);i++) {
 	doffset=REAL(offsets)[i];
-	mvl_add_directory_entry(libraries[idx].ctx, *offset, CHAR(STRING_ELT(tags, i)));
+	sch=STRING_ELT(tags, i);
+	if(sch==NA_STRING)
+		warning("Ignoring attempt to add directory entry with NA (missing value) tag");
+		else
+		mvl_add_directory_entry(libraries[idx].ctx, *offset, CHAR(sch));
 	}
 return(R_NilValue);
 }
@@ -2233,6 +2297,7 @@ double *doffset=(double *)&offset;
 const char *ch, **strvec2;
 LIBMVL_OFFSET64 *strvec;
 long long *idata;
+long *strlen2;
 float *fdata;
 unsigned char *bdata;
 
@@ -2322,8 +2387,13 @@ switch(type) {
 					error("Can only convert a single string to UINT8");
 					return(R_NilValue);
 					}
-				const char *bd=CHAR(STRING_ELT(data, 0));
-				offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, strlen(bd), bd, *moffset);
+				SEXP sch=STRING_ELT(data, 0);
+				if(sch==NA_STRING) {
+					offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, MVL_NA_STRING_LENGTH, MVL_NA_STRING, *moffset);
+					} else {
+					const char *bd=CHAR(sch);
+					offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, strlen(bd), bd, *moffset);
+					}
 				break;
 			default:
 				error("Cannot convert R type %d to UINT8", TYPEOF(data));
@@ -2406,15 +2476,26 @@ switch(type) {
 #else
 	case 10000:
 		strvec2=calloc(xlength(data), sizeof(*strvec2));
-		if(strvec2==NULL) {
+		strlen2=calloc(xlength(data), sizeof(*strlen2));
+		if(strvec2==NULL || strlen2==NULL) {
 			error("Out of memory");
+			free(strvec2);
+			free(strlen2);
 			return(R_NilValue);
 			}
 		for(i=0;i<xlength(data);i++) {
-			strvec2[i]=CHAR(STRING_ELT(data, i));
+			SEXP ch=STRING_ELT(data, i);
+			if(ch==NA_STRING) {
+				strvec2[i]=MVL_NA_STRING;
+				strlen2[i]=MVL_NA_STRING_LENGTH;
+				} else {
+				strvec2[i]=CHAR(ch);
+				strlen2[i]=xlength(ch);
+				}
 			}
-		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), NULL, (char **)strvec2, *moffset);
+		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), strlen2, (char **)strvec2, *moffset);
 		free(strvec2);
+		free(strlen2);
 		break;
 #endif
 	case 10001:
@@ -2422,8 +2503,13 @@ switch(type) {
 			error("data has to be length 1 string vector");
 			return(R_NilValue);
 			}
-		ch=CHAR(STRING_ELT(data, 0));
-		offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, strlen(ch), ch, *moffset);
+		SEXP sch=STRING_ELT(data, 0);
+		if(sch==NA_STRING) 
+			offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, MVL_NA_STRING_LENGTH, MVL_NA_STRING, *moffset);
+			else {
+			ch=CHAR(sch);
+			offset=mvl_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, strlen(ch), ch, *moffset);
+			}
 		break;
 		
 	default:
@@ -2549,8 +2635,13 @@ switch(type) {
 					error("Can only convert a single string to UINT8");
 					return(R_NilValue);
 					}
-				const char *bd=CHAR(STRING_ELT(data, 0));
-				offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, expected_length, strlen(bd), bd, *moffset);
+				SEXP ch=STRING_ELT(data, 0);
+				if(ch==NA_STRING)
+					offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, expected_length, MVL_NA_STRING_LENGTH, MVL_NA_STRING, *moffset);
+					else {
+					const char *bd=CHAR(ch);
+					offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, expected_length, strlen(bd), bd, *moffset);
+					}
 				break;
 			default:
 				error("Cannot convert R type %d to UINT8", TYPEOF(data));
@@ -2651,8 +2742,13 @@ switch(type) {
 			error("data has to be length 1 string vector");
 			return(R_NilValue);
 			}
-		ch=CHAR(STRING_ELT(data, 0));
-		offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, expected_length, strlen(ch), ch, *moffset);
+		SEXP sch=STRING_ELT(data, 0);
+		if(sch==NA_STRING)
+			offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, expected_length, MVL_NA_STRING_LENGTH, MVL_NA_STRING, *moffset);
+			else {
+			ch=CHAR(sch);
+			offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_CSTRING, expected_length, strlen(ch), ch, *moffset);
+			}
 		break;
 		
 	default:
@@ -2777,8 +2873,13 @@ switch(type) {
 					error("Can only convert a single string to UINT8");
 					return(R_NilValue);
 					}
-				const char *bd=CHAR(STRING_ELT(data, 0));
-				mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, strlen(bd), bd);
+				SEXP ch=STRING_ELT(data, 0);
+				if(ch==NA_STRING)
+					mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, MVL_NA_STRING_LENGTH, MVL_NA_STRING);
+					else {
+					const char *bd=CHAR(ch);
+					mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, strlen(bd), bd);
+					}
 				break;
 			default:
 				error("Cannot convert R type %d to UINT8", TYPEOF(data));
@@ -2911,8 +3012,13 @@ switch(type) {
 			error("data has to be length 1 string vector");
 			return(R_NilValue);
 			}
-		ch=CHAR(STRING_ELT(data, 0));
-		mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, strlen(ch), ch);
+		SEXP sch=STRING_ELT(data, 0);
+		if(sch==NA_STRING)
+			mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, MVL_NA_STRING_LENGTH, MVL_NA_STRING);
+			else {
+			ch=CHAR(sch);
+			mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, strlen(ch), ch);
+			}
 		break;
 		
 	default:
@@ -2935,7 +3041,7 @@ const char *ch;
 LIBMVL_OFFSET64 *strvec;
 long long *idata;
 float *fdata;
-SEXP data;
+SEXP data, sch;
 
 double *pd;
 int *pi;
@@ -2995,7 +3101,11 @@ for(k=0;k<xlength(data_list);k++) {
 	if(TYPEOF(data)==STRSXP) {
 		total_length+=xlength(data);
 		for(i=0;i<xlength(data);i++) {
-			char_total_length+=strlen(CHAR(STRING_ELT(data, i)));
+			sch=STRING_ELT(data, i);
+			if(sch==NA_STRING)
+				char_total_length+=MVL_NA_STRING_LENGTH;
+				else
+				char_total_length+=strlen(CHAR(sch));
 			}
 		continue;
 		}
@@ -3194,12 +3304,22 @@ for(k=0;k<xlength(data_list);k++) {
 			/* TODO: it would be nice to bounce strings against internal buffer to reduce frequency of rewrite() calls */
 			for(j=0;j<xlength(data);j+=REWRITE_BUF_SIZE) {
 				for(i=0;i+j<xlength(data) && i<REWRITE_BUF_SIZE;i++) {
-					ch=CHAR(STRING_ELT(data, i+j));
-					m=strlen(ch);
-					mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, m, ch);
-					//Rprintf("str %s %d %ld\n", ch, m, char_idx);
-					strvec[i]=char_offset+char_idx+m;
-					char_idx+=m;
+					sch=STRING_ELT(data, i+j);
+					if(sch==NA_STRING) {
+						ch=MVL_NA_STRING;
+						m=MVL_NA_STRING_LENGTH;
+						mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, m, ch);
+						//Rprintf("str %s %d %ld\n", ch, m, char_idx);
+						strvec[i]=char_offset+char_idx+m;
+						char_idx+=m;
+						} else {
+						ch=CHAR(sch);
+						m=strlen(ch);
+						mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, char_offset-sizeof(LIBMVL_VECTOR_HEADER), char_idx, m, ch);
+						//Rprintf("str %s %d %ld\n", ch, m, char_idx);
+						strvec[i]=char_offset+char_idx+m;
+						char_idx+=m;
+						}
 					}
 				i=j+REWRITE_BUF_SIZE>=xlength(data) ? xlength(data)-j : REWRITE_BUF_SIZE;
 				mvl_rewrite_vector(libraries[idx].ctx, LIBMVL_PACKED_LIST64, offset, vec_idx, i, strvec);
@@ -4425,6 +4545,7 @@ int err;
 long long da;
 double dd;
 int warn_once=1;
+SEXP sch;
 
 if(i0>=i1)return 0;
 
@@ -4519,8 +4640,13 @@ switch(TYPEOF(sexp)) {
 			}
 		/* TODO: NA_STRING in R is just "NA" we might, or might not want to alter the code below */
 		for(LIBMVL_OFFSET64 i=i0;i<i1;i++) {
-			ps=CHAR(STRING_ELT(sexp, i));
-			out[i-i0]=mvl_accumulate_hash64(out[i-i0], ps, strlen(ps));
+			sch=STRING_ELT(sexp, i);
+			if(sch==NA_STRING) 
+				out[i-i0]=mvl_accumulate_hash64(out[i-i0], MVL_NA_STRING, MVL_NA_STRING_LENGTH);
+				else {
+				ps=CHAR(sch);
+				out[i-i0]=mvl_accumulate_hash64(out[i-i0], ps, strlen(ps));
+				}
 			}
 		
 		return 0;

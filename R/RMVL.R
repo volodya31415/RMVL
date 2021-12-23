@@ -1278,6 +1278,7 @@ mvl_add_directory_entries<-function(MVLHANDLE, tag, offsets) {
 		
 	if(inherits(y, "MVL_OFFSET")) {
 		L<-lapply(y, function(offset) {
+			if(offset==0)return(NULL)
 			class(offset)<-"MVL_OFFSET"
 			obj<-make_mvl_object(MVLHANDLE, offset)
 		
