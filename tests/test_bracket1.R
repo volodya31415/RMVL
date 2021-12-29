@@ -1,11 +1,21 @@
 require("RMVL")
  
 M3<-mvl_open("test2.mvl", append=TRUE, create=TRUE)
+
 L<-list()
+
 df<-data.frame(x=1:1e5, y=rnorm(1e5), s=rep(c("a", "b"), 5e4), b=rnorm(1e5)<0.5)
 L[["x"]]<-mvl_write_object(M3, df)
+
+aa<-array(rnorm(10000), c(10, 50, 20))
+L[["y"]]<-aa
+
+mm<-matrix(rnorm(10000), 10, 1000)
+L[["z"]]<-mm
+
 L[["description"]]<-"Example of large data frame"
 mvl_write_object(M3, L, "test_object")
+
 mvl_close(M3)
 
 M3<-mvl_open("test2.mvl")
@@ -26,7 +36,8 @@ compare_df<-function(x, y) {
 	return(TRUE)
 	}
 
-if(!compare_df(df[1:20,], L2[["x"]][1:20,]))cat("test1 failed\n")
+if(!compare_df(df, L2[["x"]][,]))cat("test1a failed\n")
+if(!compare_df(df[1:20,], L2[["x"]][1:20,]))cat("test1b failed\n")
 
 if(!compare_df(df[(1:N) %% 5==0,], L2[["x"]][(1:N) %% 5==0,]))cat("test2 failed\n")
 
@@ -38,7 +49,21 @@ if(!identical(df[(1:N) %% 5==0, c("s")], L2[["x"]][(1:N)[(1:N) %% 5==0], c("s")]
 
 if(!compare_df(df[(1:N) %% 5==0, 2:3], L2[["x"]][(1:N)[(1:N) %% 5==0], 2:3]))cat("test6 failed\n")
 
+if(!isTRUE(all.equal(aa, L2[["y"]][])))cat("test7 failed\n")
+if(!isTRUE(all.equal(mm, L2[["z"]][])))cat("test8 failed\n")
+
+if(!isTRUE(all.equal(aa[c(2,3,5),,], L2[["y"]][c(2,3,5),,])))cat("test9 failed\n")
+if(!isTRUE(all.equal(aa[,c(2,3,5),], L2[["y"]][,c(2,3,5),])))cat("test10 failed\n")
+if(!isTRUE(all.equal(aa[,,c(2,3,5)], L2[["y"]][,,c(2,3,5)])))cat("test11 failed\n")
+if(!isTRUE(all.equal(aa[c(2,3,5),c(6,10,20),c(7,3,5)], L2[["y"]][c(2,3,5),c(6,10,20),c(7,3,5)])))cat("test12 failed\n")
+
+if(!isTRUE(all.equal(mm[c(2,3,5),], L2[["z"]][c(2,3,5),])))cat("test13 failed\n")
+if(!isTRUE(all.equal(mm[,c(2,3,5)], L2[["z"]][,c(2,3,5)])))cat("test14 failed\n")
+if(!isTRUE(all.equal(mm[c(2,3,5),c(6,10,20)], L2[["z"]][c(2,3,5),c(6,10,20)])))cat("test15 failed\n")
+
 print(mvl_object_stats(L2[["x"]])[c("length", "type")])
+print(mvl_object_stats(L2[["y"]])[c("length", "type")])
+print(mvl_object_stats(L2[["z"]])[c("length", "type")])
 
 mvl_close(M3)
 

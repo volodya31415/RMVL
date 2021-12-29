@@ -1509,6 +1509,7 @@ names.MVL_OBJECT<-function(x) {
 			d<-length(i)
 			idx<-i
 			}
+		idx<-idx-1
 		mult<-1
 		
 		if(...length()+1!=length(od))stop("Array dimension is ", length(od), " but ", ...length()+1, " indices given")

@@ -4644,7 +4644,7 @@ switch(TYPEOF(sexp)) {
 			if(sch==NA_STRING) 
 				out[i-i0]=mvl_accumulate_hash64(out[i-i0], MVL_NA_STRING, MVL_NA_STRING_LENGTH);
 				else {
-				ps=CHAR(sch);
+				ps=(char *)CHAR(sch);
 				out[i-i0]=mvl_accumulate_hash64(out[i-i0], ps, strlen(ps));
 				}
 			}
