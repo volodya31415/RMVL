@@ -656,7 +656,6 @@ return(0);
 static inline int mvl_packed_list_is_na(const LIBMVL_VECTOR *vec, const void *data, LIBMVL_OFFSET64 idx)
 {
 LIBMVL_OFFSET64 start, stop, len;
-char *s;
 if(mvl_vector_type(vec)!=LIBMVL_PACKED_LIST64)return 1;
 len=mvl_vector_length(vec);
 if((idx+1>=len) || (idx<0))return 1;

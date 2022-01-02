@@ -1100,7 +1100,7 @@ for(i=0;i<xlength(offsets);i++) {
 			for(j=0;j<xlength(indicies)*field_size;j+=field_size)
 				memcpy(&(pc[j]), &(mvl_vector_data_int64(vec)[(LIBMVL_OFFSET64)pidx[j]]), field_size);
 			SET_VECTOR_ELT(ans, i, v);
-			UNPROTECT(1);			
+			UNPROTECT(1);
 			break;
 		case LIBMVL_VECTOR_FLOAT:
 			v=PROTECT(allocVector(RAWSXP, xlength(indicies)*field_size));
