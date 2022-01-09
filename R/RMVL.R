@@ -45,7 +45,7 @@ MVL_SMALL_LENGTH<-1024
 #' print(L)
 #' print(L[["x"]][1:20,])
 #' mvl_object_stats(L[["x"]])
-#' # If you need to get the whole x, one can use L[["x"]][]
+#' # If you need to get the whole x, one can use mvl2R(L[["x"]])
 #' mvl_close(M4)
 #' }
 #' @export

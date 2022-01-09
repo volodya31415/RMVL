@@ -20,6 +20,16 @@ return ctx->error;
 #include <Rinternals.h>
 //#include <Rext/Print.h>
 
+static inline SEXP mkCharU(unsigned char *s)
+{
+return(mkChar((char *)s));
+}
+
+static inline SEXP mkCharLenU(const unsigned char *s, int len)
+{
+return(mkCharLen((char *)s, len));
+}
+
 typedef struct {
 	FILE *f;
 	char *data;
@@ -583,7 +593,7 @@ ans=PROTECT(allocVector(REALSXP, dir->free));
 names=PROTECT(allocVector(STRSXP, dir->free));
 dp=REAL(ans);
 for(i=0;i<dir->free;i++) {
-	SET_STRING_ELT(names, i, mkChar(dir->tag[i]));
+	SET_STRING_ELT(names, i, mkCharLenU(dir->tag[i], dir->tag_length[i]));
 	offset=dir->offset[i];
 	dp[i]=*doffset;
 	}
@@ -805,13 +815,13 @@ for(i=0;i<xlength(offsets);i++) {
 		case LIBMVL_VECTOR_CSTRING:
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			if(mvl_string_is_na(mvl_vector_data_uint8(vec), mvl_vector_length(vec)))
+			if(mvl_string_is_na((char *)mvl_vector_data_uint8(vec), mvl_vector_length(vec)))
 				SET_STRING_ELT(v, 0, NA_STRING);
 				else
-				SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+				SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
@@ -849,7 +859,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, j))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -930,17 +940,17 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
@@ -993,7 +1003,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, pidx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1074,17 +1084,17 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
@@ -1138,7 +1148,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1225,7 +1235,7 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
@@ -1233,10 +1243,10 @@ for(i=0;i<xlength(offsets);i++) {
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
@@ -1290,7 +1300,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, v_idx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1399,15 +1409,15 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[j];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, mvl_vector_length(vec)));
@@ -1463,7 +1473,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, j))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1536,17 +1546,17 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
@@ -1602,7 +1612,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, pidx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, pidx[j]), mvl_packed_list_get_entry_bytelength(vec, pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1677,17 +1687,17 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[(LIBMVL_OFFSET64)pidx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, xlength(indicies)));
@@ -1743,7 +1753,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, (LIBMVL_OFFSET64)pidx[j]), mvl_packed_list_get_entry_bytelength(vec, (LIBMVL_OFFSET64)pidx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1823,7 +1833,7 @@ for(i=0;i<xlength(offsets);i++) {
 				pc[j]=mvl_vector_data_uint8(vec)[v_idx[j]];
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
@@ -1831,10 +1841,10 @@ for(i=0;i<xlength(offsets);i++) {
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
@@ -1889,7 +1899,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, libraries[idx].data, v_idx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -2124,17 +2134,17 @@ for(i=0;i<xlength(offsets);i++) {
 			INDEX_LOOP(pc[j]=mvl_vector_data_uint8(vec)[j0], pc[j]=0);
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_CSTRING:
 			error("String subset not supported");
 			return(R_NilValue);
 			v=PROTECT(allocVector(STRSXP, 1));
 			/* TODO: check that vector length is within R limits */
-			SET_STRING_ELT(v, 0, mkCharLen(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
+			SET_STRING_ELT(v, 0, mkCharLenU(mvl_vector_data_uint8(vec), mvl_vector_length(vec)));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
-			//SET_VECTOR_ELT(ans, i, mkCharLen(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
+			//SET_VECTOR_ELT(ans, i, mkCharLenU(mvl_vector_data_uint8(v), mvl_vector_length(vec)));
 			break;
 		case LIBMVL_VECTOR_INT32:
 			v=PROTECT(allocVector(INTSXP, N));
@@ -2185,7 +2195,7 @@ for(i=0;i<xlength(offsets);i++) {
 				if(mvl_packed_list_is_na(vec, data, j0))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLen(mvl_packed_list_get_entry(vec, data, j0), mvl_packed_list_get_entry_bytelength(vec, j0)));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, data, j0), mvl_packed_list_get_entry_bytelength(vec, j0)));
 				}, SET_STRING_ELT(v, j, NA_STRING));
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -2493,7 +2503,7 @@ switch(type) {
 				strlen2[i]=xlength(ch);
 				}
 			}
-		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), strlen2, (char **)strvec2, *moffset);
+		offset=mvl_write_packed_list(libraries[idx].ctx, xlength(data), strlen2, (unsigned char **)strvec2, *moffset);
 		free(strvec2);
 		free(strlen2);
 		break;
@@ -4362,13 +4372,13 @@ for(LIBMVL_OFFSET64 k=0;k<N;k+=N_BLOCK) {
 				if(p==NULL)goto cleanup1;
 				memcpy(p, first_idx_prev, first_idx_free*sizeof(*p));
 				free(first_idx_prev);
-				first_idx_prev=p;
+				first_idx_prev=(long long *)p;
 				
 				p=calloc(first_idx_size, sizeof(*p));
 				if(p==NULL)goto cleanup1;
 				memcpy(p, first, first_idx_free*sizeof(*p));
 				free(first);
-				first=p;				
+				first=(long long *)p;
 				}
 			first_idx_free++;
 			count[idx]=0;
@@ -4540,7 +4550,7 @@ LIBMVL_OFFSET64 data_offset;
 LIBMVL_VECTOR *vec;
 double *pd;
 int *pi;
-char *ps;
+unsigned char *ps;
 int err;
 long long da;
 double dd;
@@ -4642,10 +4652,10 @@ switch(TYPEOF(sexp)) {
 		for(LIBMVL_OFFSET64 i=i0;i<i1;i++) {
 			sch=STRING_ELT(sexp, i);
 			if(sch==NA_STRING) 
-				out[i-i0]=mvl_accumulate_hash64(out[i-i0], MVL_NA_STRING, MVL_NA_STRING_LENGTH);
+				out[i-i0]=mvl_accumulate_hash64(out[i-i0], (unsigned char*)MVL_NA_STRING, MVL_NA_STRING_LENGTH);
 				else {
-				ps=(char *)CHAR(sch);
-				out[i-i0]=mvl_accumulate_hash64(out[i-i0], ps, strlen(ps));
+				ps=(unsigned char *)CHAR(sch);
+				out[i-i0]=mvl_accumulate_hash64(out[i-i0], ps, strlen((char *)ps));
 				}
 			}
 		
