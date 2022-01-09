@@ -1002,8 +1002,8 @@ mvl_inherits<-function(x, clstr, which=FALSE) {
 mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 	#cat("Writing", class(x), typeof(x), "\n")
 	metadata<-mvl_write_object_metadata(MVLHANDLE, x, drop.rownames=drop.rownames)
-	# For now we only support vector-like MVL_OBJECTs.
-	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix", "logical", "MVL_OBJECT", "Date"))) {
+	
+	if(inherits(x, c("numeric", "character", "integer", "factor", "raw", "array", "matrix", "logical", "MVL_OBJECT", "Date", "MVL_R_SERIALIZED"))) {
 		offset<-mvl_write_vector(MVLHANDLE, x, metadata)
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
@@ -1020,6 +1020,35 @@ mvl_write_object<-function(MVLHANDLE, x, name=NULL, drop.rownames=FALSE) {
 		return(invisible(x))
 		}
 	stop("Could not write object with class ", class(x))
+	}
+	
+#' Write R object in serialized form
+#'
+#' This function packages the object into a raw vector before writing it out. The raw vector is tagged with 
+#' special class that assures the object is automatically converted back to R representation when reading.
+#' Serialized objects can only be read completely.
+#' 
+#' This function can be used in rare cases when it is important to store a complete R object, but it is not
+#' important for it to be accessible by other programs, and it is not important to conserve memory or bandwidth.
+#' 
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param x a suitable R object (vector, array, list, data.frame) or a vector-like MVL_OBJECT
+#' @param name if specified add a named entry to MVL file directory
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_write_object}}
+#' @examples
+#' \dontrun{
+#' Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+#' mvl_write_serialized_object(Mtmp, lm(rnorm(100)~runif(100)), "LM1")
+#' Mtmp<-mvl_remap(Mtmp)
+#' print(mvl2R(Mtmp$LM1))
+#' }
+#' @export
+#'
+mvl_write_serialized_object<-function(MVLHANDLE, x, name=NULL) {
+	offset<-mvl_write_object(MVLHANDLE, structure(serialize(x, NULL), class="MVL_R_SERIALIZED"))
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+	return(invisible(offset))
 	}
 	
 #' Concatenate objects and write result into MVL file. 
@@ -1217,7 +1246,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 	if(any(metadata[["MVL_LAYOUT"]]=="R") && !recurse && !is.null(cl) && any(cl %in% c("data.frame", "MVL_INDEX"))) {
 		return(make_mvl_object(MVLHANDLE, offset))
 		}
-	
+		
 	if(is.null(idx)) {
 		if(raw) 
 			vec<-.Call(read_vectors_raw, MVLHANDLE[["handle"]], offset)[[1]]
@@ -1243,6 +1272,10 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		if(!is.null(cl)) {
+			if(any(cl=="MVL_R_SERIALIZED")) {
+				return(unserialize(vec))
+				}
+	
 			if(any(cl=="factor") || any(cl=="character")) {
 				vec<-mvl_flatten_string(vec)
 				if(cl=="factor")vec<-as.factor(vec)
