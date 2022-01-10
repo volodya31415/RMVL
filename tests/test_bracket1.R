@@ -20,6 +20,9 @@ L[["LL2"]]<-LL2
 L[["description"]]<-"Example of large data frame"
 mvl_write_object(M3, L, "test_object")
 
+LM1<-lm(rnorm(100)~runif(100))
+mvl_write_serialized_object(M3, LM1, "LM1")
+
 mvl_close(M3)
 
 M3<-mvl_open("test2.mvl")
@@ -97,6 +100,12 @@ if(!isTRUE(all.equal(LL2[5], L2[["LL2"]][5]))) {
 	cat("-----------\n")
 	}
 
+if(!identical(LM1, mvl2R(M3["LM1"]))) {
+	cat("test19 failed\n")
+	print(all.equal(LM1, mvl2R(M3["LM1"])))
+	cat("-----------\n")
+	}
+	
 # TODO:
 # Testing of [,raw=TRUE] is complicated because R's as.raw() function is only meant for conversion of characters,
 # while MVL raw mode only returns raw vectors when there is no equivalent R vector (such as the case of floats and INT64)

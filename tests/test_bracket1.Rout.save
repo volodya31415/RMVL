@@ -38,11 +38,14 @@ Loading required package: RMVL
 > L[["description"]]<-"Example of large data frame"
 > mvl_write_object(M3, L, "test_object")
 > 
+> LM1<-lm(rnorm(100)~runif(100))
+> mvl_write_serialized_object(M3, LM1, "LM1")
+> 
 > mvl_close(M3)
 > 
 > M3<-mvl_open("test2.mvl")
 > print(names(M3))
-[1] "test_object"
+[1] "test_object" "LM1"        
 > L2<-M3["test_object"]
 > 
 > N<-dim(df)[1]
@@ -116,6 +119,12 @@ Loading required package: RMVL
 + 	cat("-----------\n")
 + 	}
 > 
+> if(!identical(LM1, mvl2R(M3["LM1"]))) {
++ 	cat("test19 failed\n")
++ 	print(all.equal(LM1, mvl2R(M3["LM1"])))
++ 	cat("-----------\n")
++ 	}
+> 	
 > # TODO:
 > # Testing of [,raw=TRUE] is complicated because R's as.raw() function is only meant for conversion of characters,
 > # while MVL raw mode only returns raw vectors when there is no equivalent R vector (such as the case of floats and INT64)
@@ -164,4 +173,4 @@ $type
 > 
 > proc.time()
    user  system elapsed 
-  0.891   0.037   0.916 
+  0.665   0.055   0.711 
