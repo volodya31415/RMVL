@@ -1099,7 +1099,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		}
 	
 	
-	if(any(cl %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix"))) {
+	if(any(cl %in% c("numeric", "character", "integer", "factor", "raw", "array", "matrix", "logical", "Date"))) {
 		dims_new<-dim(L[[1]])
 		if(!is.null(dims_new)) {
 			if(length(dims_new)>1) {
@@ -1140,7 +1140,7 @@ mvl_fused_write_objects<-function(MVLHANDLE, L, name=NULL, drop.rownames=TRUE) {
 		if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
 		return(invisible(offset))
 		}
-	stop("Could not perform fused write of ", length(L), " objects")
+	stop("Could not perform fused write of ", length(L), " objects with class ", paste(cl, collapse=" "))
 	}
 	
 mvl_flatten_string<-function(v) {
