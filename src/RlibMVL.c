@@ -494,7 +494,7 @@ switch(TYPEOF(indices)) {
 			return(-5);
 			}
 		for(LIBMVL_OFFSET64 m=0, k=0;m<N;m++)
-			if(pi[m] && pi[m]!=NA_LOGICAL) {
+			if(pi[m] && (pi[m]!=NA_LOGICAL)) {
 				v_idx[k]=m;
 				k++;
 				}
@@ -2002,7 +2002,7 @@ for(i=0;i<xlength(offsets);i++) {
 			N=0;
 			int *pi=LOGICAL(indicies);
 			for(LIBMVL_OFFSET64 j=0;j<xlength(indicies);j++)
-				if(pi[j] && pi[j]!=NA_LOGICAL)N++;
+				if(pi[j] && (pi[j]!=NA_LOGICAL))N++;
 			break; 
 			}
 		case NILSXP: { 
@@ -2102,9 +2102,9 @@ for(i=0;i<xlength(offsets);i++) {
 			break; \
 			} \
 		case LGLSXP: { \
-			int * restrict pi=LOGICAL(indicies); \
+			int * restrict pidx=LOGICAL(indicies); \
 			for(LIBMVL_OFFSET64 j0=0,j=0;j0<xlength(indicies);j0++) \
-				if(pi[j0] && pi[j0]!=NA_LOGICAL) { \
+				if(pidx[j0] && (pidx[j0]!=NA_LOGICAL)) { \
 					line; \
 					j++; \
 					} else { \

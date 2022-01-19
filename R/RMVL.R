@@ -1699,6 +1699,7 @@ mvl2R<-function(obj, raw=FALSE) {
 				return(vec)
 				}
 			} else {
+			stop("Too many indices")
 			}
 		stop("Cannot process ", obj)
 		}
