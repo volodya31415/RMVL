@@ -1717,7 +1717,7 @@ print.MVL_INDEX<-function(obj, ...) {
 	index_type<-obj["index_type"]
 	if(index_type==1) {
 		vec_types<-mvl2R(obj["vec_types"])
-		cat("MVL_INDEX(extent index using ", length(vec_types), " column",ifelse(length(vec_types)>1, "s", ""),": ", paste(mvl_type_name(vec_types), collapse=","), ")\n", sep="")
+		cat("MVL_INDEX(extent index using ", length(vec_types), " column",ifelse(length(vec_types)>1, "s", ""),": ", paste(unlist(lapply(vec_types, mvl_type_name)), collapse=","), ")\n", sep="")
 		return(invisible(obj))
 		}
 	if(index_type==2) {
@@ -1725,6 +1725,8 @@ print.MVL_INDEX<-function(obj, ...) {
 		cat("MVL_INDEX(spatial_index1 using ", length(vec_bits), " column",ifelse(length(vec_bits)>1, "s", ""),")\n", sep="")
 		return(invisible(obj))
 		}
+	cat("MVL_INDEX(unknown index type)\n")
+	return(invisible(obj))
 	}
 	
 #' Apply function to indices of nearby rows
