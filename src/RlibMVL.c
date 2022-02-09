@@ -2629,6 +2629,19 @@ switch(type) {
 				offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, expected_length, xlength(data), bdata, *moffset);
 				free(bdata);
 				break;
+			case LGLSXP:
+				bdata=calloc(xlength(data), 1);
+				if(bdata==NULL) {
+					error("Out of memory");
+					return(R_NilValue);
+					}
+				int *ld=LOGICAL(data);
+				for(i=0;i<xlength(data);i++) {
+					bdata[i]=ld[i]==NA_LOGICAL ? 255 : ld[i];
+					}
+				offset=mvl_start_write_vector(libraries[idx].ctx, LIBMVL_VECTOR_UINT8, expected_length, xlength(data), bdata, *moffset);
+				free(bdata);
+				break;
 			case REALSXP:
 				bdata=calloc(xlength(data), 1);
 				if(bdata==NULL) {
@@ -2864,6 +2877,19 @@ switch(type) {
 					}
 				int *id=INTEGER(data);
 				for(i=0;i<xlength(data);i++)bdata[i]=id[i];
+				mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, xlength(data), bdata);
+				free(bdata);
+				break;
+			case LGLSXP:
+				bdata=calloc(xlength(data), 1);
+				if(bdata==NULL) {
+					error("Out of memory");
+					return(R_NilValue);
+					}
+				int *ld=LOGICAL(data);
+				for(i=0;i<xlength(data);i++) {
+					bdata[i]=ld[i]==NA_LOGICAL ? 255 : ld[i];
+					}
 				mvl_rewrite_vector(libraries[idx].ctx, type, data_offset, chunk_offset, xlength(data), bdata);
 				free(bdata);
 				break;
