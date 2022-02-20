@@ -93,7 +93,7 @@ return(posix_fallocate(fileno(f), offset, len));
 
 #else
 
-size_t cur, end, i;
+off_t cur, end, i;
 int err;
 #ifndef FALLOCATE_BUF_SIZE
 #define FALLOCATE_BUF_SIZE 512
@@ -123,7 +123,7 @@ for(i=end;i<offset+len;i+=FALLOCATE_BUF_SIZE) {
 if((err=fseeko(f, cur, SEEK_SET))<0) {
 	return(err);
 	}
-return(0);	
+return(0);
 #endif
 }
 
@@ -151,6 +151,16 @@ ctx->directory_offset=-1;
 ctx->character_class_offset=0;
 
 ctx->cached_strings=mvl_create_named_list(32);
+
+ctx->flags=0;
+
+#ifdef HAVE_POSIX_FALLOCATE
+ctx->flags|=LIBMVL_CTX_FLAG_HAVE_POSIX_FALLOCATE;
+#endif
+
+#ifdef HAVE_FTELLO
+ctx->flags|=LIBMVL_CTX_FLAG_HAVE_FTELLO;
+#endif
 
 return(ctx);
 }

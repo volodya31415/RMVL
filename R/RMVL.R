@@ -135,6 +135,17 @@ mvl_xlength<-function(x) {
 	return(.Call(mvl_xlength_int, x))
 	}
 	
+	
+#' Return status of MVL package
+#'
+#' @return list of status values
+#' @export
+mvl_status<-function() {
+	L<-.Call(get_status)
+	L[["mvl_small_length"]]<-MVL_SMALL_LENGTH
+	return(L)
+	}
+	
 mvl_write_vector<-function(MVLHANDLE, x, metadata.offset=NULL) {
 	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
 	if(!is.null(metadata.offset) && !inherits(metadata.offset, "MVL_OFFSET"))stop("not an MVL offset")

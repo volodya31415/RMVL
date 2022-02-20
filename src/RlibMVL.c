@@ -522,6 +522,92 @@ switch(TYPEOF(indices)) {
 return(0);
 }
 
+SEXP get_status(void)
+{
+int max_N=20;
+int idx=0, idx2, n_open;
+int j;
+SEXP names, ans, data;
+	
+names=PROTECT(allocVector(STRSXP, max_N));
+ans=PROTECT(allocVector(VECSXP, max_N));
+
+#define add_status(name, val)   {\
+	if(idx<max_N) { \
+		SET_STRING_ELT(names, idx, mkChar(name)); \
+		SET_VECTOR_ELT(ans, idx, (val)); \
+		idx++; \
+		} else { \
+		Rprintf("*** MVL_INTERNAL_ERROR: too many status fields\n"); \
+		} \
+	}
+
+add_status("size_t_bytes", ScalarInteger(sizeof(size_t)));
+add_status("off_t_bytes", ScalarInteger(sizeof(off_t)));
+add_status("long_bytes", ScalarInteger(sizeof(long)));
+add_status("offset64_bytes", ScalarInteger(sizeof(LIBMVL_OFFSET64)));
+add_status("vector_header_bytes", ScalarInteger(sizeof(LIBMVL_VECTOR_HEADER)));
+
+n_open=0;
+for(j=0;j<libraries_free;j++)
+	if(libraries[j].ctx!=NULL)n_open++;
+	
+add_status("open_libraries", ScalarInteger(n_open));
+	
+data=PROTECT(allocVector(INTSXP, n_open));
+idx2=0;
+for(j=0;j<libraries_free;j++)
+	if(libraries[j].ctx!=NULL) {
+		INTEGER(data)[idx2]=j;
+		idx2++;
+		}
+		
+add_status("library_handles", data);
+UNPROTECT(1);
+
+data=PROTECT(allocVector(INTSXP, n_open));
+idx2=0;
+for(j=0;j<libraries_free;j++)
+	if(libraries[j].ctx!=NULL) {
+		INTEGER(data)[idx2]=libraries[j].ctx->flags;
+		idx2++;
+		}
+		
+add_status("library_flags", data);
+UNPROTECT(1);
+
+data=PROTECT(allocVector(LGLSXP, n_open));
+idx2=0;
+for(j=0;j<libraries_free;j++)
+	if(libraries[j].ctx!=NULL) {
+		LOGICAL(data)[idx2]=libraries[j].modified;
+		idx2++;
+		}
+		
+add_status("library_modified", data);
+UNPROTECT(1);
+
+data=PROTECT(allocVector(REALSXP, n_open));
+idx2=0;
+for(j=0;j<libraries_free;j++)
+	if(libraries[j].ctx!=NULL) {
+		REAL(data)[idx2]=libraries[j].length;
+		idx2++;
+		}
+		
+add_status("library_length", data);
+UNPROTECT(1);
+
+#undef add_status
+if(idx<max_N) {
+	SETLENGTH(names, idx);
+	SETLENGTH(ans, idx);
+	}
+
+setAttrib(ans, R_NamesSymbol, names);
+UNPROTECT(2);
+return(ans);
+}
 
 SEXP find_directory_entries(SEXP idx0, SEXP tag)
 {
@@ -6132,6 +6218,7 @@ static const R_CallMethodDef callMethods[] = {
   {"compute_repeats",  (DL_FUNC) &compute_repeats, 1},
   {"extent_index_lapply",  (DL_FUNC) &extent_index_lapply, 4},
   {"extent_index_scan",  (DL_FUNC) &extent_index_scan, 3},
+  {"get_status",  (DL_FUNC) &get_status, 0},
    {NULL, NULL, 0}
 };
 
