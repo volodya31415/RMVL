@@ -495,7 +495,7 @@ mvl_get_neighbors<-function(spatial_index, data_list) {
 #'
 #' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
-#' @param fn a function of one argument - list of indices
+#' @param fn a function of two arguments - and index into \code{data_list} and a corresponding list of indices
 #' @return a list of results of function \code{fn}
 #' @seealso \code{\link{mvl_group}}
 #'  
@@ -666,7 +666,7 @@ mvl_write_extent_index<-function(MVLHANDLE, L, name=NULL) {
 #'
 #' @param extent_index  MVL_OBJECT computed by \code{mvl_write_extent_index()} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. If missing, scan the entire table one hash at a time.
-#' @param fn a function of one argument - list of indices
+#' @param fn a function of two arguments - and index into \code{data_list} and a corresponding list of indices
 #' @return a list of results of function \code{fn}
 #' @seealso \code{\link{mvl_index_lapply}}, \code{\link{mvl_group}}
 #'  
@@ -1751,7 +1751,7 @@ print.MVL_INDEX<-function(obj, ...) {
 #'
 #' @param index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors, or a data.fame.
-#' @param fn a function of one argument - list of indices
+#' @param fn a function of two arguments - and index into \code{data_list} and a corresponding list of indices
 #' @return a list of results of function \code{fn}
 #' @seealso \code{\link{mvl_group}}
 #'  
