@@ -1543,7 +1543,7 @@ mvl2R<-function(obj, raw=FALSE) {
 #' @export
 `[.MVL_OBJECT`<-function(obj, i, ..., drop=TRUE, raw=FALSE, recurse=FALSE, ref=FALSE) {
 	if(missing(i) && ...length()==0) {
-		return(mvl_read_object(obj, unclass(obj)[["offset"]], recurse=TRUE, raw=raw, ref=ref))
+		return(mvl_read_object(obj, unclass(obj)[["offset"]], recurse=!ref, raw=raw, ref=ref))
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	if(obj[["bracket_dispatch"]]==1) {
