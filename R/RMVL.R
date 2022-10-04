@@ -1763,7 +1763,7 @@ print.MVL_INDEX<-function(obj, ...) {
 #' mvl_write_spatial_index1(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
 #'                                                                c(2, 3), "df1_sp_groups")
 #' Mtmp<-mvl_remap(Mtmp)
-#' mvl_neighbors_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)),
+#' mvl_index_lapply(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3)),
 #'                                            function(i, idx) { return(list(i, idx))})
 #' }
 #' @export
