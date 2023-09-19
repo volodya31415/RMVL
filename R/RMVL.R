@@ -1727,12 +1727,12 @@ mvl2R<-function(obj, raw=FALSE) {
 print.MVL_INDEX<-function(obj, ...) {
 	index_type<-obj["index_type"]
 	if(index_type==1) {
-		vec_types<-mvl2R(obj["vec_types"])
+		vec_types<-unlist(mvl2R(obj["vec_types"]))
 		cat("MVL_INDEX(extent index using ", length(vec_types), " column",ifelse(length(vec_types)>1, "s", ""),": ", paste(unlist(lapply(vec_types, mvl_type_name)), collapse=","), ")\n", sep="")
 		return(invisible(obj))
 		}
 	if(index_type==2) {
-		vec_bits<-mvl2R(obj["bits"])
+		vec_bits<-unlist(mvl2R(obj["bits"]))
 		cat("MVL_INDEX(spatial_index1 using ", length(vec_bits), " column",ifelse(length(vec_bits)>1, "s", ""),")\n", sep="")
 		return(invisible(obj))
 		}
@@ -1745,9 +1745,11 @@ print.MVL_INDEX<-function(obj, ...) {
 #' This function is passed the index computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} and a list of vectors, which are interpreted in a data frame fashion, or an R data.frame.
 #' For each row we retrieve that set of indices that matches it and call function fn(i, idx) with index i of row being processed and vector idx listing matched indices.
 #'
-#' The notion of "matched index" is specific to type of index being used:
-#'	* for an index created with \code{mvl_write_spatial_index1} we return the indices of nearby rows. The user should apply an additional cut to narrow down to actual indices needed.
-#'	* for an index created with \code{mvl_write_extent_index} we return the indices of rows with identical hashes. Even though 64-bit hashes produce very few collisions, it is recommended to apply additional cut to ensure that only the exactly matching rows are returned.
+#' The notion of "matched indices" is specific to the type of index being used.
+#'
+#' For an index created with \code{mvl_write_spatial_index1} we return the indices of nearby rows. The user should apply an additional cut to narrow down to actual indices needed.
+#'
+#' For an index created with \code{mvl_write_extent_index} we return the indices of rows with identical hashes. Even though 64-bit hashes produce very few collisions, it is recommended to apply additional cut to ensure that only the exactly matching rows are returned.
 #'
 #' @param index  MVL_OBJECT computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} 
 #' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors, or a data.fame.
