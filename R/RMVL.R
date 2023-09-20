@@ -1668,10 +1668,13 @@ mvl2R<-function(obj, raw=FALSE) {
 	# 		if(is.logical(i)) {
 	# 			i<-which(i)
 	# 			}
+			nn<-obj2[["metadata"]][["names"]]
+			
 			if(is.factor(i))i<-as.character(i)
 			if(is.character(i)) {
-				if(is.null(obj2[["metadata"]][["names"]]))stop("Object has no names")
-				i<-which.max(obj2[["metadata"]][["names"]]==i)
+				if(is.null(nn))stop("Object has no names")
+#				i<-which.max(obj2[["metadata"]][["names"]]==i)
+				i<-match(i, nn)
 				}
 	#		if(is.numeric(i)) 
 				{
@@ -1710,7 +1713,6 @@ mvl2R<-function(obj, raw=FALSE) {
 							})
 						}
 					}
-				nn<-obj2[["metadata"]][["names"]]
 				if(!is.null(nn))names(vec)<-nn[i]
 #				if(drop && length(vec)==1)vec<-unlist(vec)
 				return(vec)
