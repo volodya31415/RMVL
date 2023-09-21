@@ -2166,7 +2166,8 @@ for(i=0;i<xlength(offsets);i++) {
 		case REALSXP: {\
 			double * restrict pidx=REAL(indicies); \
 			for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-				LIBMVL_OFFSET64 j0=pidx[j]-1; \
+				double vpidx=pidx[j]; \
+				LIBMVL_OFFSET64 j0=isfinite(vpidx) ? (LIBMVL_OFFSET64)(vpidx-1.0) : N0; \
 				if(j0<N0) { \
 					line ;\
 					} else { \

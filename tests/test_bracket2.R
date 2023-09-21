@@ -52,6 +52,92 @@ if(!compare_df(df, mvl2R(L2[["x"]]))) {
 	cat("-----------\n")
 	}
 	
+if(!isTRUE(all.equal(aa, mvl2R(L2[["y"]])))) {
+	cat("test1b failed\n")
+	print(all.equal(aa, mvl2R(L2[["y"]])))
+	print(attributes(aa))
+	print(attributes(mvl2R(L2[["y"]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal(mm, mvl2R(L2[["z"]])))) {
+	cat("test1c failed\n")
+	print(all.equal(mm, mvl2R(L2[["z"]])))
+	print(attributes(mm))
+	print(attributes(mvl2R(L2[["z"]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal(LL2, mvl2R(L2[["LL2"]])))) {
+	cat("test1d failed\n")
+	print(all.equal(LL2, mvl2R(L2[["LL2"]])))
+	print(attributes(LL2))
+	print(attributes(mvl2R(L2[["LL2"]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal("Example of large data frame", L2[["description"]]))) {
+	cat("test1e failed\n")
+	print(all.equal("Example of large data frame", L2[["description"]]))
+	print(attributes("Example of large data frame"))
+	print(attributes(L2[["description"]]))
+	cat("-----------\n")
+	}
+
+# # R behaviour is mixed in this situation
+# # For lists R returns empty list, but (1:5)[[NA]] throws an exception
+# # It would not be unreasonable to think that vec[[NA]] should be NA
+# # On the other hand, subscripting with NA is inefficient, and throwing an exception
+# # forces to filter out NAs first
+# # For now, we throw an exception and bypass the test
+# if(!isTRUE(all.equal(L[[NA]], mvl2R(L2[[NA]])))) {
+# 	cat("test1e failed\n")
+# 	print(all.equal(L[[NA]], mvl2R(L2[[NA]])))
+# 	print(attributes(L[[NA]]))
+# 	print(attributes(mvl2R(L2[[NA]])))
+# 	cat("-----------\n")
+# 	}
+
+if(!compare_df(df, mvl2R(L2[[1]]))) {
+	cat("test1f failed\n")
+	print(attributes(df))
+	print(attributes(mvl2R(L2[[1]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal(aa, mvl2R(L2[[2]])))) {
+	cat("test1g failed\n")
+	print(all.equal(aa, mvl2R(L2[[2]])))
+	print(attributes(aa))
+	print(attributes(mvl2R(L2[[2]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal(mm, mvl2R(L2[[3]])))) {
+	cat("test1h failed\n")
+	print(all.equal(aa, mvl2R(L2[[3]])))
+	print(attributes(aa))
+	print(attributes(mvl2R(L2[[3]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal(LL2, mvl2R(L2[[4]])))) {
+	cat("test1i failed\n")
+	print(all.equal(aa, mvl2R(L2[[4]])))
+	print(attributes(aa))
+	print(attributes(mvl2R(L2[[4]])))
+	cat("-----------\n")
+	}
+	
+if(!isTRUE(all.equal("Example of large data frame", L2[[5]]))) {
+	cat("test1j failed\n")
+	print(all.equal("Example of large data frame", L2[[5]]))
+	print(attributes("Example of large data frame"))
+	print(attributes(L2[[5]]))
+	cat("-----------\n")
+	}
+
+
 if(!isTRUE(all.equal(L[c(2, 3)], L2[c(2,3), recurse=TRUE]))) {
 	cat("test2a failed\n")
 	print(all.equal(L[c(2, 3)], L2[c(2, 3), recurse=TRUE]))
@@ -60,9 +146,10 @@ if(!isTRUE(all.equal(L[c(2, 3)], L2[c(2,3), recurse=TRUE]))) {
 	cat("-----------\n")
 	}
 
-if(!isTRUE(all.equal(L[c(2, NA, 3)], L2[c(2, NA, 3), recurse=TRUE]))) {
+# Some of the names are NA and all.equal() does not handle this properly
+if(!isTRUE(all.equal.list(L[c(2, NA, 3)], L2[c(2, NA, 3), recurse=TRUE], use.names=FALSE))) {
 	cat("test2b failed\n")
-	print(all.equal(L[c(2, NA, 3)], L2[c(2, NA, 3), recurse=TRUE]))
+	print(all.equal.list(L[c(2, NA, 3)], L2[c(2, NA, 3), recurse=TRUE], use.names=FALSE))
 	print(attributes(L[c(2, NA, 3)]))
 	print(attributes(L2[c(2, NA, 3), recurse=TRUE]))
 	cat("-----------\n")

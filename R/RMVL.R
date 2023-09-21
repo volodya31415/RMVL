@@ -1422,10 +1422,11 @@ names.MVL<-function(x) {
 #' @export
 print.MVL<-function(x, ...) {
 	if(!inherits(x, "MVL")) stop("not an MVL object")
-	if(length(x[["directory"]])< MVL_SMALL_LENGTH)
-		cat("MVL(handle ", x[["handle"]], " directory with ", length(x[["directory"]]), " entries, [c(\"", paste0(names(x[["directory"]]), collapse="\", \""), "\")])\n", sep="")
+	x2<-unclass(x)
+	if(length(x2[["directory"]])< MVL_SMALL_LENGTH)
+		cat("MVL(handle ", x2[["handle"]], " directory with ", length(x2[["directory"]]), " entries, [c(\"", paste0(names(x2[["directory"]]), collapse="\", \""), "\")])\n", sep="")
 		else
-		cat("MVL(handle ", x[["handle"]], " directory with ", length(x[["directory"]]), " entries, [c(\"", paste0(names(x[["directory"]])[1:MVL_SMALL_LENGTH], collapse="\", \""), "\")])\n", sep="")
+		cat("MVL(handle ", x2[["handle"]], " directory with ", length(x2[["directory"]]), " entries, [c(\"", paste0(names(x2[["directory"]])[1:MVL_SMALL_LENGTH], collapse="\", \""), "\")])\n", sep="")
 	invisible(x)
 	}
 	
@@ -1748,6 +1749,16 @@ mvl2R<-function(obj, raw=FALSE) {
 		if(is.null(obj2[["metadata"]][["names"]]))stop("Object has no names")
 		i<-which.max(obj2[["metadata"]][["names"]]==i)
 		}
+	if(is.na(i)) {
+		# R behaviour is mixed in this situation
+		# For lists R returns empty list, but (1:5)[[NA]] throws an exception
+		# It would not be unreasonable to think that vec[[NA]] should be NA
+		# On the other hand, subscripting with NA is inefficient, and throwing an exception
+		# forces to filter out NAs first
+		# For now, throw an exception
+		stop("NA subscript is out of bounds")
+		return(NA)
+		}
 	if(raw)
 		vec<-.Call(read_vectors_idx_raw2, obj2[["handle"]], obj2[["offset"]], i)[[1]]
 		else
@@ -1774,8 +1785,6 @@ mvl2R<-function(obj, raw=FALSE) {
 					}
 			}
 		}
-	nn<-obj2[["metadata"]][["names"]]
-	if(!is.null(nn))names(vec)<-nn[i]
 	
 	return(vec)
 	}
@@ -1789,6 +1798,8 @@ mvl2R<-function(obj, raw=FALSE) {
 # #' @export
 print.MVL_INDEX<-function(obj, ...) {
 	obj2<-unclass(obj)
+	obj2$metadata$class<-"MVL_OBJECT"
+	class(obj2)<-"MVL_OBJECT"
 	index_type<-obj2["index_type"]
 	if(index_type==1) {
 		vec_types<-unlist(mvl2R(obj2["vec_types"]))
