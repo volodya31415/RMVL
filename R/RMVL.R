@@ -1670,7 +1670,6 @@ mvl2R<-function(obj, raw=FALSE) {
 			if(is.factor(i))i<-as.character(i)
 			if(is.character(i)) {
 				if(is.null(nn))stop("Object has no names")
-#				i<-which.max(obj2[["metadata"]][["names"]]==i)
 				i<-match(i, nn)
 				}
 	#		if(is.numeric(i)) 
@@ -1737,8 +1736,10 @@ mvl2R<-function(obj, raw=FALSE) {
 	if(length(i)!=1)stop("You can only select one element in vector index")
 	if(is.factor(i))i<-as.character(i)
 	if(is.character(i)) {
-		if(is.null(obj2[["metadata"]][["names"]]))stop("Object has no names")
-		i<-which.max(obj2[["metadata"]][["names"]]==i)
+		nn<-obj2[["metadata"]][["names"]]
+		if(is.null(nn))stop("Object has no names")
+		#i<-which.max(obj2[["metadata"]][["names"]]==i)
+		i<-match(i, nn)
 		}
 	if(is.na(i)) {
 		# R behaviour is mixed in this situation

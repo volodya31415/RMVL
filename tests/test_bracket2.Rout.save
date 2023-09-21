@@ -79,7 +79,7 @@ Loading required package: RMVL
 + 	cat("-----------\n")
 + 	}
 > 	
-> if(!isTRUE(all.equal(mm, mvl2R(L2[["z"]])))) {
+> if(!compare_df(mm, mvl2R(L2[["z"]]))) {
 + 	cat("test1c failed\n")
 + 	print(all.equal(mm, mvl2R(L2[["z"]])))
 + 	print(attributes(mm))
@@ -132,18 +132,18 @@ Loading required package: RMVL
 + 	cat("-----------\n")
 + 	}
 > 	
-> if(!isTRUE(all.equal(mm, mvl2R(L2[[3]])))) {
+> if(!compare_df(mm, mvl2R(L2[[3]]))) {
 + 	cat("test1h failed\n")
-+ 	print(all.equal(aa, mvl2R(L2[[3]])))
-+ 	print(attributes(aa))
++ 	print(all.equal(mm, mvl2R(L2[[3]])))
++ 	print(attributes(mm))
 + 	print(attributes(mvl2R(L2[[3]])))
 + 	cat("-----------\n")
 + 	}
 > 	
 > if(!isTRUE(all.equal(LL2, mvl2R(L2[[4]])))) {
 + 	cat("test1i failed\n")
-+ 	print(all.equal(aa, mvl2R(L2[[4]])))
-+ 	print(attributes(aa))
++ 	print(all.equal(LL2, mvl2R(L2[[4]])))
++ 	print(attributes(LL2))
 + 	print(attributes(mvl2R(L2[[4]])))
 + 	cat("-----------\n")
 + 	}
@@ -201,4 +201,4 @@ Loading required package: RMVL
 > 
 > proc.time()
    user  system elapsed 
-  0.957   0.024   0.970 
+  0.941   0.024   0.960 

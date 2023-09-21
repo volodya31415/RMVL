@@ -60,7 +60,7 @@ if(!isTRUE(all.equal(aa, mvl2R(L2[["y"]])))) {
 	cat("-----------\n")
 	}
 	
-if(!isTRUE(all.equal(mm, mvl2R(L2[["z"]])))) {
+if(!compare_df(mm, mvl2R(L2[["z"]]))) {
 	cat("test1c failed\n")
 	print(all.equal(mm, mvl2R(L2[["z"]])))
 	print(attributes(mm))
@@ -113,18 +113,18 @@ if(!isTRUE(all.equal(aa, mvl2R(L2[[2]])))) {
 	cat("-----------\n")
 	}
 	
-if(!isTRUE(all.equal(mm, mvl2R(L2[[3]])))) {
+if(!compare_df(mm, mvl2R(L2[[3]]))) {
 	cat("test1h failed\n")
-	print(all.equal(aa, mvl2R(L2[[3]])))
-	print(attributes(aa))
+	print(all.equal(mm, mvl2R(L2[[3]])))
+	print(attributes(mm))
 	print(attributes(mvl2R(L2[[3]])))
 	cat("-----------\n")
 	}
 	
 if(!isTRUE(all.equal(LL2, mvl2R(L2[[4]])))) {
 	cat("test1i failed\n")
-	print(all.equal(aa, mvl2R(L2[[4]])))
-	print(attributes(aa))
+	print(all.equal(LL2, mvl2R(L2[[4]])))
+	print(attributes(LL2))
 	print(attributes(mvl2R(L2[[4]])))
 	cat("-----------\n")
 	}
