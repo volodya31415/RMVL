@@ -1271,7 +1271,6 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 			vec<-.Call(read_vectors_idx_raw2, mh[["handle"]], offset, idx[[1]])[[1]]
 			else
 			vec<-.Call(read_vectors_idx3, mh[["handle"]], offset, idx[[1]])[[1]]
-#			vec<-.Call(read_vectors_idx_real, MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 		}
 	if(inherits(vec, "MVL_OFFSET")) {
 		lengths<-.Call(read_lengths, mh[["handle"]], vec)
@@ -1595,9 +1594,7 @@ mvl2R<-function(obj, raw=FALSE) {
 			ofs<-.Call(read_vectors_idx3, obj2[["handle"]], obj2[["offset"]], j)[[1]]
 			
 		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(i)))})
-		
-#		df<-.Call(read_vectors_idx2, obj[["handle"]], ofs, i)
-		
+				
 		names(df)<-n
 		class(df)<-"data.frame"
 		if(dim(df)[2]==1 && !is.null(drop) && drop)return(df[,1])
@@ -1645,16 +1642,10 @@ mvl2R<-function(obj, raw=FALSE) {
 				idx<-outer(idx, (ii-1)*mult, FUN="+")
 				}
 			}
-# 		if(raw)
-# 			vec<-.Call(read_vectors_idx_raw_real, obj2[["handle"]], obj2[["offset"]], as.numeric(idx))[[1]]
-# 			else
-# 			vec<-.Call(read_vectors_idx_real, obj2[["handle"]], obj2[["offset"]], idx)[[1]]
-# #			vec<-.Call(read_vectors_idx_real, obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		if(raw)
 			vec<-.Call(read_vectors_idx_raw2, obj2[["handle"]], obj2[["offset"]], idx+1)[[1]]
 			else
 			vec<-.Call(read_vectors_idx3, obj2[["handle"]], obj2[["offset"]], idx+1)[[1]]
-#			vec<-.Call(read_vectors_idx_real, obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		
 		if(obj2[["values_fixup"]]==1 && !raw) {
 			F<-vec==255
@@ -1684,15 +1675,10 @@ mvl2R<-function(obj, raw=FALSE) {
 				}
 	#		if(is.numeric(i)) 
 				{
-				#print(i)
-				#print(L)
-	#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
 				if(raw)
 					vec<-.Call(read_vectors_idx_raw2, obj2[["handle"]], obj2[["offset"]], i)[[1]]
 					else
 					vec<-.Call(read_vectors_idx3, obj2[["handle"]], obj2[["offset"]], i)[[1]]
-	#				vec<-.Call(read_vectors_idx, obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
-	#			vec<-.Call(read_vectors, obj[["handle"]], obj[["offset"]])[[1]][i]
 	
 				if(obj2[["values_fixup"]]==1 && !raw) {
 					F<-vec==255
