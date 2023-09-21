@@ -451,7 +451,10 @@ switch(TYPEOF(indices)) {
 				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_int64(vec)[m]-1;
 				break;
 			case LIBMVL_VECTOR_DOUBLE:
-				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_double(vec)[m]-1;
+				for(LIBMVL_OFFSET64 m=0;m<N;m++) {
+					double a=mvl_vector_data_double(vec)[m];
+					v_idx[m]=isfinite(a) ? (LIBMVL_OFFSET64) (a-1.0) : ~(LIBMVL_OFFSET64)0;
+					}
 				break;
 			case LIBMVL_VECTOR_FLOAT:
 				for(LIBMVL_OFFSET64 m=0;m<N;m++)v_idx[m]=mvl_vector_data_float(vec)[m]-1;
@@ -2140,7 +2143,8 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_DOUBLE: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data_double(vec_idx)[j]-1; \
+						double vpidx=mvl_vector_data_double(vec_idx)[j]; \
+						LIBMVL_OFFSET64 j0=isfinite(vpidx) ? (LIBMVL_OFFSET64)(vpidx-1.0) : N0; \
 						if(j0<N0) { \
 							line ;\
 							} else { \
@@ -6189,13 +6193,13 @@ static const R_CallMethodDef callMethods[] = {
   {"read_types",  (DL_FUNC) &read_types, 2},
   {"get_vector_data_ptr",  (DL_FUNC) &get_vector_data_ptr, 2},
   {"read_vectors_raw",  (DL_FUNC) &read_vectors_raw, 2},
-  {"read_vectors_idx_raw",  (DL_FUNC) &read_vectors_idx_raw, 3},
-  {"read_vectors_idx_raw_real",  (DL_FUNC) &read_vectors_idx_raw_real, 3},
+//   {"read_vectors_idx_raw",  (DL_FUNC) &read_vectors_idx_raw, 3},
+//   {"read_vectors_idx_raw_real",  (DL_FUNC) &read_vectors_idx_raw_real, 3},
   {"read_vectors_idx_raw2",  (DL_FUNC) &read_vectors_idx_raw2, 3},
   {"read_vectors",  (DL_FUNC) &read_vectors, 2},
-  {"read_vectors_idx",  (DL_FUNC) &read_vectors_idx, 3},
-  {"read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real, 3},
-  {"read_vectors_idx2",  (DL_FUNC) &read_vectors_idx2, 3},
+//   {"read_vectors_idx",  (DL_FUNC) &read_vectors_idx, 3},
+//   {"read_vectors_idx_real",  (DL_FUNC) &read_vectors_idx_real, 3},
+//   {"read_vectors_idx2",  (DL_FUNC) &read_vectors_idx2, 3},
   {"read_vectors_idx3",  (DL_FUNC) &read_vectors_idx3, 3},
   {"add_directory_entries",  (DL_FUNC) &add_directory_entries, 3},
   {"write_vector",  (DL_FUNC) &write_vector, 4},

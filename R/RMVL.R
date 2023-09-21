@@ -1645,13 +1645,18 @@ mvl2R<-function(obj, raw=FALSE) {
 				idx<-outer(idx, (ii-1)*mult, FUN="+")
 				}
 			}
+# 		if(raw)
+# 			vec<-.Call(read_vectors_idx_raw_real, obj2[["handle"]], obj2[["offset"]], as.numeric(idx))[[1]]
+# 			else
+# 			vec<-.Call(read_vectors_idx_real, obj2[["handle"]], obj2[["offset"]], idx)[[1]]
+# #			vec<-.Call(read_vectors_idx_real, obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		if(raw)
-			vec<-.Call(read_vectors_idx_raw_real, obj2[["handle"]], obj2[["offset"]], as.numeric(idx))[[1]]
+			vec<-.Call(read_vectors_idx_raw2, obj2[["handle"]], obj2[["offset"]], idx+1)[[1]]
 			else
-			vec<-.Call(read_vectors_idx_real, obj2[["handle"]], obj2[["offset"]], idx)[[1]]
+			vec<-.Call(read_vectors_idx3, obj2[["handle"]], obj2[["offset"]], idx+1)[[1]]
 #			vec<-.Call(read_vectors_idx_real, obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		
-		if(obj2[["values_fixup"]]==1) {
+		if(obj2[["values_fixup"]]==1 && !raw) {
 			F<-vec==255
 			vec<-as.logical(vec)
 			vec[F]<-NA
@@ -1689,7 +1694,7 @@ mvl2R<-function(obj, raw=FALSE) {
 	#				vec<-.Call(read_vectors_idx, obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
 	#			vec<-.Call(read_vectors, obj[["handle"]], obj[["offset"]])[[1]][i]
 	
-				if(obj2[["values_fixup"]]==1) {
+				if(obj2[["values_fixup"]]==1 && !raw) {
 					F<-vec==255
 					vec<-as.logical(vec)
 					vec[F]<-NA
