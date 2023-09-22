@@ -368,7 +368,7 @@ SEXP sidx, sofs;
 double doffset;
 LIBMVL_OFFSET64 *offset=(LIBMVL_OFFSET64 *)&doffset;
 
-sidx=VECTOR_ELT_STR(obj, "handle");
+sidx=PROTECT(VECTOR_ELT_STR(obj, "handle"));
 sofs=VECTOR_ELT_STR(obj, "offset");
 
 *idx=-1;
@@ -380,6 +380,7 @@ if((*idx)>=0 && sofs!=R_NilValue && length(sofs)==1) {
 	doffset=REAL(sofs)[0];
 	*ofs=*offset;
 	}
+UNPROTECT(1);
 }
 
 LIBMVL_VECTOR * get_mvl_vector(int idx, LIBMVL_OFFSET64 offset)
@@ -537,8 +538,8 @@ ans=PROTECT(allocVector(VECSXP, max_N));
 
 #define add_status(name, val)   {\
 	if(idx<max_N) { \
+		SET_VECTOR_ELT(ans, idx, PROTECT(val)); \
 		SET_STRING_ELT(names, idx, mkChar(name)); \
-		SET_VECTOR_ELT(ans, idx, (val)); \
 		idx++; \
 		} else { \
 		Rprintf("*** MVL_INTERNAL_ERROR: too many status fields\n"); \
@@ -550,6 +551,9 @@ add_status("off_t_bytes", ScalarInteger(sizeof(off_t)));
 add_status("long_bytes", ScalarInteger(sizeof(long)));
 add_status("offset64_bytes", ScalarInteger(sizeof(LIBMVL_OFFSET64)));
 add_status("vector_header_bytes", ScalarInteger(sizeof(LIBMVL_VECTOR_HEADER)));
+
+// This confuses Rchk, but doing manually is worse because Rchk does not properly handle macro expansion
+UNPROTECT(idx);
 
 n_open=0;
 for(j=0;j<libraries_free;j++)
@@ -2508,7 +2512,7 @@ if(length(metadata_offset)<1) {
 total_length=0;
 char_total_length=0;
 for(k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
+	data=PROTECT(VECTOR_ELT(data_list, k));
 	
 	if(TYPEOF(data)==STRSXP) {
 		total_length+=xlength(data);
@@ -2519,14 +2523,17 @@ for(k=0;k<xlength(data_list);k++) {
 				else
 				char_total_length+=strlen(CHAR(sch));
 			}
+		UNPROTECT(1);
 		continue;
 		}
 	
 	if(TYPEOF(data)!=VECSXP) {
 		total_length+=xlength(data);
+		UNPROTECT(1);
 		continue;
 		}
 	decode_mvl_object(data, &data_idx, &data_offset);
+	UNPROTECT(1);
 	vec=get_mvl_vector(data_idx, data_offset);
 	
 	if(vec==NULL) {
@@ -2572,7 +2579,7 @@ if(char_total_length>0) {
 	}
 
 for(k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
+	data=PROTECT(VECTOR_ELT(data_list, k));
 
 	if(TYPEOF(data)==VECSXP) {
 		decode_mvl_object(data, &data_idx, &data_offset);
@@ -2581,6 +2588,7 @@ for(k=0;k<xlength(data_list);k++) {
 		if(mvl_vector_type(vec)==type) {
 			mvl_rewrite_vector(libraries[idx].ctx, type, offset, vec_idx, mvl_vector_length(vec), (mvl_vector_data_uint8(vec)));
 			vec_idx+=mvl_vector_length(vec);
+			UNPROTECT(1);
 			continue;
 			}
 
@@ -2631,6 +2639,7 @@ for(k=0;k<xlength(data_list);k++) {
 				break;
 			}
 		/* TODO */
+		UNPROTECT(1);
 		continue;
 		}
 	
@@ -2701,6 +2710,7 @@ for(k=0;k<xlength(data_list);k++) {
 					break;
 				default:
 					error("can only write raw, double and integer to INT64");
+					UNPROTECT(1);
 					return(R_NilValue);
 				}
 			break;
@@ -2708,6 +2718,7 @@ for(k=0;k<xlength(data_list);k++) {
 			fdata=calloc(xlength(data), sizeof(*fdata));
 			if(fdata==NULL) {
 				error("Out of memory");
+				UNPROTECT(1);
 				return(R_NilValue);
 				}
 			pd=REAL(data);
@@ -2772,8 +2783,10 @@ for(k=0;k<xlength(data_list);k++) {
 			
 		default:
 			error("write_vector: unknown type %d", type);
+			UNPROTECT(1);
 			return(R_NilValue);
 		}
+	UNPROTECT(1);
 	}
 	
 if(char_idx>char_total_length) {
@@ -2873,7 +2886,6 @@ SEXP order_vectors(SEXP data_list, SEXP indices, SEXP s_sort_function)
 {
 int data_idx, sort_function;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 double *pd;
 int *pi, err;
@@ -2915,8 +2927,8 @@ if(vec_data==NULL || vectors==NULL) {
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -3037,7 +3049,6 @@ SEXP hash_vectors(SEXP data_list, SEXP indices)
 {
 int data_idx;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 double *pd;
 LIBMVL_OFFSET64 *po;
@@ -3073,8 +3084,8 @@ if(vec_data==NULL || vectors==NULL) {
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -3117,7 +3128,6 @@ SEXP write_hash_vectors(SEXP idx0, SEXP data_list)
 {
 int data_idx, idx;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 int err;
 
@@ -3175,8 +3185,8 @@ if(vec_data==NULL || vectors==NULL || v_idx==NULL || hash==NULL) {
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -3232,7 +3242,6 @@ SEXP write_groups(SEXP idx0, SEXP data_list)
 {
 int data_idx, idx, first_count;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 int err;
 
@@ -3299,8 +3308,8 @@ if(vec_data==NULL || vectors==NULL || v_idx==NULL || hash==NULL || first==NULL |
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -3486,8 +3495,8 @@ if(vec_data==NULL || vectors==NULL || vstats==NULL || hash==NULL || first==NULL 
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -3603,7 +3612,6 @@ SEXP write_spatial_groups(SEXP idx0, SEXP data_list, SEXP sbits)
 {
 int data_idx, idx;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
@@ -3700,8 +3708,8 @@ if(vec_data==NULL || vectors==NULL || vstats==NULL || hash==NULL || first==NULL 
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -4178,7 +4186,8 @@ switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 		Nv=xlength(VECTOR_ELT(data_list, 0));
 		break;
 	case VECSXP:
-		decode_mvl_object(VECTOR_ELT(data_list, 0), &data_idx, &data_offset);
+		decode_mvl_object(PROTECT(VECTOR_ELT(data_list, 0)), &data_idx, &data_offset);
+		UNPROTECT(1);
 		vec=get_mvl_vector(data_idx, data_offset);
 		if(vec==NULL) {
 			mvl_free_named_list(L);
@@ -4228,7 +4237,8 @@ for(int i=0;i<Nbits;i++) {
 	int shift=bits[i];
 	int mult=1<<shift;
 	int mask=mult-1;
-	normalize_vector(VECTOR_ELT(data_list, i), &(vstats[i]), 0, Nv, values);
+	normalize_vector(PROTECT(VECTOR_ELT(data_list, i)), &(vstats[i]), 0, Nv, values);
+	UNPROTECT(1);
 	for(LIBMVL_OFFSET64 k=0;k<Nv;k++) {
 		int m=floor(values[k]*mult)-mult;
 		if(m<0)m=0;
@@ -4405,7 +4415,8 @@ switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 		Nv=xlength(VECTOR_ELT(data_list, 0));
 		break;
 	case VECSXP:
-		decode_mvl_object(VECTOR_ELT(data_list, 0), &data_idx, &data_offset);
+		decode_mvl_object(PROTECT(VECTOR_ELT(data_list, 0)), &data_idx, &data_offset);
+		UNPROTECT(1);
 		vec=get_mvl_vector(data_idx, data_offset);
 		if(vec==NULL) {
 			mvl_free_named_list(L);
@@ -4455,7 +4466,8 @@ for(int i=0;i<Nbits;i++) {
 	int shift=bits[i];
 	int mult=1<<shift;
 	int mask=mult-1;
-	normalize_vector(VECTOR_ELT(data_list, i), &(vstats[i]), 0, Nv, values);
+	normalize_vector(PROTECT(VECTOR_ELT(data_list, i)), &(vstats[i]), 0, Nv, values);
+	UNPROTECT(1);
 	for(LIBMVL_OFFSET64 k=0;k<Nv;k++) {
 		int m=floor(values[k]*mult)-mult;
 		if(m<0)m=0;
@@ -4540,11 +4552,12 @@ for(LIBMVL_OFFSET64 i=0;i<Nv;i++) {
 	SETCADR(R_fcall, ScalarReal(i+1));
 	SETCADDR(R_fcall, duplicate(sa));
 //	fprintf(stderr, "%lld %d %d %d (a)\n", i, MAYBE_REFERENCED(sa), -1, -1);
-	tmp=eval(R_fcall, env);
+	tmp=PROTECT(eval(R_fcall, env));
 //	if(MAYBE_REFERENCED(tmp))tmp=duplicate(tmp);
 //	fprintf(stderr, "%lld %d %d %d (b)\n", i, MAYBE_REFERENCED(sa), -1, MAYBE_REFERENCED(tmp));
 
 	SET_VECTOR_ELT(ans, i, tmp);
+	UNPROTECT(1);
 	}
 	
 free(values);
@@ -4678,7 +4691,6 @@ SEXP find_matches(SEXP data_list0, SEXP indices0, SEXP data_list1, SEXP indices1
 int data_idx;
 
 LIBMVL_OFFSET64 data_offset, i, pairs_size;
-SEXP data;
 
 double *pd;
 int err;
@@ -4739,8 +4751,8 @@ if(vec_data0==NULL || vectors0==NULL || vec_data1==NULL || vectors1==NULL) {
 	
 //Rprintf("Computing data lists\n");
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list0);k++) {
-	data=VECTOR_ELT(data_list0, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list0, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors0[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors0[k]==NULL) {
@@ -4753,8 +4765,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list0);k++) {
 		}
 	vec_data0[k]=libraries[data_idx].data;
 	
-	data=VECTOR_ELT(data_list1, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list1, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors1[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors1[k]==NULL) {
@@ -4990,8 +5002,8 @@ if(vec_data==NULL || vectors==NULL) {
 	
 //Rprintf("Computing data lists\n");
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -5112,7 +5124,8 @@ for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 		pidx2[j-k0]=pidx[j];
 		}
 	SETCADR(R_fcall, duplicate(vidx));
-	SET_VECTOR_ELT(ans, i, eval(R_fcall, env));
+	SET_VECTOR_ELT(ans, i, PROTECT(eval(R_fcall, env)));
+	UNPROTECT(1);
 	}
 
 UNPROTECT(3);
@@ -5124,7 +5137,6 @@ SEXP compute_repeats(SEXP data_list)
 {
 int data_idx;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
@@ -5155,8 +5167,8 @@ if(vec_data==NULL || vectors==NULL) {
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -5189,7 +5201,6 @@ SEXP write_extent_index(SEXP idx0, SEXP data_list)
 {
 int idx, data_idx;
 LIBMVL_OFFSET64 data_offset;
-SEXP data;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors;
@@ -5243,8 +5254,8 @@ if(vec_data==NULL || vectors==NULL) {
 	}
 
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
-	data=VECTOR_ELT(data_list, k);
-	decode_mvl_object(data, &data_idx, &data_offset);
+	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
+	UNPROTECT(1);
 	vectors[k]=get_mvl_vector(data_idx, data_offset);
 	
 	if(vectors[k]==NULL) {
@@ -5318,7 +5329,8 @@ switch(TYPEOF(VECTOR_ELT(data_list, 0))) {
 		Nv=xlength(VECTOR_ELT(data_list, 0));
 		break;
 	case VECSXP:
-		decode_mvl_object(VECTOR_ELT(data_list, 0), &data_idx, &data_offset);
+		decode_mvl_object(PROTECT(VECTOR_ELT(data_list, 0)), &data_idx, &data_offset);
+		UNPROTECT(1);
 		vec=get_mvl_vector(data_idx, data_offset);
 		if(vec==NULL) {
 			mvl_free_extent_list_arrays(&el);
@@ -5341,9 +5353,11 @@ hash=calloc(Nv, sizeof(*hash));
 for(LIBMVL_OFFSET64 i=0;i<Nv;i++)hash[i]=MVL_SEED_HASH_VALUE;
 
 for(LIBMVL_OFFSET64 i=0;i<xlength(data_list);i++) {
-	if(hash_vector_range(VECTOR_ELT(data_list, i), 0, Nv, ei.hash_map.vec_types[i], hash)) {
+	if(hash_vector_range(PROTECT(VECTOR_ELT(data_list, i)), 0, Nv, ei.hash_map.vec_types[i], hash)) {
+		UNPROTECT(1);
 		return(R_NilValue);
 		}
+	UNPROTECT(1);
 	}
 	
 for(LIBMVL_OFFSET64 i=0;i<Nv;i++)hash[i]=mvl_randomize_bits64(hash[i]);
@@ -5377,12 +5391,12 @@ for(LIBMVL_OFFSET64 i=0;i<Nv;i++) {
 	SETCADR(R_fcall, ScalarReal(i+1));
 	SETCADDR(R_fcall, sa);
 //	fprintf(stderr, "%lld %d %d %d (a)\n", i, MAYBE_REFERENCED(sa), -1, -1);
-	tmp=eval(R_fcall, env);
+	tmp=PROTECT(eval(R_fcall, env));
 //	if(MAYBE_REFERENCED(tmp))tmp=duplicate(tmp);
 //	fprintf(stderr, "%lld %d %d %d (b)\n", i, MAYBE_REFERENCED(sa), -1, MAYBE_REFERENCED(tmp));
 
 	SET_VECTOR_ELT(ans, i, tmp);
-	UNPROTECT(1);
+	UNPROTECT(2);
 	}
 	
 mvl_free_extent_list_arrays(&el);
@@ -5444,12 +5458,12 @@ for(LIBMVL_OFFSET64 i=0;i<Nv;i++) {
 	SETCADR(R_fcall, ScalarReal(i+1));
 	SETCADDR(R_fcall, sa);
 //	fprintf(stderr, "%lld %d %d %d (a)\n", i, MAYBE_REFERENCED(sa), -1, -1);
-	tmp=eval(R_fcall, env);
+	tmp=PROTECT(eval(R_fcall, env));
 //	if(MAYBE_REFERENCED(tmp))tmp=duplicate(tmp);
 //	fprintf(stderr, "%lld %d %d %d (b)\n", i, MAYBE_REFERENCED(sa), -1, MAYBE_REFERENCED(tmp));
 
 	SET_VECTOR_ELT(ans, i, tmp);
-	UNPROTECT(1);
+	UNPROTECT(2);
 	}
 	
 mvl_free_extent_list_arrays(&el);
