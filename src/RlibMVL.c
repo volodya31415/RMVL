@@ -1402,7 +1402,7 @@ for(i=0;i<xlength(offsets);i++) {
 			switch(mvl_vector_type(vec_idx)) { \
 				case LIBMVL_VECTOR_OFFSET64: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data_int64(vec_idx)[j]-1; \
+						LIBMVL_OFFSET64 j0=(LIBMVL_OFFSET64)(mvl_vector_data_int64(vec_idx)[j]-1); \
 						if(j0<N0) { \
 							line ;\
 							} else { \
@@ -1412,7 +1412,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_INT32: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data_int32(vec_idx)[j]-1; \
+						LIBMVL_OFFSET64 j0=(LIBMVL_OFFSET64)(mvl_vector_data_int32(vec_idx)[j]-1); \
 						if(j0<N0) { \
 							line ;\
 							} else { \
@@ -1422,7 +1422,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_INT64: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data_int64(vec_idx)[j]-1; \
+						LIBMVL_OFFSET64 j0=(LIBMVL_OFFSET64)(mvl_vector_data_int64(vec_idx)[j]-1); \
 						if(j0<N0) { \
 							line ;\
 							} else { \
@@ -1443,7 +1443,7 @@ for(i=0;i<xlength(offsets);i++) {
 					break; \
 				case LIBMVL_VECTOR_FLOAT: \
 					for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-						LIBMVL_OFFSET64 j0=mvl_vector_data_float(vec_idx)[j]-1; \
+						LIBMVL_OFFSET64 j0=(LIBMVL_OFFSET64)(mvl_vector_data_float(vec_idx)[j]-1); \
 						if(j0<N0) { \
 							line ;\
 							} else { \
@@ -1472,7 +1472,7 @@ for(i=0;i<xlength(offsets);i++) {
 		case INTSXP: { \
 			int * restrict pidx=INTEGER(indicies); \
 			for(LIBMVL_OFFSET64 j=0;j<N;j++) { \
-				LIBMVL_OFFSET64 j0=pidx[j]-1; \
+				LIBMVL_OFFSET64 j0=(LIBMVL_OFFSET64)(pidx[j]-1); \
 				if(j0<N0) { \
 					line ;\
 					} else { \
