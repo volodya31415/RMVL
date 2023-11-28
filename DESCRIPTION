@@ -1,6 +1,6 @@
 Package: RMVL
 Title: Mappable Vector Library for Handling Large Datasets
-Version: 0.0.4.9
+Version: 0.1.0.0
 Authors@R: 
     person(given = "Vladimir",
            family = "Dergachev",
