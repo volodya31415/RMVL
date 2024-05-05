@@ -606,9 +606,6 @@ nunprot++;
 
 #undef add_status
 if(idx!=max_N) {
-// 	SETLENGTH should not be used
-// 	SETLENGTH(names, idx);
-// 	SETLENGTH(ans, idx);
 	Rprintf("*** RMVL INTERNAL ERROR: idx=%d vs max_N=%d in %s:%d\n",
 		idx, max_N, __FILE__, __LINE__);
 	}
