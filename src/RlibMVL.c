@@ -528,8 +528,8 @@ return(0);
 
 SEXP get_status(void)
 {
-int max_N=20;
-int idx=0, idx2, n_open;
+int max_N=10;
+int idx=0, idx2, n_open, nunprot=0;
 int j;
 SEXP names, ans, data;
 	
@@ -553,7 +553,6 @@ add_status("offset64_bytes", ScalarInteger(sizeof(LIBMVL_OFFSET64)));
 add_status("vector_header_bytes", ScalarInteger(sizeof(LIBMVL_VECTOR_HEADER)));
 
 // This confuses Rchk, but doing manually is worse because Rchk does not properly handle macro expansion
-UNPROTECT(idx);
 
 n_open=0;
 for(j=0;j<libraries_free;j++)
@@ -570,7 +569,7 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_handles", data);
-UNPROTECT(1);
+nunprot++;
 
 data=PROTECT(allocVector(INTSXP, n_open));
 idx2=0;
@@ -581,7 +580,7 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_flags", data);
-UNPROTECT(1);
+nunprot++;
 
 data=PROTECT(allocVector(LGLSXP, n_open));
 idx2=0;
@@ -592,7 +591,7 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_modified", data);
-UNPROTECT(1);
+nunprot++;
 
 data=PROTECT(allocVector(REALSXP, n_open));
 idx2=0;
@@ -603,16 +602,19 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_length", data);
-UNPROTECT(1);
+nunprot++;
 
 #undef add_status
-if(idx<max_N) {
-	SETLENGTH(names, idx);
-	SETLENGTH(ans, idx);
+if(idx!=max_N) {
+// 	SETLENGTH should not be used
+// 	SETLENGTH(names, idx);
+// 	SETLENGTH(ans, idx);
+	Rprintf("*** RMVL INTERNAL ERROR: idx=%d vs max_N=%d in %s:%d\n",
+		idx, max_N, __FILE__, __LINE__);
 	}
 
 setAttrib(ans, R_NamesSymbol, names);
-UNPROTECT(2);
+UNPROTECT(idx+nunprot+2);
 return(ans);
 }
 
