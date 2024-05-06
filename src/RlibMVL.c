@@ -2896,7 +2896,7 @@ int *pi, err;
 
 void **vec_data;
 LIBMVL_VECTOR **vectors, *vec;
-LIBMVL_OFFSET64 *v_idx;
+LIBMVL_OFFSET64 *v_idx, *vec_data_size;
 LIBMVL_OFFSET64 N;
 LIBMVL_OFFSET64 vector_length;
 
@@ -2923,10 +2923,12 @@ if(TYPEOF(s_sort_function)!=INTSXP || xlength(s_sort_function)!=1) {
 sort_function=INTEGER(s_sort_function)[0];
 	
 vec_data=calloc(xlength(data_list), sizeof(*vec_data));
+vec_data_size=calloc(xlength(data_list), sizeof(*vec_data_size));
 vectors=calloc(xlength(data_list), sizeof(*vectors));
-if(vec_data==NULL || vectors==NULL) {
+if(vec_data==NULL || vectors==NULL || vec_data_size==NULL) {
 	error("Not enough memory");
 	free(vec_data);
+	free(vec_data_size);
 	free(vectors);
 	return(R_NilValue);
 	}
@@ -2939,6 +2941,7 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 	if(vectors[k]==NULL) {
 		error("Invalid MVL object in data list");
 		free(vec_data);
+		free(vec_data_size);
 		free(vectors);
 		return(R_NilValue);
 		}
@@ -2949,12 +2952,14 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		if(vector_length!=mvl_vector_nentries(vectors[k])) {
 			error("Mismatched length %llu (expected %llu) for vector %llu", mvl_vector_length(vectors[k]), vector_length, k);
 			free(vec_data);
+			free(vec_data_size);
 			free(vectors);
 			return(R_NilValue);
 			}
 		}
 		
 	vec_data[k]=libraries[data_idx].data;
+	vec_data_size[k]=libraries[data_idx].length;
 	}
 	
 switch(TYPEOF(indices)) {
@@ -2965,6 +2970,7 @@ switch(TYPEOF(indices)) {
 		if(vec==NULL) {
 			error("Invalid MVL object or R vector passed as indices");
 			free(vec_data);
+			free(vec_data_size);
 			free(vectors);
 			return(R_NilValue);
 			}
@@ -2973,6 +2979,7 @@ switch(TYPEOF(indices)) {
 		if(v_idx==NULL) {
 			error("Not enough memory");
 			free(vec_data);
+			free(vec_data_size);
 			free(vectors);
 			return(R_NilValue);
 			}
@@ -2996,6 +3003,7 @@ switch(TYPEOF(indices)) {
 			default:
 				error("Cannot interpret MVL object as indices");
 				free(vec_data);
+				free(vec_data_size);
 				free(vectors);
 				free(v_idx);
 				return(R_NilValue);
@@ -3008,6 +3016,7 @@ switch(TYPEOF(indices)) {
 		if(v_idx==NULL) {
 			error("Not enough memory");
 			free(vec_data);
+			free(vec_data_size);
 			free(vectors);
 			return(R_NilValue);
 			}
@@ -3020,6 +3029,7 @@ switch(TYPEOF(indices)) {
 		if(v_idx==NULL) {
 			error("Not enough memory");
 			free(vec_data);
+			free(vec_data_size);
 			free(vectors);
 			return(R_NilValue);
 			}
@@ -3033,6 +3043,7 @@ switch(TYPEOF(indices)) {
 		if(v_idx==NULL) {
 			error("Not enough memory");
 			free(vec_data);
+			free(vec_data_size);
 			free(vectors);
 			return(R_NilValue);
 			}
@@ -3041,6 +3052,7 @@ switch(TYPEOF(indices)) {
 	default:
 		error("Cannot interpret R object as index");
 		free(vec_data);
+		free(vec_data_size);
 		free(vectors);
 		return(R_NilValue);		
 	}
@@ -3050,13 +3062,31 @@ for(LIBMVL_OFFSET64 m=0;m<N;m++) {
 		error("Index %llu larger than vector length (%llu vs %llu)", m+1, v_idx[m]+1, vector_length);
 		free(v_idx);
 		free(vec_data);
+		free(vec_data_size);
 		free(vectors);
 		return(R_NilValue);				
 		}
 	}
 	
+for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
+	if(mvl_vector_type(vectors[k])!=LIBMVL_PACKED_LIST64)continue;
+	
+	
+	for(LIBMVL_OFFSET64 m=0;m<N;m++) {
+		if(mvl_packed_list_validate_entry(vectors[k], vec_data[k], vec_data_size[k], v_idx[m])!=0) {
+			error("Invalid entry %llu in string vector %llu", m+1, k+1);
+			free(v_idx);
+			free(vec_data);
+			free(vec_data_size);
+			free(vectors);
+			return(R_NilValue);				
+			}
+		}
+	}
+	
 if((err=mvl_sort_indices(N, v_idx, xlength(data_list), vectors, vec_data, sort_function))!=0) {
 	free(vec_data);
+	free(vec_data_size);
 	free(vectors);
 	free(v_idx);
 	error("Error sorting indices, error code %d", err);
@@ -3067,6 +3097,7 @@ pd=REAL(ans);
 for(LIBMVL_OFFSET64 m=0;m<N;m++)pd[m]=v_idx[m]+1;
 UNPROTECT(1);
 free(vec_data);
+free(vec_data_size);
 free(vectors);
 free(v_idx);
 return(ans);	
