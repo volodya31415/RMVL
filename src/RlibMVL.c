@@ -408,7 +408,7 @@ if(libraries[idx].ctx==NULL)return(NULL);
 
 if(libraries[idx].data==NULL)return(NULL);
 
-return(mvl_read_named_list(libraries[idx].ctx, libraries[idx].data, offset));
+return(mvl_read_named_list(libraries[idx].ctx, libraries[idx].data, libraries[idx].length, offset));
 }
 
 int get_indices(SEXP indices, LIBMVL_VECTOR *vector, LIBMVL_OFFSET64 *N0, LIBMVL_OFFSET64 **v_idx0)
@@ -5329,7 +5329,7 @@ if(index_idx<0) {
 
 mvl_init_extent_index(&ei);
 
-if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei))!=0) {
+if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, libraries[index_idx].length, index_offset, &ei))!=0) {
 	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
 	return(R_NilValue);
 	}
@@ -5438,7 +5438,7 @@ decode_mvl_object(extent_index0, &index_idx, &index_offset);
 
 mvl_init_extent_index(&ei);
 
-if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, index_offset, &ei))!=0) {
+if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, libraries[index_idx].length, index_offset, &ei))!=0) {
 	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
 	return(R_NilValue);
 	}
