@@ -2898,6 +2898,7 @@ void **vec_data;
 LIBMVL_VECTOR **vectors, *vec;
 LIBMVL_OFFSET64 *v_idx;
 LIBMVL_OFFSET64 N;
+LIBMVL_OFFSET64 vector_length;
 
 SEXP ans;
 	
@@ -2941,6 +2942,18 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		free(vectors);
 		return(R_NilValue);
 		}
+		
+	if(k==0) { 
+		vector_length=mvl_vector_nentries(vectors[k]);
+		} else {
+		if(vector_length!=mvl_vector_nentries(vectors[k])) {
+			error("Mismatched length %llu (expected %llu) for vector %llu", mvl_vector_length(vectors[k]), vector_length, k);
+			free(vec_data);
+			free(vectors);
+			return(R_NilValue);
+			}
+		}
+		
 	vec_data[k]=libraries[data_idx].data;
 	}
 	
@@ -3030,6 +3043,16 @@ switch(TYPEOF(indices)) {
 		free(vec_data);
 		free(vectors);
 		return(R_NilValue);		
+	}
+	
+for(LIBMVL_OFFSET64 m=0;m<N;m++) {
+	if(v_idx[m]>=vector_length) {
+		error("Index %llu larger than vector length (%llu vs %llu)", m+1, v_idx[m]+1, vector_length);
+		free(v_idx);
+		free(vec_data);
+		free(vectors);
+		return(R_NilValue);				
+		}
 	}
 	
 if((err=mvl_sort_indices(N, v_idx, xlength(data_list), vectors, vec_data, sort_function))!=0) {
