@@ -177,7 +177,7 @@ if(p->length>0) {
 		return(R_NilValue);
 		}
 #endif
-	mvl_load_image(p->ctx, p->length, p->data);
+	mvl_load_image(p->ctx, p->data, p->length);
 	fseek(p->f, 0, SEEK_END);
 	if(mode==0) {
 		/* Read-only mapping; no need to use up a file descriptor */
@@ -4996,8 +4996,8 @@ if(key_last==NULL || key_match_indices==NULL || match_indices==NULL) {
 	}
 
 //Rprintf("Finding matches\n");
-if((err=mvl_find_matches(N0, v_idx0, xlength(data_list0), vectors0, vec_data0, key_hash,
-	N1, v_idx1, xlength(data_list1), vectors1, vec_data1, hm,
+if((err=mvl_find_matches(N0, v_idx0, xlength(data_list0), vectors0, vec_data0, vec_data0_length, key_hash,
+	N1, v_idx1, xlength(data_list1), vectors1, vec_data1, vec_data1_length, hm,
 	key_last, pairs_size, key_match_indices, match_indices))) {
 	error("Error computing merge plan %d\n", err);
 	free(vec_data0);
@@ -5162,7 +5162,7 @@ if((err=mvl_hash_indices(N, v_idx, hm->hash, xlength(data_list), vectors, vec_da
 mvl_compute_hash_map(hm);
 
 //Rprintf("Finding groups\n");
-mvl_find_groups(N, v_idx, xlength(data_list), vectors, vec_data, hm);
+mvl_find_groups(N, v_idx, xlength(data_list), vectors, vec_data, vec_data_length, hm);
 
 ans=PROTECT(allocVector(VECSXP, 2));
 
@@ -5268,6 +5268,7 @@ int data_idx;
 LIBMVL_OFFSET64 data_offset;
 
 void **vec_data;
+LIBMVL_OFFSET64 *vec_data_length;
 LIBMVL_VECTOR **vectors;
 double *dans;
 
@@ -5287,10 +5288,12 @@ if(xlength(data_list)<1) {
 	}
 	
 vec_data=calloc(xlength(data_list), sizeof(*vec_data));
+vec_data_length=calloc(xlength(data_list), sizeof(*vec_data_length));
 vectors=calloc(xlength(data_list), sizeof(*vectors));
-if(vec_data==NULL || vectors==NULL) {
+if(vec_data==NULL || vec_data_length==NULL || vectors==NULL) {
 	error("Not enough memory");
 	free(vec_data);
+	free(vec_data_length);
 	free(vectors);
 	return(R_NilValue);
 	}
@@ -5303,14 +5306,17 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 	if(vectors[k]==NULL) {
 		error("Invalid MVL object in data list");
 		free(vec_data);
+		free(vec_data_length);
 		free(vectors);
 		return(R_NilValue);
 		}
+		
 	vec_data[k]=libraries[data_idx].data;
+	vec_data_length[k]=libraries[data_idx].length;
 	}
 
 memset(&el, 0, sizeof(el));
-mvl_find_repeats(&el, xlength(data_list), vectors, vec_data);
+mvl_find_repeats(&el, xlength(data_list), vectors, vec_data, vec_data_length);
 
 ans=PROTECT(allocVector(REALSXP, el.count+1));
 dans=REAL(ans);
@@ -5319,6 +5325,7 @@ for(LIBMVL_OFFSET64 i=0;i<el.count;i++) dans[i]=el.offset[i]+1;
 
 mvl_free_partition_arrays(&el);
 free(vec_data);
+free(vec_data_length);
 free(vectors);
 	
 UNPROTECT(1);
