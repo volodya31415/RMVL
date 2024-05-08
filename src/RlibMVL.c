@@ -4249,6 +4249,14 @@ if(Nbits*sizeof(LIBMVL_VEC_STATS)!=mvl_vector_length(vec_stats)*sizeof(double)) 
 	return(R_NilValue);
 	}
 	
+/* This cutoff is determined by the call to calloc() to allocate ball below */
+if(Nbits>36) {
+	mvl_free_named_list(L);
+	error("Nbits=%d is too large (>36)", Nbits);
+	return(R_NilValue);
+	}
+	
+	
 vstats=(LIBMVL_VEC_STATS *)mvl_vector_data_double(vec_stats);
 
 first_mark=mvl_vector_data_int64(vec_first_mark);
@@ -4292,13 +4300,6 @@ query_mark=calloc(Nv, sizeof(*query_mark));
 indices_size=max_count*ball_size;
 indices=calloc(indices_size, sizeof(*indices));
 ball=calloc(ball_size*Nbits, sizeof(*ball));
-for(long long b=0;b<ball_size; b++) {
-	long long b0=b;
-	for(int i=0;i<Nbits;i++) {
-		ball[b*Nbits+i]=b0 % 3;
-		b0=b0/3;
-		}
-	}
 
 if(values==NULL || query_mark==NULL || indices==NULL || ball==NULL) {
 	error("Not enough memory");
@@ -4308,6 +4309,14 @@ if(values==NULL || query_mark==NULL || indices==NULL || ball==NULL) {
 	free(ball);
 	mvl_free_named_list(L);
 	return(R_NilValue);
+	}
+	
+for(long long b=0;b<ball_size; b++) {
+	long long b0=b;
+	for(int i=0;i<Nbits;i++) {
+		ball[b*Nbits+i]=b0 % 3;
+		b0=b0/3;
+		}
 	}
 	
 memset(query_mark, 0, Nv*sizeof(*query_mark));
