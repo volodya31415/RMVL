@@ -2871,7 +2871,7 @@ if(get_indices(indices, vec, &N_idx, &v_idx)) {
 	
 libraries[idx].modified=1;
 
-offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, *moffset, 1024*1024*16);
+offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, libraries[data_idx].length, *moffset, 1024*1024*16);
 	
 free(v_idx);
 
