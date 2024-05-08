@@ -3361,13 +3361,14 @@ if(xlength(data_list)<1) {
 	}
 	
 vec_data=calloc(xlength(data_list), sizeof(*vec_data));
+vec_data_length=calloc(xlength(data_list), sizeof(*vec_data_length));
 vectors=calloc(xlength(data_list), sizeof(*vectors));
 v_idx=calloc(N_BLOCK, sizeof(*v_idx));
 hash=calloc(N_BLOCK, sizeof(*v_idx));
 count=calloc(N_BLOCK, sizeof(*count));
 first=calloc(N_BLOCK, sizeof(*first));
 prev=calloc(N_BLOCK, sizeof(*prev));
-if(vec_data==NULL || vectors==NULL || v_idx==NULL || hash==NULL || first==NULL || prev==NULL || count==NULL) {
+if(vec_data==NULL || vec_data_length==NULL || vectors==NULL || v_idx==NULL || hash==NULL || first==NULL || prev==NULL || count==NULL) {
 	error("Not enough memory");
 	free(vec_data);
 	free(vec_data_length);
