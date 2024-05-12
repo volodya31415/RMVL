@@ -2933,6 +2933,7 @@ if(vec_data==NULL || vectors==NULL || vec_data_size==NULL) {
 	return(R_NilValue);
 	}
 
+vector_length=0;
 for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 	decode_mvl_object(PROTECT(VECTOR_ELT(data_list, k)), &data_idx, &data_offset);
 	UNPROTECT(1);
