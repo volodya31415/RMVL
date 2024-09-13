@@ -4240,7 +4240,7 @@ Nbits=mvl_vector_length(vec_bits);
 
 if(Nbits!=length(data_list) || length(data_list)==0) {
 	mvl_free_named_list(L);
-	error("Query columns do not match spatial index: %d vs %d", length(data_list), Nbits);
+	error("Query columns do not match spatial index: %d vs %llu", length(data_list), Nbits);
 	return(R_NilValue);
 	}
 	
@@ -4253,7 +4253,7 @@ if(Nbits*sizeof(LIBMVL_VEC_STATS)!=mvl_vector_length(vec_stats)*sizeof(double)) 
 /* This cutoff is determined by the call to calloc() to allocate ball below */
 if(Nbits>36) {
 	mvl_free_named_list(L);
-	error("Nbits=%d is too large (>36)", Nbits);
+	error("Nbits=%llu is too large (>36)", Nbits);
 	return(R_NilValue);
 	}
 	
