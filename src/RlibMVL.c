@@ -4418,14 +4418,14 @@ return(ans);
 
 SEXP neighbors_lapply(SEXP spatial_index, SEXP data_list, SEXP fn, SEXP env) 
 {
-LIBMVL_OFFSET64 data_offset, index_offset, *query_mark, Nv, N2, indices_size, indices_free, *indices;
+LIBMVL_OFFSET64 data_offset, index_offset, *query_mark, Nv, N2, indices_size, indices_free, *indices, Nbits, ball_size;
 int data_idx, index_idx;
 LIBMVL_VECTOR *vec_bits, *vec_first, *vec_first_mark, *vec_prev_mark, *vec_mark, *vec_prev, *vec, *vec_stats, *vec_max_count;
 SEXP ans, sa, sa2, R_fcall, tmp;
 double *values, *pd, *pd2;
 LIBMVL_NAMED_LIST *L;
-int *bits, Nbits;
-long long *first, *first_mark, *prev_mark, *mark, *prev, max_count, ball_size;
+int *bits;
+long long *first, *first_mark, *prev_mark, *mark, *prev, max_count;
 LIBMVL_VEC_STATS *vstats;
 char *ball;
 
@@ -4478,7 +4478,7 @@ Nbits=mvl_vector_length(vec_bits);
 
 if(Nbits!=length(data_list) || length(data_list)==0) {
 	mvl_free_named_list(L);
-	error("Query columns do not match spatial index: %d vs %d", length(data_list), Nbits);
+	error("Query columns do not match spatial index: %d vs %llu", length(data_list), Nbits);
 	return(R_NilValue);
 	}
 	
