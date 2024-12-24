@@ -341,6 +341,90 @@ p->f=NULL;
 return(R_NilValue);
 }
 
+SEXP compute_full_checksums(SEXP idx0)
+{
+int idx; 
+MMAPED_LIBRARY *p;
+LIBMVL_OFFSET64 offset;
+
+if(length(idx0)!=1) {
+	error("compute_full_checksums requires a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0)return(R_NilValue);
+if(idx>=libraries_free)return(R_NilValue);
+
+p=&(libraries[idx]);
+
+if(p->ctx==NULL)return(R_NilValue);
+
+if(p->f==NULL) {
+	error("library not open for writing");
+	return(R_NilValue);
+	}
+	
+if(p->data==NULL) {
+	error("compute_full_checksums requires mapped library");
+	return(R_NilValue);
+	}
+	
+offset=mvl_write_hash64_checksum_vector(p->ctx, p->data, 0, p->length, 65536);
+if(offset==LIBMVL_NULL_OFFSET) {
+	if(mvl_get_error(p->ctx)!=0)
+		error("Error %d encountered when writing checksums: %s", mvl_get_error(p->ctx), mvl_strerror(p->ctx));
+		else
+		error("Null offset while writing checksums");
+	return(R_NilValue);
+	}
+	
+mvl_add_directory_entry(p->ctx, offset, "MVL_FULL_CHECKSUMS");
+p->modified=1;
+
+if(mvl_get_error(p->ctx)!=0)
+	error("Error %d encountered when writing checksums: %s", mvl_get_error(p->ctx), mvl_strerror(p->ctx));
+
+return(R_NilValue);
+}
+
+SEXP verify_full_checksums(SEXP idx0)
+{
+int idx; 
+MMAPED_LIBRARY *p;
+LIBMVL_OFFSET64 offset_checksums;
+
+if(length(idx0)!=1) {
+	error("verify_full_checksums requires a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0)return(R_NilValue);
+if(idx>=libraries_free)return(R_NilValue);
+
+p=&(libraries[idx]);
+
+if(p->ctx==NULL)return(R_NilValue);
+	
+if(p->data==NULL) {
+	error("verify_full_checksums requires mapped library");
+	return(R_NilValue);
+	}
+
+offset_checksums=mvl_find_directory_entry(p->ctx, "MVL_FULL_CHECKSUMS");
+if(offset_checksums==LIBMVL_NULL_OFFSET) {
+	error("Checksums not found");
+	return(R_NilValue);
+	}
+	
+if(mvl_verify_full_checksum_vector(p->ctx, (LIBMVL_VECTOR *)&(p->data[offset_checksums]), p->data, p->length)) {
+	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
+	return(R_NilValue);
+	}
+
+
+return(R_NilValue);
+}
+
 
 SEXP VECTOR_ELT_STR(SEXP list, const char *s)
 {
@@ -5637,6 +5721,8 @@ static const R_CallMethodDef callMethods[] = {
    {"mmap_library", (DL_FUNC) &mmap_library, 2},
    {"remap_library", (DL_FUNC) &remap_library, 2},
   {"close_library",  (DL_FUNC) &close_library, 1},
+  {"compute_full_checksums",  (DL_FUNC) &compute_full_checksums, 1},
+  {"verify_full_checksums",  (DL_FUNC) &verify_full_checksums, 1},
   {"find_directory_entries",  (DL_FUNC) &find_directory_entries, 2},
   {"get_directory",  (DL_FUNC) &get_directory, 1},
   {"read_metadata",  (DL_FUNC) &read_metadata, 2},

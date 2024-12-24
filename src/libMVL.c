@@ -885,6 +885,7 @@ if((long long)offset<0) {
 
 mvl_write(ctx, sizeof(ctx->tmp_vh), &ctx->tmp_vh);
 
+buffer_idx=0;
 for(block=checksum_area_start;block<checksum_area_stop;block+=checksum_block_size) {
 	block_stop=block+checksum_block_size;
 	if(block_stop>checksum_area_stop)block_stop=checksum_area_stop;
@@ -1030,6 +1031,8 @@ LIBMVL_CHECKSUM_VECTOR_HEADER *hdr=(LIBMVL_CHECKSUM_VECTOR_HEADER *)(checksum_ve
 LIBMVL_OFFSET64 byte_length;
 LIBMVL_VECTOR_HEADER *vec;
 char *data8=(char *)data;
+int element_size;
+int a;
 
 if(hdr->type!=LIBMVL_VECTOR_CHECKSUM) {
 	mvl_set_error(ctx, LIBMVL_ERR_INVALID_HEADER);
@@ -1042,28 +1045,21 @@ if(err=mvl_validate_vector(vector_offset, data, data_size)) {
 	}
 
 vec=(LIBMVL_VECTOR_HEADER *)&(data8[vector_offset]);
-	
-switch(vec->type) {
-	case LIBMVL_VECTOR_CSTRING:
-	case LIBMVL_VECTOR_UINT8:
-		byte_length=vec->length;
-		break;
-	case LIBMVL_VECTOR_INT32:
-	case LIBMVL_VECTOR_FLOAT:
-		byte_length=vec->length*4;
-		break;
-	case LIBMVL_VECTOR_INT64:
-	case LIBMVL_VECTOR_DOUBLE:
-	case LIBMVL_VECTOR_OFFSET64:
-	case LIBMVL_PACKED_LIST64:
-		byte_length=vec->length*8;
-		break;
-	default:
-		mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
-		return(LIBMVL_NULL_OFFSET);
+
+element_size=mvl_element_size(mvl_vector_type(vec));
+
+if(!element_size) {
+	mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
+	return(-51);
 	}
 	
-return(mvl_verify_checksum_vector(ctx, checksum_vector, data, data_size, vector_offset, vector_offset+byte_length+sizeof(*vec)));
+if((a=mvl_verify_checksum_vector(ctx, checksum_vector, data, data_size, vector_offset, vector_offset+byte_length+sizeof(*vec))))return(a);
+
+if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64) {
+	return(mvl_verify_checksum_vector2(ctx, checksum_vector, data, data_size, mvl_vector_data_offset(vec)[0]-sizeof(LIBMVL_VECTOR_HEADER)));
+	}
+	
+return(0);
 }
 
 /*! @brief Compute and verify checksums for a given area. It works just like mvl_verify_checksum_vector() but takes pointers instead of offsets
@@ -1077,11 +1073,15 @@ return(mvl_verify_checksum_vector(ctx, checksum_vector, data, data_size, vector_
  */
 int mvl_verify_checksum_vector3(LIBMVL_CONTEXT *ctx, const LIBMVL_VECTOR *checksum_vector, void *data, LIBMVL_OFFSET64 data_size, void * start, void * stop)
 {
-if( (start-data < 0) || (start-data>data_size) || (stop-data<0) || (stop-data>data_size)) {
+char *data8=(char *)data;
+char *start8=(char *)start;
+char *stop8=(char *)stop;
+
+if( (start8-data8 < 0) || (start8-data8>data_size) || (stop8-data8<0) || (stop8-data8>data_size)) {
 	mvl_set_error(ctx, LIBMVL_ERR_INVALID_OFFSET);
 	return(-40);
 	}
-return(mvl_verify_checksum_vector(ctx, checksum_vector, data, data_size, start-data, stop-data));
+return(mvl_verify_checksum_vector(ctx, checksum_vector, data, data_size, start8-data8, stop8-data8));
 }
 
 /*! @brief Get offset to metadata describing R-style character class - an array of strings. This is convenient for writing columns of strings to be analyzed with R - just provide this offset as the metadata field of mvl_write_packed_list()
