@@ -1493,7 +1493,7 @@ print.MVL_OBJECT<-function(x, ..., small_length=10) {
 	
 #' Verify object integrity. 
 #'
-#' So far only verification of entire MVL archives is supported. 
+#' To verify entire MVL file pass an open handle. Otherwise pass MVL_OBJECT. 
 #' Verification will fail with an error if the checksums do not match or are not available
 #' 
 #' @param x MVL handle or MVL object
@@ -1506,8 +1506,14 @@ mvl_verify<-function(x) {
 		return(invisible(NULL))
 		}
 	if(inherits(x, "MVL_OBJECT")) {
-		stop("MVL_OBJECT verification has not been implemented yet")
+		.Call(verify_mvl_object_checksums, x)
+		if(mvl_inherits(x, c("list", "data.frame")) && (length(x)>0)) {
+			for(i in 1:length(x))mvl_verify(x[[i,ref=TRUE]])
+			}
+		
+		return(invisible(NULL))
 		}
+	stop("Cannot verify object of class ", class(x))
 	return(invisible(NULL))
 	}
 	

@@ -39,6 +39,7 @@ typedef struct {
 	HANDLE f_handle;
 	HANDLE f_map_handle;
 #endif
+	LIBMVL_OFFSET64 full_checksums_offset;
 	int modified;
 	} MMAPED_LIBRARY;
 	
@@ -185,8 +186,10 @@ if(p->length>0) {
 		p->f=NULL;
 		p->ctx->f=NULL;
 		}
+	p->full_checksums_offset=mvl_find_directory_entry(p->ctx, "MVL_FULL_CHECKSUMS");
 	} else {
 	mvl_write_preamble(p->ctx);
+	p->full_checksums_offset=LIBMVL_NULL_OFFSET;
 	p->modified=1;
 	}
 	
@@ -294,6 +297,9 @@ if(new_length>0) {
 		p->f=NULL;
 		p->ctx->f=NULL;
 		}
+	p->full_checksums_offset=mvl_find_directory_entry(p->ctx, "MVL_FULL_CHECKSUMS");
+	} else {
+	p->full_checksums_offset=LIBMVL_NULL_OFFSET;
 	}
 	
 return(R_NilValue);
@@ -337,6 +343,7 @@ mvl_free_context(p->ctx);
 p->ctx=NULL;
 if(p->f!=NULL)fclose(p->f);
 p->f=NULL;
+p->full_checksums_offset=LIBMVL_NULL_OFFSET;
 
 return(R_NilValue);
 }
@@ -387,44 +394,6 @@ if(mvl_get_error(p->ctx)!=0)
 return(R_NilValue);
 }
 
-SEXP verify_full_checksums(SEXP idx0)
-{
-int idx; 
-MMAPED_LIBRARY *p;
-LIBMVL_OFFSET64 offset_checksums;
-
-if(length(idx0)!=1) {
-	error("verify_full_checksums requires a single integer");
-	return(R_NilValue);
-	}
-idx=INTEGER(idx0)[0];
-if(idx<0)return(R_NilValue);
-if(idx>=libraries_free)return(R_NilValue);
-
-p=&(libraries[idx]);
-
-if(p->ctx==NULL)return(R_NilValue);
-	
-if(p->data==NULL) {
-	error("verify_full_checksums requires mapped library");
-	return(R_NilValue);
-	}
-
-offset_checksums=mvl_find_directory_entry(p->ctx, "MVL_FULL_CHECKSUMS");
-if(offset_checksums==LIBMVL_NULL_OFFSET) {
-	error("Checksums not found");
-	return(R_NilValue);
-	}
-	
-if(mvl_verify_full_checksum_vector(p->ctx, (LIBMVL_VECTOR *)&(p->data[offset_checksums]), p->data, p->length)) {
-	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
-	return(R_NilValue);
-	}
-
-
-return(R_NilValue);
-}
-
 
 SEXP VECTOR_ELT_STR(SEXP list, const char *s)
 {
@@ -466,6 +435,84 @@ if((*idx)>=0 && sofs!=R_NilValue && length(sofs)==1) {
 	}
 UNPROTECT(1);
 }
+
+
+SEXP verify_full_checksums(SEXP idx0)
+{
+int idx; 
+MMAPED_LIBRARY *p;
+LIBMVL_OFFSET64 offset_checksums;
+
+if(length(idx0)!=1) {
+	error("verify_full_checksums requires a single integer");
+	return(R_NilValue);
+	}
+idx=INTEGER(idx0)[0];
+if(idx<0)return(R_NilValue);
+if(idx>=libraries_free)return(R_NilValue);
+
+p=&(libraries[idx]);
+
+if(p->ctx==NULL)return(R_NilValue);
+	
+if(p->data==NULL) {
+	error("verify_full_checksums requires mapped library");
+	return(R_NilValue);
+	}
+
+offset_checksums=p->full_checksums_offset;
+if(offset_checksums==LIBMVL_NULL_OFFSET) {
+	error("Checksums not found");
+	return(R_NilValue);
+	}
+	
+if(mvl_verify_full_checksum_vector(p->ctx, (LIBMVL_VECTOR *)&(p->data[offset_checksums]), p->data, p->length)) {
+	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
+	return(R_NilValue);
+	}
+
+
+return(R_NilValue);
+}
+
+
+SEXP verify_mvl_object_checksums(SEXP obj)
+{
+int idx; 
+MMAPED_LIBRARY *p;
+LIBMVL_OFFSET64 offset_checksums, ofs;
+
+decode_mvl_object(obj, &idx, &ofs);
+
+if(idx<0 || idx>=libraries_free) {
+	error("invalid MVL_OBJECT");
+	return(R_NilValue);
+	}
+
+p=&(libraries[idx]);
+
+if(p->ctx==NULL)return(R_NilValue);
+	
+if(p->data==NULL) {
+	error("verify_full_checksums requires mapped library");
+	return(R_NilValue);
+	}
+
+offset_checksums=p->full_checksums_offset;
+if(offset_checksums==LIBMVL_NULL_OFFSET) {
+	error("Checksums not found");
+	return(R_NilValue);
+	}
+	
+if(mvl_verify_checksum_vector2(p->ctx, (LIBMVL_VECTOR *)&(p->data[offset_checksums]), p->data, p->length, ofs)) {
+	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
+	return(R_NilValue);
+	}
+
+
+return(R_NilValue);
+}
+
 
 LIBMVL_VECTOR * get_mvl_vector(int idx, LIBMVL_OFFSET64 offset)
 {
@@ -612,7 +659,7 @@ return(0);
 
 SEXP get_status(void)
 {
-int max_N=10;
+int max_N=11;
 int idx=0, idx2, n_open, nunprot=0;
 int j;
 SEXP names, ans, data;
@@ -686,6 +733,17 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_length", data);
+nunprot++;
+
+data=PROTECT(allocVector(LGLSXP, n_open));
+idx2=0;
+for(j=0;j<libraries_free;j++)
+	if(libraries[j].ctx!=NULL) {
+		LOGICAL(data)[idx2]=libraries[j].full_checksums_offset!=LIBMVL_NULL_OFFSET;
+		idx2++;
+		}
+		
+add_status("checksums_present", data);
 nunprot++;
 
 #undef add_status
@@ -5723,6 +5781,7 @@ static const R_CallMethodDef callMethods[] = {
   {"close_library",  (DL_FUNC) &close_library, 1},
   {"compute_full_checksums",  (DL_FUNC) &compute_full_checksums, 1},
   {"verify_full_checksums",  (DL_FUNC) &verify_full_checksums, 1},
+  {"verify_mvl_object_checksums",  (DL_FUNC) &verify_mvl_object_checksums, 1},
   {"find_directory_entries",  (DL_FUNC) &find_directory_entries, 2},
   {"get_directory",  (DL_FUNC) &get_directory, 1},
   {"read_metadata",  (DL_FUNC) &read_metadata, 2},
