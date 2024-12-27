@@ -39,7 +39,6 @@ typedef struct {
 	HANDLE f_handle;
 	HANDLE f_map_handle;
 #endif
-	LIBMVL_OFFSET64 full_checksums_offset;
 	int modified;
 	} MMAPED_LIBRARY;
 	
@@ -186,10 +185,8 @@ if(p->length>0) {
 		p->f=NULL;
 		p->ctx->f=NULL;
 		}
-	p->full_checksums_offset=mvl_find_directory_entry(p->ctx, "MVL_FULL_CHECKSUMS");
 	} else {
 	mvl_write_preamble(p->ctx);
-	p->full_checksums_offset=LIBMVL_NULL_OFFSET;
 	p->modified=1;
 	}
 	
@@ -203,6 +200,7 @@ SEXP remap_library(SEXP idx0, SEXP mode0)
 {
 int mode;
 int idx;
+int err;
 MMAPED_LIBRARY *p;
 LIBMVL_OFFSET64 new_length;
 size_t cur;
@@ -297,9 +295,13 @@ if(new_length>0) {
 		p->f=NULL;
 		p->ctx->f=NULL;
 		}
-	p->full_checksums_offset=mvl_find_directory_entry(p->ctx, "MVL_FULL_CHECKSUMS");
+	p->ctx->full_checksums_offset=mvl_find_directory_entry(p->ctx, LIBMVL_FULL_CHECKSUMS_DIRECTORY_KEY);
+	if((p->ctx->full_checksums_offset!=LIBMVL_NULL_OFFSET) && (err=mvl_validate_vector(p->ctx->full_checksums_offset, p->data, p->length))) {
+		error("Invalid MVL checksums vector: %d", err);
+		p->ctx->full_checksums_offset=LIBMVL_NULL_OFFSET;
+		}
 	} else {
-	p->full_checksums_offset=LIBMVL_NULL_OFFSET;
+	p->ctx->full_checksums_offset=LIBMVL_NULL_OFFSET;
 	}
 	
 return(R_NilValue);
@@ -343,7 +345,6 @@ mvl_free_context(p->ctx);
 p->ctx=NULL;
 if(p->f!=NULL)fclose(p->f);
 p->f=NULL;
-p->full_checksums_offset=LIBMVL_NULL_OFFSET;
 
 return(R_NilValue);
 }
@@ -385,7 +386,7 @@ if(offset==LIBMVL_NULL_OFFSET) {
 	return(R_NilValue);
 	}
 	
-mvl_add_directory_entry(p->ctx, offset, "MVL_FULL_CHECKSUMS");
+mvl_add_directory_entry(p->ctx, offset, LIBMVL_FULL_CHECKSUMS_DIRECTORY_KEY);
 p->modified=1;
 
 if(mvl_get_error(p->ctx)!=0)
@@ -441,7 +442,6 @@ SEXP verify_full_checksums(SEXP idx0)
 {
 int idx; 
 MMAPED_LIBRARY *p;
-LIBMVL_OFFSET64 offset_checksums;
 
 if(length(idx0)!=1) {
 	error("verify_full_checksums requires a single integer");
@@ -460,13 +460,12 @@ if(p->data==NULL) {
 	return(R_NilValue);
 	}
 
-offset_checksums=p->full_checksums_offset;
-if(offset_checksums==LIBMVL_NULL_OFFSET) {
+if(p->ctx->full_checksums_offset==LIBMVL_NULL_OFFSET) {
 	error("Checksums not found");
 	return(R_NilValue);
 	}
 	
-if(mvl_verify_full_checksum_vector(p->ctx, (LIBMVL_VECTOR *)&(p->data[offset_checksums]), p->data, p->length)) {
+if(mvl_verify_full_checksum_vector(p->ctx, NULL, p->data, p->length)) {
 	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
 	return(R_NilValue);
 	}
@@ -480,7 +479,7 @@ SEXP verify_mvl_object_checksums(SEXP obj)
 {
 int idx; 
 MMAPED_LIBRARY *p;
-LIBMVL_OFFSET64 offset_checksums, ofs;
+LIBMVL_OFFSET64 ofs;
 
 decode_mvl_object(obj, &idx, &ofs);
 
@@ -498,14 +497,13 @@ if(p->data==NULL) {
 	return(R_NilValue);
 	}
 
-offset_checksums=p->full_checksums_offset;
-if(offset_checksums==LIBMVL_NULL_OFFSET) {
+if(p->ctx->full_checksums_offset==LIBMVL_NULL_OFFSET) {
 	error("Checksums not found");
 	return(R_NilValue);
 	}
 	
-if(mvl_verify_checksum_vector2(p->ctx, (LIBMVL_VECTOR *)&(p->data[offset_checksums]), p->data, p->length, ofs)) {
-	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
+if(mvl_verify_checksum_vector2(p->ctx, NULL, p->data, p->length, ofs)) {
+	error("Error verifying checksums: %s", mvl_strerror(p->ctx));
 	return(R_NilValue);
 	}
 
@@ -739,7 +737,7 @@ data=PROTECT(allocVector(LGLSXP, n_open));
 idx2=0;
 for(j=0;j<libraries_free;j++)
 	if(libraries[j].ctx!=NULL) {
-		LOGICAL(data)[idx2]=libraries[j].full_checksums_offset!=LIBMVL_NULL_OFFSET;
+		LOGICAL(data)[idx2]=libraries[j].ctx->full_checksums_offset!=LIBMVL_NULL_OFFSET;
 		idx2++;
 		}
 		
