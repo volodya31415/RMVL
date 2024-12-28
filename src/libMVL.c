@@ -267,6 +267,8 @@ switch(ctx->error) {
 		return("checksum did not match, corrupt data likely");
 	case LIBMVL_ERR_NO_CHECKSUMS:
 		return("no checksums found, cannot verify");
+	case LIBMVL_ERR_NO_DATA:
+		return("data is NULL and mvl_load_image() has not been called on MVL context");
 	default:
 		return("unknown error");
 	
@@ -877,7 +879,7 @@ if((checksum_area_start & 0x7) || (checksum_block_size & 0x7) || (checksum_area_
 	return(LIBMVL_NULL_OFFSET);
 	}
 	
-memset(hdr, 0, sizeof(hdr));
+memset(hdr, 0, sizeof(*hdr));
 hdr->type=LIBMVL_VECTOR_CHECKSUM;
 hdr->checksum_algorithm=LIBMVL_CHECKSUM_ALGORITHM_INTERNAL1_HASH64;
 hdr->checksum_area_start=checksum_area_start;
@@ -1007,7 +1009,9 @@ if(hdr->length < ((hdr->checksum_area_stop-hdr->checksum_area_start+hdr->checksu
 start2=start-((start-hdr->checksum_area_start) % hdr->checksum_block_size);
 
 block=(stop-hdr->checksum_area_start) % hdr->checksum_block_size;
-if(block>0)stop2=stop+hdr->checksum_block_size-block;
+stop2=stop;
+if(block>0)stop2+=hdr->checksum_block_size-block;
+
 if(stop2>hdr->checksum_area_stop)stop2=hdr->checksum_area_stop;
 
 if(stop2>data_size) {
@@ -1107,7 +1111,7 @@ if(data==NULL) {
 	
 data8=(char *)data;
 
-if(err=mvl_validate_vector(vector_offset, data, data_size)) {
+if((err=mvl_validate_vector(vector_offset, data, data_size))!=0) {
 	mvl_set_error(ctx, err);
 	return(-50);
 	}
@@ -1128,6 +1132,8 @@ if(!element_size) {
 	mvl_set_error(ctx, LIBMVL_ERR_UNKNOWN_TYPE);
 	return(-51);
 	}
+
+byte_length=element_size*mvl_vector_length(vec);
 	
 if((a=mvl_verify_checksum_vector(ctx, checksum_vector, data, data_size, vector_offset, vector_offset+byte_length+sizeof(*vec))))return(a);
 
