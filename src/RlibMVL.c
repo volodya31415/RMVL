@@ -32,8 +32,6 @@ return(mkCharLen((char *)s, len));
 
 typedef struct {
 	FILE *f;
-	char *data;
-	LIBMVL_OFFSET64 length;
 	LIBMVL_CONTEXT *ctx;
 #ifdef __WIN32__
 	HANDLE f_handle;
@@ -53,6 +51,8 @@ int idx;
 MMAPED_LIBRARY *p;
 const char *fn;
 SEXP ans;
+LIBMVL_OFFSET64 length;
+void *data;
 
 if(length(mode0)!=1) {
 	error("mmap_library argument mode has to be length 1 integer");
@@ -136,13 +136,13 @@ if(p->f==NULL) {
 	}
 	
 fseek(p->f, 0, SEEK_END);
-p->length=ftell(p->f);
+length=ftell(p->f);
 fseek(p->f, 0, SEEK_SET);
 
 p->ctx=mvl_create_context();
 p->ctx->f=p->f;
 
-if(p->length>0) {
+if(length>0) {
 #ifdef __WIN32__
 	p->f_handle=(HANDLE)_get_osfhandle(fileno(p->f));
 	if(p->f_handle==NULL) {
@@ -160,8 +160,8 @@ if(p->length>0) {
 		return(R_NilValue);
 		}
 		
-	p->data=MapViewOfFile(p->f_map_handle, FILE_MAP_READ, 0, 0, p->length);
-	if(p->data==NULL) {
+	data=MapViewOfFile(p->f_map_handle, FILE_MAP_READ, 0, 0, length);
+	if(data==NULL) {
 		error("Cannot create Win32 File mapping view");
 		fclose(p->f);
 		p->f=NULL;
@@ -169,15 +169,15 @@ if(p->length>0) {
 		}
 
 #else
-	p->data=mmap(NULL, p->length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
-	if(p->data==NULL) {
+	data=mmap(NULL, length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
+	if(data==NULL) {
 		error("Memory mapping MVL library: %s", strerror(errno));
 		fclose(p->f);
 		p->f=NULL;
 		return(R_NilValue);
 		}
 #endif
-	mvl_load_image(p->ctx, p->data, p->length);
+	mvl_load_image(p->ctx, data, length);
 	fseek(p->f, 0, SEEK_END);
 	if(mode==0) {
 		/* Read-only mapping; no need to use up a file descriptor */
@@ -203,6 +203,7 @@ int idx;
 int err;
 MMAPED_LIBRARY *p;
 LIBMVL_OFFSET64 new_length;
+void *data;
 size_t cur;
 
 if(length(idx0)!=1) {
@@ -254,9 +255,9 @@ if(new_length>0) {
 		return(R_NilValue);
 		}
 	
-	UnmapViewOfFile(p->data);
+	UnmapViewOfFile(p->ctx->data);
 	CloseHandle(p->f_map_handle);
-	p->length=new_length;
+	p->ctx->data_size=new_length;
 	
 	p->f_map_handle=CreateFileMappingA(p->f_handle, NULL, PAGE_READONLY, 0, 0, NULL);
 	if(p->f_map_handle==NULL) {
@@ -266,8 +267,8 @@ if(new_length>0) {
 		return(R_NilValue);
 		}
 		
-	p->data=MapViewOfFile(p->f_map_handle, FILE_MAP_READ, 0, 0, p->length);
-	if(p->data==NULL) {
+	p->ctx->data=MapViewOfFile(p->f_map_handle, FILE_MAP_READ, 0, 0, p->ctx->data_size);
+	if(p->ctx->data==NULL) {
 		error("Cannot create Win32 File mapping view");
 		fclose(p->f);
 		p->f=NULL;
@@ -275,16 +276,16 @@ if(new_length>0) {
 		}
 
 #else
-	if(p->data!=NULL) {
-		if(munmap(p->data, p->length)!=0) {
+	if(p->ctx->data!=NULL) {
+		if(munmap(p->ctx->data, p->ctx->data_size)!=0) {
 			error("Unmapping data: %s", strerror(errno));
 			}
 		}
 
-	p->length=new_length;
+	p->ctx->data_size=new_length;
 
-	p->data=mmap(NULL, p->length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
-	if(p->data==NULL) {
+	p->ctx->data=mmap(NULL, new_length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
+	if(p->ctx->data==NULL) {
 		error("Memory mapping MVL library: %s", strerror(errno));
 		return(R_NilValue);
 		}
@@ -296,7 +297,7 @@ if(new_length>0) {
 		p->ctx->f=NULL;
 		}
 	p->ctx->full_checksums_offset=mvl_find_directory_entry(p->ctx, LIBMVL_FULL_CHECKSUMS_DIRECTORY_KEY);
-	if((p->ctx->full_checksums_offset!=LIBMVL_NULL_OFFSET) && (err=mvl_validate_vector(p->ctx->full_checksums_offset, p->data, p->length))) {
+	if((p->ctx->full_checksums_offset!=LIBMVL_NULL_OFFSET) && (err=mvl_validate_vector(p->ctx->full_checksums_offset, p->ctx->data, p->ctx->data_size))) {
 		error("Invalid MVL checksums vector: %d", err);
 		p->ctx->full_checksums_offset=LIBMVL_NULL_OFFSET;
 		}
@@ -323,16 +324,16 @@ p=&(libraries[idx]);
 
 if(p->ctx==NULL)return(R_NilValue);
 
-if(p->data!=NULL) {
+if(p->ctx->data!=NULL) {
 #ifndef __WIN32__
-	if(munmap(p->data, p->length)!=0) {
+	if(munmap(p->ctx->data, p->ctx->data_size)!=0) {
 		error("Unmapping data: %s", strerror(errno));
 		}
 #else
-	UnmapViewOfFile(p->data);
+	UnmapViewOfFile(p->ctx->data);
 	CloseHandle(p->f_map_handle);
 #endif
-	p->data=NULL;
+	p->ctx->data=NULL;
 	}
 	
 if(p->modified) {
@@ -372,12 +373,12 @@ if(p->f==NULL) {
 	return(R_NilValue);
 	}
 	
-if(p->data==NULL) {
+if(MVL_CONTEXT_DATA(p->ctx)==NULL) {
 	error("compute_full_checksums requires mapped library");
 	return(R_NilValue);
 	}
 	
-offset=mvl_write_hash64_checksum_vector(p->ctx, p->data, 0, p->length, 65536);
+offset=mvl_write_hash64_checksum_vector(p->ctx, MVL_CONTEXT_DATA(p->ctx), 0, MVL_CONTEXT_DATA_SIZE(p->ctx), 65536);
 if(offset==LIBMVL_NULL_OFFSET) {
 	if(mvl_get_error(p->ctx)!=0)
 		error("Error %d encountered when writing checksums: %s", mvl_get_error(p->ctx), mvl_strerror(p->ctx));
@@ -455,7 +456,7 @@ p=&(libraries[idx]);
 
 if(p->ctx==NULL)return(R_NilValue);
 	
-if(p->data==NULL) {
+if(MVL_CONTEXT_DATA(p->ctx)==NULL) {
 	error("verify_full_checksums requires mapped library");
 	return(R_NilValue);
 	}
@@ -465,7 +466,7 @@ if(p->ctx->full_checksums_offset==LIBMVL_NULL_OFFSET) {
 	return(R_NilValue);
 	}
 	
-if(mvl_verify_full_checksum_vector(p->ctx, NULL, p->data, p->length)) {
+if(mvl_verify_full_checksum_vector(p->ctx, NULL, NULL, 0)) {
 	error("Error verifying full checksums: %s", mvl_strerror(p->ctx));
 	return(R_NilValue);
 	}
@@ -492,7 +493,7 @@ p=&(libraries[idx]);
 
 if(p->ctx==NULL)return(R_NilValue);
 	
-if(p->data==NULL) {
+if(MVL_CONTEXT_DATA(p->ctx)==NULL) {
 	error("verify_full_checksums requires mapped library");
 	return(R_NilValue);
 	}
@@ -502,7 +503,7 @@ if(p->ctx->full_checksums_offset==LIBMVL_NULL_OFFSET) {
 	return(R_NilValue);
 	}
 	
-if(mvl_verify_checksum_vector2(p->ctx, NULL, p->data, p->length, ofs)) {
+if(mvl_verify_checksum_vector2(p->ctx, NULL, NULL, 0, ofs)) {
 	error("Error verifying checksums: %s", mvl_strerror(p->ctx));
 	return(R_NilValue);
 	}
@@ -519,14 +520,14 @@ if(idx<0 || idx>=libraries_free || offset==0)return(NULL);
 
 if(libraries[idx].ctx==NULL)return(NULL);
 
-if(libraries[idx].data==NULL)return(NULL);
+if(MVL_CONTEXT_DATA(libraries[idx].ctx)==NULL)return(NULL);
 
-if((err=mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length))<0) {
+if((err=mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx)))<0) {
 	error("Invalid vector: error %d", err);
 	return(NULL);
 	}
 
-return((LIBMVL_VECTOR *)(&libraries[idx].data[offset]));
+return((LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]));
 }
 
 LIBMVL_NAMED_LIST * get_mvl_named_list(int idx, LIBMVL_OFFSET64 offset)
@@ -535,9 +536,9 @@ if(idx<0 || idx>=libraries_free || offset==0)return(NULL);
 
 if(libraries[idx].ctx==NULL)return(NULL);
 
-if(libraries[idx].data==NULL)return(NULL);
+if(MVL_CONTEXT_DATA(libraries[idx].ctx)==NULL)return(NULL);
 
-return(mvl_read_named_list(libraries[idx].ctx, libraries[idx].data, libraries[idx].length, offset));
+return(mvl_read_named_list(libraries[idx].ctx, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx), offset));
 }
 
 int get_indices(SEXP indices, LIBMVL_VECTOR *vector, LIBMVL_OFFSET64 *N0, LIBMVL_OFFSET64 **v_idx0)
@@ -726,7 +727,7 @@ data=PROTECT(allocVector(REALSXP, n_open));
 idx2=0;
 for(j=0;j<libraries_free;j++)
 	if(libraries[j].ctx!=NULL) {
-		REAL(data)[idx2]=libraries[j].length;
+		REAL(data)[idx2]=MVL_CONTEXT_DATA_SIZE(libraries[j].ctx);
 		idx2++;
 		}
 		
@@ -867,11 +868,11 @@ d_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=d_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length)) {
+	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {
 		d_ans[i]=NA_REAL;
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_PACKED_LIST64:
 			d_ans[i]=mvl_vector_length(vec)-1;
@@ -918,12 +919,12 @@ d_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=d_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length)) {		
+	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {		
 		for(j=0;j<nfields;j++)
 			d_ans[i*nfields+j]=NA_REAL;
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	mvl_compute_vec_stats(vec, &stats);
 	memcpy(&(d_ans[i*nfields]), &stats, sizeof(stats));
 	}
@@ -965,11 +966,11 @@ p_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=p_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length)) {		
+	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {		
 		p_ans[i]=NA_INTEGER;
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	p_ans[i]=mvl_vector_type(vec);
 	}
 
@@ -1011,11 +1012,11 @@ ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
-	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+	if(offset==0 || offset>MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx)-sizeof(LIBMVL_VECTOR_HEADER)) {
 		SET_VECTOR_ELT(ans, i, R_NilValue);
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 		case LIBMVL_VECTOR_CSTRING:
@@ -1088,10 +1089,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, mvl_vector_length(vec)-1));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<mvl_vector_length(vec)-1;j++) {
-				if(mvl_packed_list_is_na(vec, libraries[idx].data, j))
+				if(mvl_packed_list_is_na(vec, MVL_CONTEXT_DATA(libraries[idx].ctx), j))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, MVL_CONTEXT_DATA(libraries[idx].ctx), j), mvl_packed_list_get_entry_bytelength(vec, j)));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1146,11 +1147,11 @@ ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
-	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+	if(offset==0 || offset>MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx)-sizeof(LIBMVL_VECTOR_HEADER)) {
 		SET_VECTOR_ELT(ans, i, R_NilValue);
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 
 	m=mvl_vector_length(vec);
 	for(j=0;j<N;j++) {
@@ -1241,10 +1242,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, N));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<N;j++) {
-				if(mvl_packed_list_is_na(vec, libraries[idx].data, v_idx[j]))
+				if(mvl_packed_list_is_na(vec, MVL_CONTEXT_DATA(libraries[idx].ctx), v_idx[j]))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, MVL_CONTEXT_DATA(libraries[idx].ctx), v_idx[j]), mvl_packed_list_get_entry_bytelength(vec, v_idx[j])));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1294,12 +1295,12 @@ p_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=p_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length)) {
+	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {
 		UNPROTECT(1);
 		error("Invalid vector offset provided");
 		return(R_NilValue);
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	
 	offset=(LIBMVL_OFFSET64)&(mvl_vector_data(vec));
 	p_ans[i]=*doffset2;	
@@ -1340,11 +1341,11 @@ ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
-	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+	if(offset==0 || offset>MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx)-sizeof(LIBMVL_VECTOR_HEADER)) {
 		SET_VECTOR_ELT(ans, i, R_NilValue);
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	switch(mvl_vector_type(vec)) {
 		case LIBMVL_VECTOR_UINT8:
 			v=PROTECT(allocVector(RAWSXP, mvl_vector_length(vec)));
@@ -1414,10 +1415,10 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, mvl_vector_length(vec)-1));
 			/* TODO: check that vector length is within R limits */
 			for(j=0;j<mvl_vector_length(vec)-1;j++) {
-				if(mvl_packed_list_is_na(vec, libraries[idx].data, j))
+				if(mvl_packed_list_is_na(vec, MVL_CONTEXT_DATA(libraries[idx].ctx), j))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
-					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, libraries[idx].data, j), mvl_packed_list_get_entry_bytelength(vec, j)));
+					SET_STRING_ELT(v, j, mkCharLenU(mvl_packed_list_get_entry(vec, MVL_CONTEXT_DATA(libraries[idx].ctx), j), mvl_packed_list_get_entry_bytelength(vec, j)));
 				}
 			SET_VECTOR_ELT(ans, i, v);
 			UNPROTECT(1);
@@ -1487,11 +1488,11 @@ ans=PROTECT(allocVector(VECSXP, xlength(offsets)));
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
-	if(offset==0 || offset>libraries[idx].length-sizeof(LIBMVL_VECTOR_HEADER)) {
+	if(offset==0 || offset>MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx)-sizeof(LIBMVL_VECTOR_HEADER)) {
 		SET_VECTOR_ELT(ans, i, R_NilValue);
 		continue;
 		}
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	N0=mvl_vector_length(vec);
 	
 		
@@ -1715,7 +1716,7 @@ for(i=0;i<xlength(offsets);i++) {
 			v=PROTECT(allocVector(STRSXP, N));
 			/* TODO: check that vector length is within R limits */
 			INDEX_LOOP( {
-				void *data=libraries[idx].data;
+				void *data=MVL_CONTEXT_DATA(libraries[idx].ctx);
 				if(mvl_packed_list_is_na(vec, data, j0))
 					SET_STRING_ELT(v, j, NA_STRING);
 					else
@@ -1766,13 +1767,13 @@ dans=REAL(ans);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, libraries[idx].data, libraries[idx].length)) {
-		Rprintf("offset=%lld data=%p length=%lld\n", offset, libraries[idx].data, libraries[idx].length);
+	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {
+		Rprintf("offset=%lld data=%p length=%lld\n", offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx));
 		offset=0;
 		dans[i]=NA_REAL;
 		continue;
 		} 
-	vec=(LIBMVL_VECTOR *)(&libraries[idx].data[offset]);
+	vec=(LIBMVL_VECTOR *)(&MVL_CONTEXT_DATA(libraries[idx].ctx)[offset]);
 	offset=mvl_vector_metadata_offset(vec);
 	dans[i]=*doffset2;
 	}
@@ -3011,7 +3012,7 @@ if(get_indices(indices, vec, &N_idx, &v_idx)) {
 	
 libraries[idx].modified=1;
 
-offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, libraries[data_idx].data, libraries[data_idx].length, *moffset, 1024*1024*16);
+offset=mvl_indexed_copy_vector(libraries[idx].ctx, N_idx, v_idx, vec, MVL_CONTEXT_DATA(libraries[data_idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx), *moffset, 1024*1024*16);
 	
 free(v_idx);
 
@@ -3099,8 +3100,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 			}
 		}
 		
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_size[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_size[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 	
 switch(TYPEOF(indices)) {
@@ -3296,8 +3297,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		free(vectors);
 		return(R_NilValue);
 		}
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_length[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 	
 if(get_indices(indices, vectors[0], &N, &v_idx)) {
@@ -3407,8 +3408,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_length[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 
 N=mvl_vector_length(vectors[0]);
@@ -3540,8 +3541,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_length[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 
 N=mvl_vector_length(vectors[0]);
@@ -3730,7 +3731,7 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		free(values);
 		return(R_NilValue);
 		}
-	vec_data[k]=libraries[data_idx].data;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
 	mvl_compute_vec_stats(vectors[k], &(vstats[k]));
 	}
 
@@ -3946,7 +3947,7 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		free(first_hash);
 		return(R_NilValue);
 		}
-	vec_data[k]=libraries[data_idx].data;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
 	mvl_compute_vec_stats(vectors[k], &(vstats[k]));
 	}
 
@@ -4222,7 +4223,7 @@ switch(TYPEOF(sexp)) {
 		if(0 && mvl_vector_type(vec)!=expected_type) {
 			error("Vector types do not match: expected %d got %d", mvl_vector_type(vec), expected_type);
 			}
-		if((err=mvl_hash_range(i0, i1, out, 1, &vec, (void **)&(libraries[data_idx].data), &(libraries[data_idx].length), LIBMVL_ACCUMULATE_HASH))!=0) {
+		if((err=mvl_hash_range(i0, i1, out, 1, &vec, (void **)&(MVL_CONTEXT_DATA(libraries[data_idx].ctx)), &(MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx)), LIBMVL_ACCUMULATE_HASH))!=0) {
 			error("Error computing hashes (%d)", err);
 			memset(out, 0, (i1-i0)*sizeof(*out));
 			return -1;
@@ -5008,8 +5009,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list0);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data0[k]=libraries[data_idx].data;
-	vec_data0_length[k]=libraries[data_idx].length;
+	vec_data0[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data0_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	
 	decode_mvl_object(PROTECT(VECTOR_ELT(data_list1, k)), &data_idx, &data_offset);
 	UNPROTECT(1);
@@ -5026,8 +5027,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list0);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data1[k]=libraries[data_idx].data;
-	vec_data1_length[k]=libraries[data_idx].length;
+	vec_data1[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data1_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	
 	if(mvl_vector_type(vectors0[k])!=mvl_vector_type(vectors1[k])) {
 		error("Vector types do not match");
@@ -5284,8 +5285,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_length[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 	
 //Rprintf("Extracting index\n");
@@ -5462,8 +5463,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_length[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 
 memset(&el, 0, sizeof(el));
@@ -5555,8 +5556,8 @@ for(LIBMVL_OFFSET64 k=0;k<xlength(data_list);k++) {
 		return(R_NilValue);
 		}
 		
-	vec_data[k]=libraries[data_idx].data;
-	vec_data_length[k]=libraries[data_idx].length;
+	vec_data[k]=MVL_CONTEXT_DATA(libraries[data_idx].ctx);
+	vec_data_length[k]=MVL_CONTEXT_DATA_SIZE(libraries[data_idx].ctx);
 	}
 
 mvl_init_extent_index(&ei);
@@ -5604,7 +5605,7 @@ if(index_idx<0) {
 
 mvl_init_extent_index(&ei);
 
-if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, libraries[index_idx].length, index_offset, &ei))!=0) {
+if((err=mvl_load_extent_index(libraries[index_idx].ctx, MVL_CONTEXT_DATA(libraries[index_idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[index_idx].ctx), index_offset, &ei))!=0) {
 	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
 	return(R_NilValue);
 	}
@@ -5713,7 +5714,7 @@ decode_mvl_object(extent_index0, &index_idx, &index_offset);
 
 mvl_init_extent_index(&ei);
 
-if((err=mvl_load_extent_index(libraries[index_idx].ctx, libraries[index_idx].data, libraries[index_idx].length, index_offset, &ei))!=0) {
+if((err=mvl_load_extent_index(libraries[index_idx].ctx, MVL_CONTEXT_DATA(libraries[index_idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[index_idx].ctx), index_offset, &ei))!=0) {
 	error("Error accessing extent index (%d): %s", err, mvl_strerror(libraries[index_idx].ctx));
 	return(R_NilValue);
 	}
