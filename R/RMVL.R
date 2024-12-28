@@ -1507,10 +1507,9 @@ mvl_verify<-function(x) {
 		}
 	if(inherits(x, "MVL_OBJECT")) {
 		.Call(verify_mvl_object_checksums, x)
-		if(mvl_inherits(x, c("list", "data.frame")) && (length(x)>0)) {
+		if(mvl_inherits(x, c("list", "data.frame", "MVL_INDEX")) && (length(x)>0)) {
 			for(i in 1:length(x))mvl_verify(x[[i,ref=TRUE]])
-			}
-		
+			}			
 		return(invisible(NULL))
 		}
 	stop("Cannot verify object of class ", class(x))
