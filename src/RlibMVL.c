@@ -297,7 +297,7 @@ if(new_length>0) {
 		p->ctx->f=NULL;
 		}
 	p->ctx->full_checksums_offset=mvl_find_directory_entry(p->ctx, LIBMVL_FULL_CHECKSUMS_DIRECTORY_KEY);
-	if((p->ctx->full_checksums_offset!=LIBMVL_NULL_OFFSET) && (err=mvl_validate_vector(p->ctx->full_checksums_offset, p->ctx->data, p->ctx->data_size))) {
+	if((p->ctx->full_checksums_offset!=LIBMVL_NULL_OFFSET) && (err=mvl_validate_vector2(p->ctx, p->ctx->full_checksums_offset))) {
 		error("Invalid MVL checksums vector: %d", err);
 		p->ctx->full_checksums_offset=LIBMVL_NULL_OFFSET;
 		}
@@ -522,7 +522,7 @@ if(libraries[idx].ctx==NULL)return(NULL);
 
 if(MVL_CONTEXT_DATA(libraries[idx].ctx)==NULL)return(NULL);
 
-if((err=mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx)))<0) {
+if((err=mvl_validate_vector2(libraries[idx].ctx, offset))<0) {
 	error("Invalid vector: error %d", err);
 	return(NULL);
 	}
@@ -868,7 +868,7 @@ d_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=d_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {
+	if(mvl_validate_vector2(libraries[idx].ctx, offset)) {
 		d_ans[i]=NA_REAL;
 		continue;
 		}
@@ -919,7 +919,7 @@ d_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=d_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {		
+	if(mvl_validate_vector2(libraries[idx].ctx, offset)) {		
 		for(j=0;j<nfields;j++)
 			d_ans[i*nfields+j]=NA_REAL;
 		continue;
@@ -966,7 +966,7 @@ p_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=p_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {		
+	if(mvl_validate_vector2(libraries[idx].ctx, offset)) {		
 		p_ans[i]=NA_INTEGER;
 		continue;
 		}
@@ -1295,7 +1295,7 @@ p_offsets=REAL(offsets);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=p_offsets[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {
+	if(mvl_validate_vector2(libraries[idx].ctx, offset)) {
 		UNPROTECT(1);
 		error("Invalid vector offset provided");
 		return(R_NilValue);
@@ -1767,7 +1767,7 @@ dans=REAL(ans);
 for(i=0;i<xlength(offsets);i++) {
 	doffset=REAL(offsets)[i];
 	offset=*offset0;
-	if(mvl_validate_vector(offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx))) {
+	if(mvl_validate_vector2(libraries[idx].ctx, offset)) {
 		Rprintf("offset=%lld data=%p length=%lld\n", offset, MVL_CONTEXT_DATA(libraries[idx].ctx), MVL_CONTEXT_DATA_SIZE(libraries[idx].ctx));
 		offset=0;
 		dans[i]=NA_REAL;
