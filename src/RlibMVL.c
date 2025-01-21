@@ -10,12 +10,6 @@
 #include <errno.h>
 #include "libMVL.h"
 
-/* This needs to be before including R headers because they redefine "error" as a macro */
-static inline int mvl_get_error(LIBMVL_CONTEXT *ctx)
-{
-return ctx->error;
-}
-
 #include <R.h>
 #include <Rinternals.h>
 //#include <Rext/Print.h>
@@ -149,6 +143,8 @@ if(length>0) {
 		error("Cannot obtain Win32 file handle");
 		fclose(p->f);
 		p->f=NULL;
+		mvl_free_context(p->ctx);
+		p->ctx=NULL;
 		return(R_NilValue);
 		}
 	
@@ -157,6 +153,8 @@ if(length>0) {
 		error("Cannot obtain Win32 file mapping object");
 		fclose(p->f);
 		p->f=NULL;
+		mvl_free_context(p->ctx);
+		p->ctx=NULL;
 		return(R_NilValue);
 		}
 		
@@ -165,6 +163,8 @@ if(length>0) {
 		error("Cannot create Win32 File mapping view");
 		fclose(p->f);
 		p->f=NULL;
+		mvl_free_context(p->ctx);
+		p->ctx=NULL;
 		return(R_NilValue);
 		}
 
@@ -174,10 +174,21 @@ if(length>0) {
 		error("Memory mapping MVL library: %s", strerror(errno));
 		fclose(p->f);
 		p->f=NULL;
+		mvl_free_context(p->ctx);
+		p->ctx=NULL;
 		return(R_NilValue);
 		}
 #endif
+	mvl_clear_error(p->ctx);
 	mvl_load_image(p->ctx, data, length);
+	if(mvl_get_error(p->ctx)) {
+		error("Loading MVL image: %s", strerror(errno));
+		fclose(p->f);
+		p->f=NULL;
+		mvl_free_context(p->ctx);
+		p->ctx=NULL;
+		return(R_NilValue);
+		}
 	fseek(p->f, 0, SEEK_END);
 	if(mode==0) {
 		/* Read-only mapping; no need to use up a file descriptor */
