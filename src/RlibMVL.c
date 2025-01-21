@@ -140,7 +140,7 @@ if(length>0) {
 #ifdef __WIN32__
 	p->f_handle=(HANDLE)_get_osfhandle(fileno(p->f));
 	if(p->f_handle==NULL) {
-		error("Cannot obtain Win32 file handle");
+		error("Cannot obtain Win32 file handle for \"%s\"", fn);
 		fclose(p->f);
 		p->f=NULL;
 		mvl_free_context(p->ctx);
@@ -150,7 +150,7 @@ if(length>0) {
 	
 	p->f_map_handle=CreateFileMappingA(p->f_handle, NULL, PAGE_READONLY, 0, 0, NULL);
 	if(p->f_map_handle==NULL) {
-		error("Cannot obtain Win32 file mapping object");
+		error("Cannot obtain Win32 file mapping object for \"%s\"", fn);
 		fclose(p->f);
 		p->f=NULL;
 		mvl_free_context(p->ctx);
@@ -160,7 +160,7 @@ if(length>0) {
 		
 	data=MapViewOfFile(p->f_map_handle, FILE_MAP_READ, 0, 0, length);
 	if(data==NULL) {
-		error("Cannot create Win32 File mapping view");
+		error("Cannot create Win32 File mapping view for \"%s\"", fn);
 		fclose(p->f);
 		p->f=NULL;
 		mvl_free_context(p->ctx);
@@ -171,7 +171,7 @@ if(length>0) {
 #else
 	data=mmap(NULL, length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
 	if(data==MAP_FAILED) {
-		error("Memory mapping MVL library: %s", strerror(errno));
+		error("Memory mapping MVL library for \"%s\": %s", fn, strerror(errno));
 		fclose(p->f);
 		p->f=NULL;
 		mvl_free_context(p->ctx);
@@ -182,7 +182,7 @@ if(length>0) {
 	mvl_clear_error(p->ctx);
 	mvl_load_image(p->ctx, data, length);
 	if(mvl_get_error(p->ctx)) {
-		error("Loading MVL image: %s", strerror(errno));
+		error("Loading MVL image for \"%s\": %s", fn, strerror(errno));
 		fclose(p->f);
 		p->f=NULL;
 		mvl_free_context(p->ctx);
