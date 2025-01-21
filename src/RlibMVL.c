@@ -170,7 +170,7 @@ if(length>0) {
 
 #else
 	data=mmap(NULL, length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
-	if(data==NULL) {
+	if(data==MAP_FAILED) {
 		error("Memory mapping MVL library: %s", strerror(errno));
 		fclose(p->f);
 		p->f=NULL;
