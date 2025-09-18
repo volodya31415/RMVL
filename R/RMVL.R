@@ -1468,28 +1468,28 @@ mvl_type_name<-function(x) {
 print.MVL_OBJECT<-function(x, ..., small_length=10) {
 	obj<-unclass(x)
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class) || (object_class %in% c("numeric", "integer", "character"))) {
+	if(is.null(object_class) || any(object_class %in% c("numeric", "integer", "character"))) {
 		tname<-mvl_type_name(obj[["type"]])
 		len<-obj[["length"]]
 		cat("MVL_OBJECT(", tname, " length ", len, ")\n", sep="")
 		} else
-	if(object_class %in% c("data.frame", "array", "matrix")) {
+	if(any(object_class %in% c("data.frame", "array", "matrix"))) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		
 		nm<-obj[["metadata"]][["names"]]
 		if(length(nm)<1 || length(od)!=2) 
-			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), ")\n", sep="")
+			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), " ", paste0(od, collapse="x"), ")\n", sep="")
 			else
 		if(length(nm)< small_length) 
-			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm, collapse="\", \""), "\")] )\n", sep="")
+			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm, collapse="\", \""), "\")] )\n", sep="")
 			else
-			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm[1:small_length], collapse="\", \""), "\", ...)] )\n", sep="")
+			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm[1:small_length], collapse="\", \""), "\", ...)] )\n", sep="")
 		} else
 	if(any(object_class=="MVL_INDEX")) {
 		print.MVL_INDEX(x, ...)
 		} else {
-		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, ")\n", sep="")
+		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), ")\n", sep="")
 		}
 	invisible(obj)
 	}
