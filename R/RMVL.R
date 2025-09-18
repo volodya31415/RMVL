@@ -1449,9 +1449,10 @@ MVL_TYPE_NAME<-list("UINT8", "INT32", "INT64", "FLOAT", "DOUBLE")
 MVL_TYPE_NAME[[100]]<-"OFFSET64"
 MVL_TYPE_NAME[[101]]<-"CSTRING"
 MVL_TYPE_NAME[[102]]<-"STRVEC"
-	
+MVL_TYPE_NAME[[103]]<-"CHECKSUM64"
+
 mvl_type_name<-function(x) {
-	y<-lapply(MVL_TYPE_NAME[x], function(xx){if(is.null(xx))return(NA); return(xx)})
+	y<-lapply(x, function(xx){tt<-unlist(MVL_TYPE_NAME[xx]) ; if(is.null(tt) || length(tt)<1)return(paste0("UNKNOWN_TYPE(", xx, ")")); return(tt)})
 	return(unlist(y))
 	}
 	
