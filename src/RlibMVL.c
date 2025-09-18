@@ -296,7 +296,7 @@ if(new_length>0) {
 	p->ctx->data_size=new_length;
 
 	p->ctx->data=mmap(NULL, new_length, PROT_READ, MAP_SHARED, fileno(p->f), 0);
-	if(p->ctx->data==NULL) {
+	if(p->ctx->data==MAP_FAILED) {
 		error("Memory mapping MVL library: %s", strerror(errno));
 		return(R_NilValue);
 		}
