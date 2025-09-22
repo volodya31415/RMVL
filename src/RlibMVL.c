@@ -14,6 +14,12 @@
 #include <Rinternals.h>
 //#include <Rext/Print.h>
 
+#ifdef __WIN32__
+/* Windows ucrt has fseek and ftell use 32-bit values even on 64-bit Windows */
+#define fseek _fseeki64
+#define ftell _ftelli64
+#endif
+
 static inline SEXP mkCharU(unsigned char *s)
 {
 return(mkChar((char *)s));
@@ -5835,5 +5841,7 @@ void R_init_RMVL(DllInfo *info) {
 
   R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
   R_useDynamicSymbols(info, FALSE);
+  
+  if(sizeof(LIBMVL_OFFSET64)!=8)error("Compilation error: LIBMVL_OFFSET64 is not 8-bytes long.");
 
 }
