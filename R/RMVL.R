@@ -1823,14 +1823,15 @@ mvl2R<-function(obj, raw=FALSE) {
 	return(vec)
 	}
 	
-# #' Print summary information of MVL_INDEX
-# #' 
-# #' @param obj MVL_INDEX object
-# #' @param \ldots not used.
-# #' @return invisible(obj)
-# #'
-# #' @export
-print.MVL_INDEX<-function(obj, ...) {
+#' Print summary information of MVL_INDEX
+#'
+#' @param x MVL_INDEX object
+#' @param \ldots not used.
+#' @return invisible(obj)
+#'
+#' @export
+print.MVL_INDEX<-function(x, ...) {
+	obj<-x
 	obj2<-unclass(obj)
 	obj2$metadata$class<-"MVL_OBJECT"
 	class(obj2)<-"MVL_OBJECT"
